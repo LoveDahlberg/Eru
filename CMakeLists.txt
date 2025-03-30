@@ -33,7 +33,20 @@ message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}, ${LLVM_INCLUDE_DIRS}")
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-add_executable(main lib/test.cpp)
+# Generate a compile_commands.json file. Used for the clangd extension.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Include the common headers
+include_directories(${CMAKE_SOURCE_DIR}/include)
+
+add_subdirectory(test)
+
+# Create target for main executable.
+# Set the C++ standard to C++23
+set(CMAKE_CXX_STANDARD 23)
+
+# Add each lib folder to each own lib that can be included here.
+add_executable(main lib/Main.cpp lib/Support/IO/FileReader.cpp)
 
 llvm_map_components_to_libnames(llvm_libs core support irreader)
 target_link_libraries(main PRIVATE 

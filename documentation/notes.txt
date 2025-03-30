@@ -1,0 +1,34 @@
+Example language
+
+Secruity:
+ - Name obfuscation
+ - Arithmetic obfuscation
+ - Control flow obfuscation
+ - String encryption
+ - Checksumming
+
+Structure:
+ - C like structure to start with. Come up with fitting structure as I go.
+ - Strongly typed
+
+
+ Ideas:
+  - Could allow relfection in limited fashion, you may only perform a reflection call if you explicitly define execution for when it doesn't work.
+    + How to allow reflection with name obfuscation?
+     - Needs some runtime mapping, wouldn't be secure.
+    + Could allow reflection without direct name reference, like looping functions in a module.
+  - auto deduction of variable types (auto, var, etc)
+-------------------
+
+Data types:
+int
+string
+
+string name() {
+    int a = 0;
+    return a + 1;
+}
+
+int main() {}
+
+
