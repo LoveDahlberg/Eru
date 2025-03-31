@@ -1,7 +1,12 @@
 #include <gtest/gtest.h>
+
 #include <Lexer/Lexer.h>
+#include <Lexer/Lexer.cpp>
+
+using namespace Lexer;
+
 
 TEST(Lexer, TestName) {
-  // Test code here
-  // EXPECT_EQ(1, );
+  EXPECT_EQ(1,1 );
+  // lookAhead("");
 }

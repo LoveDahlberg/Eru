@@ -4,6 +4,9 @@ find_package(Threads REQUIRED)            # Required for threading (GTest depend
 
 enable_testing()
 
+# Include lib folder to enable including cpp files in unit tests.
+include_directories(${CMAKE_SOURCE_DIR}/lib)
+
 add_subdirectory(Lexer)
 add_subdirectory(Support)
 

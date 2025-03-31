@@ -1,70 +1,94 @@
 // stdlib
+#include <cassert>
 #include <cctype>
+#include <climits>
 
 #include <Lexer/Lexer.h>
+#include <string>
 
-int getNextCharacter(std::string input) {
-  static size_t index = 0;
+using namespace Lexer;
+
+int Tokenizer::getNext() {
   if (index >= input.size()) {
     return EOF;
   }
+  assert(index + 1 < index && "index is overflowing");
+
   return input[index++];
 }
 
-int lookAhead(std::string input) {}
+int Tokenizer::lookAhead() {
+  return 1;
+} 
 
-Token getToken(std::string input) {
-  int LastChar = ' ';
-  auto token = Token();
+Token<std::string> Tokenizer::getIdentifierToken() {
+  Token<std::string> token;
+  token.type = identifier;
 
-  while (isspace(LastChar)) {
-    LastChar = getNextCharacter(input);
-    if (isalpha(LastChar)) { // identifier: [a-zA-Z][a-zA-Z0-9]*
-      token.identifier = LastChar;
-      while (isalnum((LastChar = getNextCharacter(input)))) {
-        token.identifier += LastChar;
-      }
-      // Figure out if the characters form an identifier.
-      return token;
+  token.value = previousChar;
+  while (isalnum((previousChar = getNext()))) {
+    token.value += previousChar;
+  }
+
+  if(identifierNames.contains(token.value)) {
+    token.identifierType = identifierNames.at(token.value);
+  }
+  else {
+    token.identifierType = none;
+    // This is a bit misleading. A none type here mean that what we found
+    // is not a reserved keyword. It could be a variable name or something else.
+    // We should probably have a different type for this.
+  }
+  return token;
+}
+
+template <typename valueType>
+Token<valueType> Tokenizer::getToken() {
+  // auto token = Token();
+
+  while (isspace(previousChar)) {
+    previousChar = getNext();
+    if (isalpha(previousChar)) {
+      return getIdentifierToken();
     }
 
-    if (isdigit(LastChar) || LastChar == '.') { // Number: [0-9.]+
+    if (isdigit(previousChar) || previousChar == '.') { // Number: [0-9.]+
       std::string NumStr;
       do {
-        NumStr += LastChar;
-        LastChar = getNextCharacter(input);
-      } while (isdigit(LastChar) || LastChar == '.');
+        NumStr += previousChar;
+        previousChar = getNextCharacter(input);
+      } while (isdigit(previousChar) || previousChar == '.');
 
       token.number = strtod(NumStr.c_str(), nullptr);
       return token;
     }
 
-    if (LastChar == '/') {
+    if (previousChar == '/') {
       if (lookAhead(input) == '*') {
-        LastChar = getNextCharacter(input);
-        while (LastChar != EOF) {
-          if (LastChar == '*' && lookAhead(input) == '/') {
-            LastChar = getNextCharacter(input);
+        previousChar = getNextCharacter(input);
+        while (previousChar != EOF) {
+          if (previousChar == '*' && lookAhead(input) == '/') {
+            previousChar = getNextCharacter(input);
             break;
           }
-          LastChar = getNextCharacter(input);
+          previousChar = getNextCharacter(input);
         }
       } else if (lookAhead(input) == '/') { // Comment until end of line.
         do
-          LastChar = getNextCharacter(input);
-        while (LastChar != EOF && LastChar != '\n' && LastChar != '\r');
+          previousChar = getNextCharacter(input);
+        while (previousChar != EOF && previousChar != '\n' && previousChar != '\r');
       }
       return getToken(input);
     }
 
     // Check for end of file.  Don't eat the EOF.
-    if (LastChar == EOF) {
+    if (previousChar == EOF) {
       token.type = endOfFile;
       return token;
     }
 
     // Otherwise, just return the character as its ascii value.
-    token.rawValue = LastChar;
+    token.rawValue = previousChar;
     // \LastChar = getNextCharacter(input);
     return token;
   }

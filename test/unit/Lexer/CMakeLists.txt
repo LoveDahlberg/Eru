@@ -9,6 +9,7 @@ target_link_libraries(testLexer PRIVATE
     # Add linking agains the specific lib.
     Lexer
 )
+# target_include_directories(testLexer PRIVATE ${CMAKE_SOURCE_DIR}/lib)
 
 # Register the test with CTest
 add_test(NAME Lexer COMMAND testLexer)
