@@ -1,7 +1,5 @@
-Fix the folder and filesystem
- - Create header and files for Lexer
- - Construct everything correctly in the cmakelists
-
 Add tests for lexer and implement it.
+
+Add tests for File reader and implement it.
 
 Add ninja to project

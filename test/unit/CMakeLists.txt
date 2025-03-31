@@ -4,16 +4,12 @@ find_package(Threads REQUIRED)            # Required for threading (GTest depend
 
 enable_testing()
 
-# Create the test executable
-add_executable(tests test.cpp)
+add_subdirectory(Lexer)
+add_subdirectory(Support)
 
-# Link against local GTest installation
-target_link_libraries(tests PRIVATE 
-    GTest::GTest 
-    GTest::Main
-    Threads::Threads
-    # Add linking agains the specific lib.
+# Add a custom target for running all unit tests
+add_custom_target(unittests
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+    DEPENDS testLexer testFileReader
+    COMMENT "Running all unit tests"
 )
-
-# Register the test with CTest
-add_test(NAME TestCategory COMMAND tests)

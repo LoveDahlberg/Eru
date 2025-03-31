@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 3.10)
 project(project)
 
+set(CMAKE_CXX_STANDARD 23)
+
+# Generate a compile_commands.json file. Used for the clangd extension.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+############################
+# LLVM Setup
+############################
+
 # Packages LLVM depends on.
 
 # Libedit
@@ -33,27 +42,36 @@ message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}, ${LLVM_INCLUDE_DIRS}")
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-# Generate a compile_commands.json file. Used for the clangd extension.
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+llvm_map_components_to_libnames(llvm_libs core support irreader)
+
+############################
+# Includes and Libraries
+############################
 
 # Include the common headers
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_subdirectory(test)
+add_subdirectory(lib)
 
-# Create target for main executable.
-# Set the C++ standard to C++23
-set(CMAKE_CXX_STANDARD 23)
+############################
+# Create main target
+############################
 
 # Add each lib folder to each own lib that can be included here.
-add_executable(main lib/Main.cpp lib/Support/IO/FileReader.cpp)
+add_executable(main lib/Main.cpp)
 
-llvm_map_components_to_libnames(llvm_libs core support irreader)
+# Link dependencies
 target_link_libraries(main PRIVATE 
+    # LLVM dependecies
     ${llvm_libs}
     LibEdit::LibEdit
     zstd::libzstd_shared
-    CURL::libcurl)
+    CURL::libcurl
+    
+    # Project dependencies
+    Lexer
+    FileReader)
 
 add_custom_target(run
     COMMAND $<TARGET_FILE:main>
