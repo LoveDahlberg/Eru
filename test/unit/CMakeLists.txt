@@ -1,6 +1,6 @@
 # Find locally installed Google Test
 # Include manually built gmock static libraries.. TODO improve this.
-set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "/usr/lib/gtest")
+
 find_package(GTest REQUIRED)              # Core Google Test
 find_package(Threads REQUIRED)            # Required for threading (GTest dependency)
 

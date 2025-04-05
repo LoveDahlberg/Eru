@@ -17,29 +17,30 @@ _____
 grammar definition:
 _____
 
-[top] -> {declaration} {top} | {assignment} {top} | {directive} {top} | {function} {top} | e
-
-  [declaration] -> {type} (IDENTIFER)
-    [type] -> {data} | (IDENTIFER)
-    [data] -> (INT), (SIGNED_INT_32), (UNSIGNED_INT_32), (BOOl), (STRING), (CHAR)
+[top] -> {declaration} {top} | {directive} {top} | {function} {top} | END_OF_FILE
   
-  [assignment] -> {declaration} (EQUAL) {assignmentExpression} | (IDENTIFER) (EQUAL) {assignmentExpression}
-    [assignmentExpression] -> {assignmentExpressionTarget} {operator} {assignmentExpression} | {assignmentExpressionTarget} 
-      [assignmentExpressionTarget] -> (IDENTIFER) | {literal} | {functionCall} 
-        [literal] -> (STRING_LITERAL) | (INTEGER_LITERAL)
-        [functionCall] -> (IDENTIFER) (LEFT_PARENTHESIS) {parametersCall} (RIGHT_PARENTHESIS)
-          [parametersCall] -> {prametersCallList} | e
-            [prametersCallList] -> {passable} | {passable} (COMMA) {prametersCallList}
-              [passable] -> (IDENTIFER) | {literal}
-      [operator] -> (PLUS) | (MINUS) | e 
-
-
-  [directive] -> (LEFT_BRACKET)(RIGHT_BRACKET)
-
-  [function] -> {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) {directive} {primaryExpression}
+  [declaration] -> {type} (IDENTIFER) (NEWLINE) | {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS)  (NEWLINE)
+    [type] -> {data} | (IDENTIFER)
+      [data] -> (INT), (SIGNED_INT_32), (UNSIGNED_INT_32), (BOOl), (STRING), (CHAR)    
     [parametersDeclaration] -> {parametersDeclarationList} | e
       [parametersDeclarationList] -> {type} (IDENTIFER) | {type} (IDENTIFER) (COMMA) {parametersDeclaration}
+  
+  [directive] -> (LEFT_BRACKET)(RIGHT_BRACKET)
+
+  [function] -> {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) {directive} (LEFT_CURLY_BRACE) {primaryExpression} (RIGHT_CURLY_BRACE)
     [primaryExpression] -> {declaration} {primaryExpression} | {assignment} {primaryExpression} | {controlflow} {primaryExpression} | e
+      [assignment] -> {assignmentTarget} (EQUAL) {assignmentExpression} (NEWLINE)
+        [assignmentTarget] -> {declaration} | (IDENTIFER) 
+        
+        [assignmentExpression] -> {assignmentExpressionTarget} {operator} {assignmentExpression} | {assignmentExpressionTarget} 
+          [assignmentExpressionTarget] -> (IDENTIFER) | {literal} | {functionCall} 
+            [literal] -> (STRING_LITERAL) | (INTEGER_LITERAL)          
+            [functionCall] -> (IDENTIFER) (LEFT_PARENTHESIS) {parametersCall} (RIGHT_PARENTHESIS)
+              [parametersCall] -> {prametersCallList} | e
+                [prametersCallList] -> {passable} | {passable} (COMMA) {prametersCallList}
+                  [passable] -> (IDENTIFER) | {literal}
+          [operator] -> (PLUS) | (MINUS) | e 
+
       [controlflow] -> {conditionalBranch} | {functionCall}
         [conditionalBranch] -> (IF) {conditinalExpression} {continuedCondition}
           [conditinalExpression] -> (LEFT_PARENTHESIS) {booleanExpression} (RIGHT_PARENTHESIS) {primaryExpression} 
@@ -47,3 +48,41 @@ _____
               [booleanExpressionList] -> {booleanConcat} {booleanExpression} | e
                 [booleanConcat] -> (AND) | (OR)
           [continuedCondition] -> (ELSE) {conditinalExpression} | (ELIF) {conditinalExpression} {continuedCondition} | e
+
+_____
+
+Token definition:
+_____
+
+(IDENTIFER) -> [a-zA-Z_][a-zA-Z0-9_]*
+
+(IF) -> if
+(ELSE) -> else
+(ELIF) -> elif
+(AND) -> and
+(OR) -> or
+
+(LEFT_PARENTHESIS) -> (
+(RIGHT_PARENTHESIS) -> )
+(LEFT_CURLY_BRACE) -> {
+(RIGHT_CURLY_BRACE) -> }
+(LEFT_BRACKET) -> [
+(RIGHT_BRACKET) -> ]
+(COMMA) -> ,
+(NEWLINE) -> \n | \r | \n\r
+
+(INT) -> int
+(SIGNED_INT_32) -> sint32
+(UNSIGNED_INT_32) -> uint32
+(BOOL) -> true | false
+(STRING) -> string
+(CHAR) -> char
+
+(PLUS) -> +
+(MINUS) -> -
+(EQUAL) -> =
+
+(INTEGER_LITERAL) -> [0-9]+
+(STRING_LITERAL) -> ".*"
+
+(END_OF_FILE) -> EOF

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <filesystem>
+#include <iostream>
 #include <string>
 
 #include <Support/IO/FileReader.h>
@@ -13,7 +13,24 @@ struct Token {
   TokenType type = TokenType::NONE;
   std::string value;
 
-  bool operator==(const Token&) const = default;
+  // TODO make a custom matcher where this is done instead..
+  bool operator==(const Token &other) const {
+    bool success = true;
+    if (other.value != value) {
+      std::cout << std::format(
+          "Token equality: value '{}' is not equal to expected value '{}'\n",
+          other.value, value);
+      success = false;
+    }
+
+    if (other.type != type) {
+      std::cout << std::format(
+          "Token equality: type '{}' is not equal to expected type '{}'\n",
+          std::to_string(other.type), std::to_string(type));
+      success = false;
+    }
+    return success;
+  };
 };
 
 class Tokenizer {
@@ -25,6 +42,7 @@ public:
 private:
   int lookAhead();
   int getNext();
+  int getCurrent();
 
   Token getReservedOrIdentifier();
   Token getNumber();
@@ -32,6 +50,9 @@ private:
   Token getStringLiteral();
   bool isSeparatorOrOperatorToken();
   Token getSeparatorOrOperatorToken();
+  Token getNewline();
+  Token getEndOfFile();
+  Token getUnknown();
 
 private:
   const std::string input;

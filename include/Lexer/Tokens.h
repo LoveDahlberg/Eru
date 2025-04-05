@@ -47,12 +47,11 @@ enum TokenType {
   INTEGER_LITERAL,
   STRING_LITERAL,
 
-  COMMENT,
-  WHITESPACE,
   END_OF_FILE,
 };
 
-// Mapping of reserved types  
+// Mapping of reserved types
+// TODO statically assert that this map is correct, i.e no duplicate values.
 const std::unordered_map<std::string, TokenType> reserverdTypeToToken = {
   {"if", IF},
   {"else", ELSE},
@@ -70,7 +69,8 @@ const std::unordered_map<std::string, TokenType> reserverdTypeToToken = {
   {"char", CHAR},
 };
 
-// Separator and operators char map..
+// Separator and operators char mapping
+// TODO statically assert that this map is correct, i.e no duplicate values.
 const std::unordered_map<char, TokenType> separatorOperatorToToken = {
   {'(', LEFT_PARENTHESIS},
   {')', RIGHT_PARENTHESIS},

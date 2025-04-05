@@ -2,7 +2,6 @@
 #include "Lexer/Tokens.h"
 #include <cassert>
 #include <cctype>
-#include <climits>
 
 #include <Lexer/Lexer.h>
 #include <string>
@@ -20,6 +19,14 @@ int Tokenizer::getNext() {
   return input[++index];
 }
 
+int Tokenizer::getCurrent() {
+  if (index >= input.size()) {
+    return EOF;
+  }
+
+  return input[index];
+}
+
 int Tokenizer::lookAhead() {
   // What to do here?
   if (index >= input.size()) {
@@ -34,6 +41,8 @@ int Tokenizer::lookAhead() {
 Token Tokenizer::getReservedOrIdentifier() {
   auto token = Token();
 
+  // TODO make this accept identifers with special characters that are
+  // acceptable, like _
   token.value = currentChar;
   while (isalnum((currentChar = getNext()))) {
     token.value += currentChar;
@@ -56,6 +65,9 @@ Token Tokenizer::getNumber() {
     token.value += currentChar;
     currentChar = getNext();
   } while (isdigit(currentChar) || currentChar == '.');
+
+  // TODO if you pass 1abc it will take the 1 and read abc after.
+  // It should return an unknown token here when it is an invalid number.
 
   return token;
 }
@@ -87,8 +99,8 @@ Token Tokenizer::getStringLiteral() {
   do {
     escapeCharacter = false;
     currentChar = getNext();
-    
-    if(currentChar == '\\'){
+
+    if (currentChar == '\\') {
       escapeCharacter = true;
       token.value += getNext();
       continue;
@@ -117,9 +129,37 @@ Token Tokenizer::getSeparatorOrOperatorToken() {
   return token;
 }
 
+Token Tokenizer::getNewline() {
+  Token token;
+  token.type = NEWLINE;
+
+  currentChar = getNext();
+  return token;
+}
+
+Token Tokenizer::getEndOfFile() {
+  Token token;
+  token.type = END_OF_FILE;
+  return token;
+}
+
+Token Tokenizer::getUnknown() {
+  Token token;
+  token.value = currentChar;
+  currentChar = getNext();
+  return token;
+}
+
+bool isNewline(int currentChar) {
+  return currentChar == '\n' || currentChar == '\r';
+}
+
 Token Tokenizer::getToken() {
-  // Find next non whitespace character.
+  currentChar = getCurrent();
   while (isspace(currentChar)) {
+    if (isNewline(currentChar)) {
+      return getNewline();
+    }
     currentChar = getNext();
   }
 
@@ -144,14 +184,10 @@ Token Tokenizer::getToken() {
     return getSeparatorOrOperatorToken();
   }
 
-  Token token;
   if (currentChar == EOF) {
-    token.type = END_OF_FILE;
-    return token;
+    return getEndOfFile();
   }
 
   // What case is this?
-  token.value = currentChar;
-  currentChar = getNext();
-  return token;
+  return getUnknown();
 }
