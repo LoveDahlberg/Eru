@@ -14,7 +14,11 @@ enum TokenType {
   // Keywords, reserved words in the language, if, while, return
   IF,
   ELSE,
+  ELIF,
   RETURN,
+  OR,
+  AND,
+
 
   // Separators, punctuation characters and paried delimiters,
   LEFT_PARENTHESIS,
@@ -36,6 +40,7 @@ enum TokenType {
 
   // Operators, symbols that operate on arguments and produce results, +, <, =
   PLUS,
+  MINUS,
   EQUAL,
   
   // Literals,  numbers, logical, textual and refernce literals
@@ -51,15 +56,11 @@ enum TokenType {
 const std::unordered_map<std::string, TokenType> reserverdTypeToToken = {
   {"if", IF},
   {"else", ELSE},
+  {"elif", ELIF},
   {"return", RETURN},
+  {"or", OR},
+  {"and", AND},
 
-  {"(", LEFT_PARENTHESIS},
-  {")", RIGHT_PARENTHESIS},
-  {"{", LEFT_CURLY_BRACE},
-  {"}", RIGHT_CURLY_BRACE},
-  {"[", LEFT_BRACKET},
-  {"]", RIGHT_BRACKET},
-  {",", COMMA},
 
   {"int", INT},
   {"sint32", SIGNED_INT_32},
@@ -67,8 +68,6 @@ const std::unordered_map<std::string, TokenType> reserverdTypeToToken = {
   {"bool", BOOl},
   {"string", STRING},
   {"char", CHAR},
-
-  {"+", PLUS},
 };
 
 // Separator and operators char map..
@@ -82,6 +81,7 @@ const std::unordered_map<char, TokenType> separatorOperatorToToken = {
   {',', COMMA},
 
   {'+', PLUS},
+  {'-', MINUS},
   {'=', EQUAL},
 };
 

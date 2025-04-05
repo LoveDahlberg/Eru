@@ -1,0 +1,49 @@
+How to read
+
+// TODO explain in more detail how the | works and the recursive nature of everything..
+
+Contains the grammar definition
+
+Each grammar declaration contains a list of rules and tokens.
+  - Grammar declaration are [ruleName]
+  - Rules are {ruleName}
+  - Tokens are (tokenName)
+
+What precedes each grammar line must be a tabbed list of lines expanding undefined rules (with no previous grammar declaration)
+declared in the previous grammar line in the order they appear.
+
+_____
+
+grammar definition:
+_____
+
+[top] -> {declaration} {top} | {assignment} {top} | {directive} {top} | {function} {top} | e
+
+  [declaration] -> {type} (IDENTIFER)
+    [type] -> {data} | (IDENTIFER)
+    [data] -> (INT), (SIGNED_INT_32), (UNSIGNED_INT_32), (BOOl), (STRING), (CHAR)
+  
+  [assignment] -> {declaration} (EQUAL) {assignmentExpression} | (IDENTIFER) (EQUAL) {assignmentExpression}
+    [assignmentExpression] -> {assignmentExpressionTarget} {operator} {assignmentExpression} | {assignmentExpressionTarget} 
+      [assignmentExpressionTarget] -> (IDENTIFER) | {literal} | {functionCall} 
+        [literal] -> (STRING_LITERAL) | (INTEGER_LITERAL)
+        [functionCall] -> (IDENTIFER) (LEFT_PARENTHESIS) {parametersCall} (RIGHT_PARENTHESIS)
+          [parametersCall] -> {prametersCallList} | e
+            [prametersCallList] -> {passable} | {passable} (COMMA) {prametersCallList}
+              [passable] -> (IDENTIFER) | {literal}
+      [operator] -> (PLUS) | (MINUS) | e 
+
+
+  [directive] -> (LEFT_BRACKET)(RIGHT_BRACKET)
+
+  [function] -> {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) {directive} {primaryExpression}
+    [parametersDeclaration] -> {parametersDeclarationList} | e
+      [parametersDeclarationList] -> {type} (IDENTIFER) | {type} (IDENTIFER) (COMMA) {parametersDeclaration}
+    [primaryExpression] -> {declaration} {primaryExpression} | {assignment} {primaryExpression} | {controlflow} {primaryExpression} | e
+      [controlflow] -> {conditionalBranch} | {functionCall}
+        [conditionalBranch] -> (IF) {conditinalExpression} {continuedCondition}
+          [conditinalExpression] -> (LEFT_PARENTHESIS) {booleanExpression} (RIGHT_PARENTHESIS) {primaryExpression} 
+            [booleanExpression] -> {assignmentExpression} {booleanExpressionList}
+              [booleanExpressionList] -> {booleanConcat} {booleanExpression} | e
+                [booleanConcat] -> (AND) | (OR)
+          [continuedCondition] -> (ELSE) {conditinalExpression} | (ELIF) {conditinalExpression} {continuedCondition} | e
