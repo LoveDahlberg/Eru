@@ -18,17 +18,33 @@ Structure:
      - Needs some runtime mapping, wouldn't be secure.
     + Could allow reflection without direct name reference, like looping functions in a module.
   - auto deduction of variable types (auto, var, etc)
+  - Support for meta programming, which essentially is a kind of reflection.
+   + I could support parsing and modification of construct that don't directly rely on their names.
+     like looping all methods of a class, but not allowing literal comparisons, only static like comparing 
+     argument types etc.
+  - Look to draw inspiration from cool features from other languages.
+
+The language could allow the user to define obfuscation technies that should be applied, and how to apply them.
+
+So for example you could attach some directive to a function declaration, saying that you want it to have its controlflow obfuscated.
+A function could be defined as
+
+<return type> <identifer>(<paramaters>, ...) [<Directive list>] {<code>}
+
+The directive list could apply to anything that you want to define rules for.
+
 -------------------
 
 Data types:
 int
 string
 
-string name() {
-    int a = 0;
-    return a + 1;
+string name() [
+  Directive..
+  ] {
+  int a = 0
+  return a + 1
 }
 
 int main() {}
-
 

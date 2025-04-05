@@ -4,44 +4,37 @@
 #include <string>
 
 #include <Support/IO/FileReader.h>
-#include <unordered_map>
+
+#include <Lexer/Tokens.h>
 
 namespace Lexer {
 
-enum TokenType { endOfFile, identifier, number };
-
-enum Identifier {
-  none,
-  integer,
-  string,
-  boolean,
-};
-using Identifiers = std::unordered_map<std::string, Identifier>;
-const Identifiers identifierNames = {
-    {"integer", integer}, {"string", string}, {"boolean", boolean}};
-
-template <typename valueType> struct Token {
-  TokenType type;
-  valueType value;
-  Identifier identifierType;
+struct Token {
+  TokenType type = TokenType::NONE;
+  std::string value;
 };
 
 class Tokenizer {
 public:
-  Tokenizer(std::filesystem::path path) : input(getFileContent(path)) {}
+  Tokenizer(const std::string &input) : input(input) {}
 
-  template <typename valueType> Token<valueType> getToken();
+  Token getToken();
 
 private:
   int lookAhead();
   int getNext();
 
-  Token<std::string> getIdentifierToken();
+  Token getReservedOrIdentifier();
+  Token getNumber();
+  void skipComment();
+  Token getStringLiteral();
+  bool isSeparatorOrOperatorToken();
+  Token getSeparatorOrOperatorToken();
 
 private:
-  std::string input;
+  const std::string input;
   long long unsigned index = 0;
-  int previousChar = ' ';
+  int currentChar = ' ';
 };
 
 } // namespace Lexer

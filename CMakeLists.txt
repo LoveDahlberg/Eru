@@ -51,6 +51,8 @@ llvm_map_components_to_libnames(llvm_libs core support irreader)
 # Include the common headers
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
+set(CMAKE_BUILD_TYPE Debug)
+
 add_subdirectory(test)
 add_subdirectory(lib)
 

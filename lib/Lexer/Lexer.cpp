@@ -1,4 +1,5 @@
 // stdlib
+#include "Lexer/Tokens.h"
 #include <cassert>
 #include <cctype>
 #include <climits>
@@ -8,88 +9,146 @@
 
 using namespace Lexer;
 
+// TODO, get next and lookahead could be an object used by the tokenizer
+// It could be attached to the 'input' object itself.
 int Tokenizer::getNext() {
   if (index >= input.size()) {
     return EOF;
   }
-  assert(index + 1 < index && "index is overflowing");
+  assert(index + 1 > index && "index is overflowing");
 
-  return input[index++];
+  return input[++index];
 }
 
 int Tokenizer::lookAhead() {
-  return 1;
-} 
+  // What to do here?
+  if (index >= input.size()) {
+    return EOF;
+  }
+  assert(index + 1 > index && "index is overflowing");
 
-Token<std::string> Tokenizer::getIdentifierToken() {
-  Token<std::string> token;
-  token.type = identifier;
+  return input[index + 1];
+}
 
-  token.value = previousChar;
-  while (isalnum((previousChar = getNext()))) {
-    token.value += previousChar;
+// TODO all getters could be could be part of a token builder object.
+Token Tokenizer::getReservedOrIdentifier() {
+  auto token = Token();
+
+  token.value = currentChar;
+  while (isalnum((currentChar = getNext()))) {
+    token.value += currentChar;
   }
 
-  if(identifierNames.contains(token.value)) {
-    token.identifierType = identifierNames.at(token.value);
-  }
-  else {
-    token.identifierType = none;
-    // This is a bit misleading. A none type here mean that what we found
-    // is not a reserved keyword. It could be a variable name or something else.
-    // We should probably have a different type for this.
+  if (reserverdTypeToToken.contains(token.value)) {
+    token.type = reserverdTypeToToken.at(token.value);
+  } else {
+    token.type = TokenType::IDENTIFER;
   }
   return token;
 }
 
-template <typename valueType>
-Token<valueType> Tokenizer::getToken() {
-  // auto token = Token();
+Token Tokenizer::getNumber() {
+  auto token = Token();
+  token.type = INTEGER_LITERAL;
 
-  while (isspace(previousChar)) {
-    previousChar = getNext();
-    if (isalpha(previousChar)) {
-      return getIdentifierToken();
-    }
+  do {
+    token.value += currentChar;
+    currentChar = getNext();
+  } while (isdigit(currentChar) || currentChar == '.');
 
-    if (isdigit(previousChar) || previousChar == '.') { // Number: [0-9.]+
-      std::string NumStr;
-      do {
-        NumStr += previousChar;
-        previousChar = getNextCharacter(input);
-      } while (isdigit(previousChar) || previousChar == '.');
+  return token;
+}
 
-      token.number = strtod(NumStr.c_str(), nullptr);
-      return token;
-    }
-
-    if (previousChar == '/') {
-      if (lookAhead(input) == '*') {
-        previousChar = getNextCharacter(input);
-        while (previousChar != EOF) {
-          if (previousChar == '*' && lookAhead(input) == '/') {
-            previousChar = getNextCharacter(input);
-            break;
-          }
-          previousChar = getNextCharacter(input);
-        }
-      } else if (lookAhead(input) == '/') { // Comment until end of line.
-        do
-          previousChar = getNextCharacter(input);
-        while (previousChar != EOF && previousChar != '\n' && previousChar != '\r');
+void Tokenizer::skipComment() {
+  if (lookAhead() == '*') {
+    currentChar = getNext();
+    while (currentChar != EOF) {
+      if (currentChar == '*' && lookAhead() == '/') {
+        currentChar = getNext();
+        break;
       }
-      return getToken(input);
+      currentChar = getNext();
+    }
+  } else if (lookAhead() == '/') {
+    do
+      currentChar = getNext();
+    while (currentChar != EOF && currentChar != '\n' && currentChar != '\r');
+  } else {
+    currentChar = getNext();
+  }
+}
+
+Token Tokenizer::getStringLiteral() {
+  Token token;
+  token.type = STRING_LITERAL;
+
+  bool escapeCharacter;
+  do {
+    escapeCharacter = false;
+    currentChar = getNext();
+    
+    if(currentChar == '\\'){
+      escapeCharacter = true;
+      continue;
     }
 
-    // Check for end of file.  Don't eat the EOF.
-    if (previousChar == EOF) {
-      token.type = endOfFile;
-      return token;
+    if (currentChar == '"') {
+      continue;
     }
 
-    // Otherwise, just return the character as its ascii value.
-    token.rawValue = previousChar;
-    // \LastChar = getNextCharacter(input);
+    // Improve to disallow problematic things here..
+    token.value += currentChar;
+  } while (escapeCharacter || currentChar != '"');
+
+  return token;
+}
+
+bool Tokenizer::isSeparatorOrOperatorToken() {
+  return separatorOperatorToToken.contains(currentChar);
+}
+
+Token Tokenizer::getSeparatorOrOperatorToken() {
+  Token token;
+  token.type = separatorOperatorToToken.at(currentChar);
+  currentChar = getNext();
+  return token;
+}
+
+Token Tokenizer::getToken() {
+  // Find next non whitespace character.
+  while (isspace(currentChar)) {
+    currentChar = getNext();
+  }
+
+  if (isalpha(currentChar)) {
+    return getReservedOrIdentifier();
+  }
+
+  if (isdigit(currentChar)) {
+    return getNumber();
+  }
+
+  if (currentChar == '"') {
+    return getStringLiteral();
+  }
+
+  if (currentChar == '/') {
+    skipComment();
+    return getToken();
+  }
+
+  if (isSeparatorOrOperatorToken()) {
+    return getSeparatorOrOperatorToken();
+  }
+
+  Token token;
+  if (currentChar == EOF) {
+    token.type = END_OF_FILE;
     return token;
   }
+
+  // What case is this?
+  token.value = currentChar;
+  currentChar = getNext();
+  return token;
 }
