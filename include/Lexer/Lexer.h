@@ -12,6 +12,8 @@ namespace Lexer {
 struct Token {
   TokenType type = TokenType::NONE;
   std::string value;
+
+  bool operator==(const Token&) const = default;
 };
 
 class Tokenizer {

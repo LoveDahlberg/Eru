@@ -15,7 +15,7 @@ TEST(Lexer, BasicTokenization) {
   
   // Comment
   int main() [] {
-    int a = 1
+    int a = "ab\"c"
     if(1) {
       string b
     }
@@ -31,45 +31,49 @@ TEST(Lexer, BasicTokenization) {
 
   Tokenizer tokenizer(stream);
 
-  std::vector<TokenType> ParsedTokens;
+  std::vector<Token> ParsedTokensTypes;
+  std::vector<std::string> ParsedTokensTokenValues;
   Token currentToken;
   while ((currentToken = tokenizer.getToken()).type != END_OF_FILE) {
-    ParsedTokens.push_back(currentToken.type);
+    ParsedTokensTypes.push_back(currentToken);
+    // ParsedTokensTokenValues.push_back(currentToken.value);
   }
 
+  // TODO make custom matcher for this, the test failure is horrible for this..
   // clang-format off
-  EXPECT_THAT(ParsedTokens,
+  EXPECT_THAT(ParsedTokensTypes,
               testing::ElementsAre(
                   /* int main() [] { */
-                  INT, IDENTIFER, LEFT_PARENTHESIS, RIGHT_PARENTHESIS, LEFT_BRACKET, RIGHT_BRACKET, LEFT_CURLY_BRACE, 
+                  Token{INT}, Token{IDENTIFER, "main"}, Token{LEFT_PARENTHESIS}, Token{RIGHT_PARENTHESIS}, Token{LEFT_BRACKET}, Token{RIGHT_BRACKET}, Token{LEFT_CURLY_BRACE}, 
                   
-                  /* int a = 1 */
-                  INT, IDENTIFER, EQUAL, INTEGER_LITERAL,
+                  /* int a = "ab\"c" */
+                  Token{INT}, Token{IDENTIFER, "a"}, Token{EQUAL}, Token{STRING_LITERAL, R"(ab"c)"},
                   
                   /* if(1) { */
-                  IF, LEFT_PARENTHESIS, INTEGER_LITERAL, RIGHT_PARENTHESIS, LEFT_CURLY_BRACE,
+                  Token{IF}, Token{LEFT_PARENTHESIS}, Token{INTEGER_LITERAL, "1"}, Token{RIGHT_PARENTHESIS}, Token{LEFT_CURLY_BRACE},
                   
                   /*  string b */
-                  STRING, IDENTIFER,
+                  Token{STRING}, Token{IDENTIFER, "b"},
 
                   /* } */
-                  RIGHT_CURLY_BRACE,
+                  Token{RIGHT_CURLY_BRACE},
                   
                   /* else { */
-                  ELSE, LEFT_CURLY_BRACE,
+                  Token{ELSE}, Token{LEFT_CURLY_BRACE},
                   
                   /* string a */
-                  STRING, IDENTIFER,
+                  Token{STRING}, Token{IDENTIFER, "a"},
 
                   /* } */
-                  RIGHT_CURLY_BRACE,
+                  Token{RIGHT_CURLY_BRACE},
                   
                   /* return 1*/
-                  RETURN, INTEGER_LITERAL,
+                  Token{RETURN}, Token{INTEGER_LITERAL, "1"},
 
                   /* } */
-                  RIGHT_CURLY_BRACE));
-  // clang-format on
+                  Token{RIGHT_CURLY_BRACE}));
+    // clang-format on
 }
 
-// TODO Create one test per internal getter, something smaller that tries everything that could be inside.
+// TODO Create one test per internal getter, something smaller that tries
+// everything that could be inside.

@@ -41,6 +41,7 @@ Token Tokenizer::getReservedOrIdentifier() {
 
   if (reserverdTypeToToken.contains(token.value)) {
     token.type = reserverdTypeToToken.at(token.value);
+    token.value = "";
   } else {
     token.type = TokenType::IDENTIFER;
   }
@@ -89,6 +90,7 @@ Token Tokenizer::getStringLiteral() {
     
     if(currentChar == '\\'){
       escapeCharacter = true;
+      token.value += getNext();
       continue;
     }
 
@@ -100,6 +102,7 @@ Token Tokenizer::getStringLiteral() {
     token.value += currentChar;
   } while (escapeCharacter || currentChar != '"');
 
+  currentChar = getNext();
   return token;
 }
 
