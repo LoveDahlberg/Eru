@@ -26,7 +26,8 @@ struct Token {
     if (other.type != type) {
       std::cout << std::format(
           "Token equality: type '{}' is not equal to expected type '{}'\n",
-          std::to_string(other.type), std::to_string(type));
+          std::to_string(static_cast<int>(other.type)),
+          std::to_string(static_cast<int>(type)));
       success = false;
     }
     return success;

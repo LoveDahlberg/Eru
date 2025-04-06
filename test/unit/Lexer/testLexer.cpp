@@ -18,7 +18,7 @@ using tokenHandlingLambda = std::function<void(const Token &)>;
 void getAllTokens(tokenHandlingLambda &&lambda, std::string stream) {
   Tokenizer tokenizer(stream);
   Token currentToken;
-  while ((currentToken = tokenizer.getToken()).type != END_OF_FILE) {
+  while ((currentToken = tokenizer.getToken()).type != TokenType::END_OF_FILE) {
     lambda(currentToken);
   }
 }
@@ -54,39 +54,39 @@ TEST(Lexer, BasicTokenization) {
   // clang-format off
   EXPECT_THAT(ParsedTokensTypes,
               testing::ElementsAre(
-                  Token{NEWLINE}, Token{NEWLINE},
+                  Token{TokenType::NEWLINE}, Token{TokenType::NEWLINE},
 
                   /* int main() [] { */
-                  Token{INT}, Token{IDENTIFER, "main"}, Token{LEFT_PARENTHESIS}, Token{RIGHT_PARENTHESIS},
-                  Token{LEFT_BRACKET}, Token{RIGHT_BRACKET}, Token{LEFT_CURLY_BRACE}, Token{NEWLINE}, 
+                  Token{TokenType::INT}, Token{TokenType::IDENTIFER, "main"}, Token{TokenType::LEFT_PARENTHESIS}, Token{TokenType::RIGHT_PARENTHESIS},
+                  Token{TokenType::LEFT_BRACKET}, Token{TokenType::RIGHT_BRACKET}, Token{TokenType::LEFT_CURLY_BRACE}, Token{TokenType::NEWLINE}, 
                   
                   /* int a = "ab\"c" */
-                  Token{INT}, Token{IDENTIFER, "a"}, Token{EQUAL}, Token{STRING_LITERAL, R"(ab"c)"}, Token{NEWLINE}, 
+                  Token{TokenType::INT}, Token{TokenType::IDENTIFER, "a"}, Token{TokenType::EQUAL}, Token{TokenType::STRING_LITERAL, R"(ab"c)"}, Token{TokenType::NEWLINE}, 
                   
                   /* if(1) { */
-                  Token{IF}, Token{LEFT_PARENTHESIS}, Token{INTEGER_LITERAL, "1"}, Token{RIGHT_PARENTHESIS},
-                  Token{LEFT_CURLY_BRACE}, Token{NEWLINE}, 
+                  Token{TokenType::IF}, Token{TokenType::LEFT_PARENTHESIS}, Token{TokenType::INTEGER_LITERAL, "1"}, Token{TokenType::RIGHT_PARENTHESIS},
+                  Token{TokenType::LEFT_CURLY_BRACE}, Token{TokenType::NEWLINE}, 
                   
                   /*  string b */
-                  Token{STRING}, Token{IDENTIFER, "b"}, Token{NEWLINE}, 
+                  Token{TokenType::STRING}, Token{TokenType::IDENTIFER, "b"}, Token{TokenType::NEWLINE}, 
 
                   /* } */
-                  Token{RIGHT_CURLY_BRACE}, Token{NEWLINE}, 
+                  Token{TokenType::RIGHT_CURLY_BRACE}, Token{TokenType::NEWLINE}, 
                   
                   /* else { */
-                  Token{ELSE}, Token{LEFT_CURLY_BRACE}, Token{NEWLINE}, 
+                  Token{TokenType::ELSE}, Token{TokenType::LEFT_CURLY_BRACE}, Token{TokenType::NEWLINE}, 
                   
                   /* string a */
-                  Token{STRING}, Token{IDENTIFER, "a"}, Token{NEWLINE}, 
+                  Token{TokenType::STRING}, Token{TokenType::IDENTIFER, "a"}, Token{TokenType::NEWLINE}, 
 
                   /* } */
-                  Token{RIGHT_CURLY_BRACE}, Token{NEWLINE}, Token{NEWLINE}, 
+                  Token{TokenType::RIGHT_CURLY_BRACE}, Token{TokenType::NEWLINE}, Token{TokenType::NEWLINE}, 
                   
                   /* return 1*/
-                  Token{RETURN}, Token{INTEGER_LITERAL, "1"}, Token{NEWLINE}, 
+                  Token{TokenType::RETURN}, Token{TokenType::INTEGER_LITERAL, "1"}, Token{TokenType::NEWLINE}, 
 
                   /* } */
-                  Token{RIGHT_CURLY_BRACE}, Token{NEWLINE}, Token{NEWLINE}));
+                  Token{TokenType::RIGHT_CURLY_BRACE}, Token{TokenType::NEWLINE}, Token{TokenType::NEWLINE}));
   // clang-format on
 }
 
@@ -149,7 +149,7 @@ TEST(Lexer, TestNewLines) {
   int numberOfNewlines = 0;
   getAllTokens(
       [&numberOfNewlines](const Token currentToken) {
-        if (currentToken.type == Lexer::NEWLINE) {
+        if (currentToken.type == TokenType::NEWLINE) {
           ++numberOfNewlines;
           EXPECT_TRUE(currentToken.value.empty());
         }
