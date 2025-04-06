@@ -1,16 +1,18 @@
-// stdlib
-#include "Lexer/Tokens.h"
+// stl
 #include <cassert>
 #include <cctype>
-
-#include <Lexer/Lexer.h>
 #include <string>
 
-using namespace Lexer;
+// include
+#include <Support/Constants.h>
+#include <Lexer/Tokens.h>
+#include <Lexer/Lexer.h>
 
-// TODO, get next and lookahead could be an object used by the tokenizer
+using namespace Lexing;
+
+// TODO, get next and lookahead could be an object used by the lexer
 // It could be attached to the 'input' object itself.
-int Tokenizer::getNext() {
+int Lexer::getNext() {
   if (index >= input.size()) {
     return EOF;
   }
@@ -19,7 +21,7 @@ int Tokenizer::getNext() {
   return input[++index];
 }
 
-int Tokenizer::getCurrent() {
+int Lexer::getCurrent() {
   if (index >= input.size()) {
     return EOF;
   }
@@ -27,7 +29,7 @@ int Tokenizer::getCurrent() {
   return input[index];
 }
 
-int Tokenizer::lookAhead() {
+int Lexer::lookAhead() {
   // What to do here?
   if (index >= input.size()) {
     return EOF;
@@ -38,7 +40,7 @@ int Tokenizer::lookAhead() {
 }
 
 // TODO all getters could be could be part of a token builder object.
-Token Tokenizer::getReservedOrIdentifier() {
+Token Lexer::getReservedOrIdentifier() {
   auto token = Token();
 
   // TODO make this accept identifers with special characters that are
@@ -57,10 +59,11 @@ Token Tokenizer::getReservedOrIdentifier() {
   return token;
 }
 
-Token Tokenizer::getNumber() {
+Token Lexer::getNumber() {
   auto token = Token();
   token.type = TokenType::INTEGER_LITERAL;
 
+  // TODO add loopLimit
   do {
     token.value += currentChar;
     currentChar = getNext();
@@ -72,7 +75,7 @@ Token Tokenizer::getNumber() {
   return token;
 }
 
-void Tokenizer::skipComment() {
+void Lexer::skipComment() {
   if (lookAhead() == '*') {
     currentChar = getNext();
     while (currentChar != EOF) {
@@ -91,10 +94,11 @@ void Tokenizer::skipComment() {
   }
 }
 
-Token Tokenizer::getStringLiteral() {
+Token Lexer::getStringLiteral() {
   Token token;
   token.type = TokenType::STRING_LITERAL;
 
+  // TODO add loopLimit
   bool escapeCharacter;
   do {
     escapeCharacter = false;
@@ -118,18 +122,18 @@ Token Tokenizer::getStringLiteral() {
   return token;
 }
 
-bool Tokenizer::isSeparatorOrOperatorToken() {
+bool Lexer::isSeparatorOrOperatorToken() {
   return separatorOperatorToToken.contains(currentChar);
 }
 
-Token Tokenizer::getSeparatorOrOperatorToken() {
+Token Lexer::getSeparatorOrOperatorToken() {
   Token token;
   token.type = separatorOperatorToToken.at(currentChar);
   currentChar = getNext();
   return token;
 }
 
-Token Tokenizer::getNewline() {
+Token Lexer::getNewline() {
   Token token;
   token.type = TokenType::NEWLINE;
 
@@ -137,13 +141,13 @@ Token Tokenizer::getNewline() {
   return token;
 }
 
-Token Tokenizer::getEndOfFile() {
+Token Lexer::getEndOfFile() {
   Token token;
   token.type = TokenType::END_OF_FILE;
   return token;
 }
 
-Token Tokenizer::getUnknown() {
+Token Lexer::getUnknown() {
   Token token;
   token.value = currentChar;
   currentChar = getNext();
@@ -154,7 +158,7 @@ bool isNewline(int currentChar) {
   return currentChar == '\n' || currentChar == '\r';
 }
 
-Token Tokenizer::getToken() {
+Token Lexer::getNextToken() {
   currentChar = getCurrent();
   while (isspace(currentChar)) {
     if (isNewline(currentChar)) {
@@ -177,7 +181,7 @@ Token Tokenizer::getToken() {
 
   if (currentChar == '/') {
     skipComment();
-    return getToken();
+    return getNextToken();
   }
 
   if (isSeparatorOrOperatorToken()) {

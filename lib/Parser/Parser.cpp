@@ -1,32 +1,22 @@
 
 // stl
-
-#include "AST/Declaration.h"
 #include "AST/Types.h"
-#include <memory>
+#include "Lexer/Tokens.h"
 #include <optional>
 #include <string>
+#include <vector>
 
 // include
-#include <AST/Top.h>
-#include <Lexer/Lexer.h>
-#include <Lexer/Tokens.h>
+#include <Parser/Parser.h>
+#include <Support/Constants.h>
 #include <Support/Log.h>
 
 // llvm
 #include <llvm/Support/Error.h>
-#include <vector>
-
-using namespace Lexer;
-using namespace AST;
 
 namespace Parser {
 
-// TODO either move this to a class or make the API here better
-static Token token;
-static TokenCategory tokenCategory;
-static Tokenizer *tokenizer;
-
+// TODO move this to a printing file
 constexpr auto topParsingName = "TopParsing";
 constexpr auto declarationParsingName = "DeclarationParsing";
 constexpr auto directiveParsingName = "DirectiveParsing";
@@ -40,94 +30,164 @@ void printParsing(const char *parsingFunctionName, TokenCategory tokenCategory,
            std::to_string(static_cast<int>(token.type)), token.value);
 }
 
-bool ParseDirective(Top &top) {
-  return false;
-}
+bool ParseDirective(Top &top) { return false; }
 
-std::optional<Types::Identifier> ParseIdentifier() {
-  token = tokenizer->getToken();
-  return std::nullopt;
-}
-
-std::optional<Types::Type> ParseType() {
-  token = tokenizer->getToken();
-  switch (token.type) {
-  case TokenType::INT:
-    return Types::Int(std::stoi(token.value));
-  case TokenType::IDENTIFER:
-  case TokenType::SIGNED_INT_32:
-  case TokenType::UNSIGNED_INT_32:
-  case TokenType::BOOl:
-  case TokenType::STRING:
-  case TokenType::CHAR:
-    // Create each unique type
-    break;
-  default:
-    printParsing(typeParsingName, TokenCategory::TYPE, token);
-    break;
+std::optional<Types::Identifier> ParseIdentifier(Lexer &lexer) {
+  if (lexer.getCurrentToken().type != TokenType::IDENTIFER) {
+    // err
+    return std::nullopt;
   }
 
-  return std::nullopt;
+  auto identifier = Types::Identifier(lexer.getCurrentToken().value);
+
+  // Get next, current type saved.
+  lexer.generateNextToken();
+  return identifier;
 }
 
-std::optional<std::vector<Declaration::Declaration>> ParseParameters() {
-  token = tokenizer->getToken();
-  return std::nullopt;
+std::optional<Types::Type> ParseType(Lexer &lexer) {
+
+  Types::Type type;
+
+  switch (lexer.getCurrentToken().type) {
+  case TokenType::INT:
+    type = Types::Int();
+    break;
+  case TokenType::IDENTIFER:
+    type = Types::Identifier(lexer.getCurrentToken().value);
+    break;
+  case TokenType::SIGNED_INT_32:
+    type = Types::SingedInt32();
+    break;
+  case TokenType::UNSIGNED_INT_32:
+    type = Types::UnsignedInt32();
+    break;
+  case TokenType::BOOl:
+    type = Types::Bool();
+    break;
+  case TokenType::STRING:
+    type = Types::String();
+    break;
+  case TokenType::CHAR:
+    type = Types::Char();
+    break;
+  default:
+    // err
+    return std::nullopt;
+  }
+
+  // Get next, current type saved.
+  lexer.generateNextToken();
+  return type;
 }
 
-bool ParseFunctionDefinition(Top &top, const Types::Type &type,
+std::optional<Declaration::Declaration> ParseVariableDeclaration(Lexer &lexer) {
+  auto type = ParseType(lexer);
+  if (!type) {
+    // err
+    return std::nullopt;
+  }
+
+  auto identifier = ParseIdentifier(lexer);
+  if (!identifier) {
+    // err
+    return std::nullopt;
+  }
+
+  return Declaration::VariableDeclaration(*type, *identifier);
+}
+
+std::optional<std::vector<Declaration::Declaration>>
+ParseParameters(Lexer &lexer) {
+
+  std::vector<Declaration::Declaration> parameters;
+  if (lexer.getCurrentToken().type == TokenType::RIGHT_PARENTHESIS) {
+    return parameters;
+  }
+
+  int loopCounter = 0;
+  do {
+    auto parameterDeclaration = ParseVariableDeclaration(lexer);
+    if (!parameterDeclaration) {
+      // err
+      return std::nullopt;
+    }
+    parameters.push_back(*parameterDeclaration);
+
+    if (lexer.getCurrentToken().type == TokenType::RIGHT_PARENTHESIS) {
+      break;
+    }
+
+    if (lexer.getCurrentToken().type != TokenType::COMMA) {
+      // err
+      return std::nullopt;
+    }
+
+    // Eat the ,
+    lexer.generateNextToken();
+  } while (loopCounter++ < loopLimit);
+
+  return parameters;
+}
+
+bool ParseFunctionDefinition(Lexer &lexer, Top &top, const Types::Type &type,
                              const Types::Identifier &identifier,
                              std::vector<Declaration::Declaration> parameters) {
-  return false;
+  return true;
 }
 
-bool ParseFunctionDefinitionOrDeclaration(Top &top, const Types::Type &type,
+bool ParseFunctionDefinitionOrDeclaration(Lexer &lexer, Top &top,
+                                          const Types::Type &type,
                                           const Types::Identifier &identifier) {
-  // Eat the (
-  token = tokenizer->getToken();
-  auto paramaters = ParseParameters();
+  // eat the (
+  lexer.generateNextToken();
+
+  auto paramaters = ParseParameters(lexer);
   if (!paramaters) {
     // err
     return false;
   }
 
-  if (token.type != TokenType::RIGHT_PARENTHESIS) {
+  // TODO strictly not needed, as a valid ParseParameters will leave the
+  // parenthesis here. But its more correct to check it here too.
+  if (lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
     // err
     return false;
   }
 
-  // Eat the )
-  token = tokenizer->getToken();
-  if (token.type == TokenType::NEWLINE) {
+  // eat the )
+  lexer.generateNextToken();
+
+  if (lexer.getCurrentToken().type == TokenType::NEWLINE) {
     top.declarations.emplace_back(
         Declaration::FunctionDeclaration(type, identifier, *paramaters));
     return true;
   }
 
-  return ParseFunctionDefinition(top, type, identifier, *paramaters);
+  return ParseFunctionDefinition(lexer, top, type, identifier, *paramaters);
 }
 
-bool ParseDeclarationOrFunction(Top &top) {
-  auto type = ParseType();
+bool ParseDeclarationOrFunction(Lexer &lexer, Top &top) {
+  auto type = ParseType(lexer);
   if (!type) {
     // err
     return false;
   }
 
-  auto identifier = ParseIdentifier();
+  auto identifier = ParseIdentifier(lexer);
   if (!identifier) {
     // err
     return false;
   }
 
-  switch (token.type) {
+  switch (lexer.getCurrentToken().type) {
   case TokenType::NEWLINE:
     top.declarations.emplace_back(
         Declaration::VariableDeclaration(*type, *identifier));
     return true;
   // Function declaration or defition
   case TokenType::LEFT_PARENTHESIS:
-    return ParseFunctionDefinitionOrDeclaration(top, *type, *identifier);
+    return ParseFunctionDefinitionOrDeclaration(lexer, top, *type, *identifier);
     break;
   default:
     // err
@@ -136,32 +196,38 @@ bool ParseDeclarationOrFunction(Top &top) {
 }
 
 // TODO improve error handling
-Top ParseTop(Tokenizer &passedTokenizer) {
+Top ParseTop(Lexer &lexer) {
   Top top{};
 
-  tokenizer = &passedTokenizer;
-
-  for (;;) {
-    token = tokenizer->getToken();
-    tokenCategory = tokenTypeToCategory.at(token.type);
+  int loopCounter = 0;
+  do {
+    auto tokenCategory = tokenTypeToCategory.at(lexer.generateNextToken().type);
     switch (tokenCategory) {
     case TokenCategory::SEPARATOR:
-      if(ParseDirective(top)){
+      if (lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
+        continue;
+      }
+
+      if (ParseDirective(top)) {
         continue;
       }
       break;
     case TokenCategory::TYPE:
-      if (ParseDeclarationOrFunction(top)) {
+      if (ParseDeclarationOrFunction(lexer, top)) {
         continue;
       }
       break;
     default:
-      printParsing(topParsingName, tokenCategory, token);
+      if (lexer.getCurrentToken().type == TokenType::END_OF_FILE) {
+        break;
+      }
+      // err
+      printParsing(topParsingName, tokenCategory, lexer.getCurrentToken());
       break;
     }
     // Break the main loop
     break;
-  }
+  } while (loopCounter++ < loopLimit);
 
   return top;
 }

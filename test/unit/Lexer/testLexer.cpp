@@ -11,14 +11,14 @@
 #include <unordered_map>
 #include <vector>
 
-using namespace Lexer;
+using namespace Lexing;
 
 using tokenHandlingLambda = std::function<void(const Token &)>;
 
 void getAllTokens(tokenHandlingLambda &&lambda, std::string stream) {
-  Tokenizer tokenizer(stream);
+  Lexer lexer(stream);
   Token currentToken;
-  while ((currentToken = tokenizer.getToken()).type != TokenType::END_OF_FILE) {
+  while ((currentToken = lexer.generateNextToken()).type != TokenType::END_OF_FILE) {
     lambda(currentToken);
   }
 }

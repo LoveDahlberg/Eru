@@ -11,6 +11,7 @@ include_directories(${CMAKE_SOURCE_DIR}/lib)
 
 add_subdirectory(Lexer)
 add_subdirectory(Support)
+add_subdirectory(Parser)
 
 # Add a custom target for running all unit tests
 add_custom_target(unittests

@@ -3,7 +3,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace Lexer {
+namespace Lexing {
 
 enum class TokenType {
   NONE,
@@ -30,7 +30,7 @@ enum class TokenType {
   NEWLINE,
 
   // Data type, sint32, uint32, bool, string, char
-  INT,
+  INT, // TODO, int is currently the same as SIGNED_INT_32. THis is stupid
   SIGNED_INT_32,
   UNSIGNED_INT_32,
   BOOl,
@@ -92,41 +92,41 @@ enum class TokenCategory {
   LITERAL,
 };
 
-const std::unordered_map<TokenType, TokenCategory> tokenTypeToCategory {
-  {TokenType::NONE, TokenCategory::NONE},
+const std::unordered_map<TokenType, TokenCategory> tokenTypeToCategory{
+    {TokenType::NONE, TokenCategory::NONE},
 
-      {TokenType::IDENTIFER, TokenCategory::TYPE},
+    {TokenType::IDENTIFER, TokenCategory::TYPE},
 
-      {TokenType::IF, TokenCategory::KEYWORD},
-      {TokenType::ELSE, TokenCategory::KEYWORD},
-      {TokenType::ELIF, TokenCategory::KEYWORD},
-      {TokenType::RETURN, TokenCategory::KEYWORD},
-      {TokenType::OR, TokenCategory::KEYWORD},
-      {TokenType::AND, TokenCategory::KEYWORD},
+    {TokenType::IF, TokenCategory::KEYWORD},
+    {TokenType::ELSE, TokenCategory::KEYWORD},
+    {TokenType::ELIF, TokenCategory::KEYWORD},
+    {TokenType::RETURN, TokenCategory::KEYWORD},
+    {TokenType::OR, TokenCategory::KEYWORD},
+    {TokenType::AND, TokenCategory::KEYWORD},
 
-      {TokenType::LEFT_PARENTHESIS, TokenCategory::SEPARATOR},
-      {TokenType::RIGHT_PARENTHESIS, TokenCategory::SEPARATOR},
-      {TokenType::LEFT_CURLY_BRACE, TokenCategory::SEPARATOR},
-      {TokenType::RIGHT_CURLY_BRACE, TokenCategory::SEPARATOR},
-      {TokenType::LEFT_BRACKET, TokenCategory::SEPARATOR},
-      {TokenType::RIGHT_BRACKET, TokenCategory::SEPARATOR},
-      {TokenType::COMMA, TokenCategory::SEPARATOR},
-      {TokenType::NEWLINE, TokenCategory::SEPARATOR},
+    {TokenType::LEFT_PARENTHESIS, TokenCategory::SEPARATOR},
+    {TokenType::RIGHT_PARENTHESIS, TokenCategory::SEPARATOR},
+    {TokenType::LEFT_CURLY_BRACE, TokenCategory::SEPARATOR},
+    {TokenType::RIGHT_CURLY_BRACE, TokenCategory::SEPARATOR},
+    {TokenType::LEFT_BRACKET, TokenCategory::SEPARATOR},
+    {TokenType::RIGHT_BRACKET, TokenCategory::SEPARATOR},
+    {TokenType::COMMA, TokenCategory::SEPARATOR},
+    {TokenType::NEWLINE, TokenCategory::SEPARATOR},
 
-      {TokenType::INT, TokenCategory::TYPE},
-      {TokenType::SIGNED_INT_32, TokenCategory::TYPE},
-      {TokenType::UNSIGNED_INT_32, TokenCategory::TYPE},
-      {TokenType::BOOl, TokenCategory::TYPE},
-      {TokenType::STRING, TokenCategory::TYPE},
-      {TokenType::CHAR, TokenCategory::TYPE},
+    {TokenType::INT, TokenCategory::TYPE},
+    {TokenType::SIGNED_INT_32, TokenCategory::TYPE},
+    {TokenType::UNSIGNED_INT_32, TokenCategory::TYPE},
+    {TokenType::BOOl, TokenCategory::TYPE},
+    {TokenType::STRING, TokenCategory::TYPE},
+    {TokenType::CHAR, TokenCategory::TYPE},
 
-      {TokenType::PLUS, TokenCategory::OPERATOR},
-      {TokenType::MINUS, TokenCategory::OPERATOR},
-      {TokenType::EQUAL, TokenCategory::OPERATOR},
+    {TokenType::PLUS, TokenCategory::OPERATOR},
+    {TokenType::MINUS, TokenCategory::OPERATOR},
+    {TokenType::EQUAL, TokenCategory::OPERATOR},
 
-      {TokenType::INTEGER_LITERAL, TokenCategory::LITERAL},
-      {TokenType::STRING_LITERAL, TokenCategory::LITERAL},
-      {TokenType::END_OF_FILE, TokenCategory::NONE},
+    {TokenType::INTEGER_LITERAL, TokenCategory::LITERAL},
+    {TokenType::STRING_LITERAL, TokenCategory::LITERAL},
+    {TokenType::END_OF_FILE, TokenCategory::NONE},
 };
 
-} // namespace Lexer
+} // namespace Lexing

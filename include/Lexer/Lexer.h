@@ -7,7 +7,7 @@
 
 #include <Lexer/Tokens.h>
 
-namespace Lexer {
+namespace Lexing {
 
 struct Token {
   TokenType type = TokenType::NONE;
@@ -34,13 +34,22 @@ struct Token {
   };
 };
 
-class Tokenizer {
+class Lexer {
 public:
-  Tokenizer(const std::string &input) : input(input) {}
+  Lexer(const std::string &input) : input(input) {}
 
-  Token getToken();
+  Token generateNextToken(){
+    currentToken = getNextToken();
+    return currentToken;
+  }
+
+  Token getCurrentToken(){
+    return currentToken;
+  }
 
 private:
+  Token getNextToken();
+
   int lookAhead();
   int getNext();
   int getCurrent();
@@ -55,10 +64,10 @@ private:
   Token getEndOfFile();
   Token getUnknown();
 
-private:
   const std::string input;
   long long unsigned index = 0;
   int currentChar = ' ';
+  Token currentToken;
 };
 
-} // namespace Lexer
+} // namespace Lexing
