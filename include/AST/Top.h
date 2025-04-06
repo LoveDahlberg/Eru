@@ -18,7 +18,7 @@ struct Top : public AST {
   }
 
   std::vector<Declaration::Declaration> declarations;
-  //   std::vector<Declaration::Declaration> directives;
+  std::vector<Declaration::Declaration> directives;
   //   std::vector<Declaration::Declaration> functions;
 };
 

@@ -8,19 +8,19 @@ namespace AST::Declaration {
 
 class Declaration : public AST {
 public:
-  Declaration(const Types::Type &type, const std::string &name)
+  Declaration(const Types::Type &type, const Types::Identifier &name)
       : type(type), name(name) {}
 
   llvm::Value *codegen() { return nullptr; }
 
 private:
   Types::Type type;
-  std::string name;
+  Types::Identifier name;
 };
 
 class VariableDeclaration : public Declaration {
 public:
-  VariableDeclaration(const Types::Type &type, const std::string &name)
+  VariableDeclaration(const Types::Type &type, const Types::Identifier &name)
       : Declaration(type, name) {}
 
   llvm::Value *codegen() { return nullptr; }
@@ -28,11 +28,11 @@ public:
 
 class FunctionDeclaration : public Declaration {
 public:
-  FunctionDeclaration(const Types::Type &type, const std::string &name,
+  FunctionDeclaration(const Types::Type &type, const Types::Identifier &name,
                       std::vector<Declaration> parameters)
       : Declaration(type, name), parameters(parameters) {}
 
-  FunctionDeclaration(const Types::Type &type, const std::string &name)
+  FunctionDeclaration(const Types::Type &type, const Types::Identifier &name)
       : Declaration(type, name) {}
 
   llvm::Value *codegen() { return nullptr; }

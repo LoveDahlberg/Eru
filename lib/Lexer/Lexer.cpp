@@ -59,7 +59,7 @@ Token Tokenizer::getReservedOrIdentifier() {
 
 Token Tokenizer::getNumber() {
   auto token = Token();
-  token.type = INTEGER_LITERAL;
+  token.type = TokenType::INTEGER_LITERAL;
 
   do {
     token.value += currentChar;
@@ -93,7 +93,7 @@ void Tokenizer::skipComment() {
 
 Token Tokenizer::getStringLiteral() {
   Token token;
-  token.type = STRING_LITERAL;
+  token.type = TokenType::STRING_LITERAL;
 
   bool escapeCharacter;
   do {
@@ -131,7 +131,7 @@ Token Tokenizer::getSeparatorOrOperatorToken() {
 
 Token Tokenizer::getNewline() {
   Token token;
-  token.type = NEWLINE;
+  token.type = TokenType::NEWLINE;
 
   currentChar = getNext();
   return token;
@@ -139,7 +139,7 @@ Token Tokenizer::getNewline() {
 
 Token Tokenizer::getEndOfFile() {
   Token token;
-  token.type = END_OF_FILE;
+  token.type = TokenType::END_OF_FILE;
   return token;
 }
 

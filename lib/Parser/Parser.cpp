@@ -1,21 +1,31 @@
 
 // stl
 
+#include "AST/Declaration.h"
+#include "AST/Types.h"
+#include <memory>
+#include <optional>
 #include <string>
 
 // include
+#include <AST/Top.h>
 #include <Lexer/Lexer.h>
 #include <Lexer/Tokens.h>
 #include <Support/Log.h>
-#include <AST/Top.h>
 
 // llvm
-#include <llvm/Support/Error.h> // For llvm::Expected
+#include <llvm/Support/Error.h>
+#include <vector>
 
 using namespace Lexer;
 using namespace AST;
 
 namespace Parser {
+
+// TODO either move this to a class or make the API here better
+static Token token;
+static TokenCategory tokenCategory;
+static Tokenizer *tokenizer;
 
 constexpr auto topParsingName = "TopParsing";
 constexpr auto declarationParsingName = "DeclarationParsing";
@@ -30,21 +40,21 @@ void printParsing(const char *parsingFunctionName, TokenCategory tokenCategory,
            std::to_string(static_cast<int>(token.type)), token.value);
 }
 
-void DirectiveParsing(Tokenizer &tokenizer, const Token &token) {
-  switch (token.type) {}
+bool ParseDirective(Top &top) {
+  return false;
 }
 
-void DeclarationParsing(Tokenizer &tokenizer, const Token &token) {
-  switch (token.type) {}
+std::optional<Types::Identifier> ParseIdentifier() {
+  token = tokenizer->getToken();
+  return std::nullopt;
 }
 
-llvm::Expected<Types::Type> TypeParsing(Tokenizer &tokenizer, const Token &token) {
-  
-  Types::Type type;
-  
+std::optional<Types::Type> ParseType() {
+  token = tokenizer->getToken();
   switch (token.type) {
-  case TokenType::IDENTIFER:
   case TokenType::INT:
+    return Types::Int(std::stoi(token.value));
+  case TokenType::IDENTIFER:
   case TokenType::SIGNED_INT_32:
   case TokenType::UNSIGNED_INT_32:
   case TokenType::BOOl:
@@ -57,25 +67,94 @@ llvm::Expected<Types::Type> TypeParsing(Tokenizer &tokenizer, const Token &token
     break;
   }
 
-  return type;
+  return std::nullopt;
 }
 
-Top TopParsing(Tokenizer &tokenizer) {
+std::optional<std::vector<Declaration::Declaration>> ParseParameters() {
+  token = tokenizer->getToken();
+  return std::nullopt;
+}
+
+bool ParseFunctionDefinition(Top &top, const Types::Type &type,
+                             const Types::Identifier &identifier,
+                             std::vector<Declaration::Declaration> parameters) {
+  return false;
+}
+
+bool ParseFunctionDefinitionOrDeclaration(Top &top, const Types::Type &type,
+                                          const Types::Identifier &identifier) {
+  // Eat the (
+  token = tokenizer->getToken();
+  auto paramaters = ParseParameters();
+  if (!paramaters) {
+    // err
+    return false;
+  }
+
+  if (token.type != TokenType::RIGHT_PARENTHESIS) {
+    // err
+    return false;
+  }
+
+  // Eat the )
+  token = tokenizer->getToken();
+  if (token.type == TokenType::NEWLINE) {
+    top.declarations.emplace_back(
+        Declaration::FunctionDeclaration(type, identifier, *paramaters));
+    return true;
+  }
+
+  return ParseFunctionDefinition(top, type, identifier, *paramaters);
+}
+
+bool ParseDeclarationOrFunction(Top &top) {
+  auto type = ParseType();
+  if (!type) {
+    // err
+    return false;
+  }
+
+  auto identifier = ParseIdentifier();
+  if (!identifier) {
+    // err
+    return false;
+  }
+
+  switch (token.type) {
+  case TokenType::NEWLINE:
+    top.declarations.emplace_back(
+        Declaration::VariableDeclaration(*type, *identifier));
+    return true;
+  // Function declaration or defition
+  case TokenType::LEFT_PARENTHESIS:
+    return ParseFunctionDefinitionOrDeclaration(top, *type, *identifier);
+    break;
+  default:
+    // err
+    return false;
+  }
+}
+
+// TODO improve error handling
+Top ParseTop(Tokenizer &passedTokenizer) {
   Top top{};
 
-  Token token;
-  TokenCategory tokenCategory;
+  tokenizer = &passedTokenizer;
+
   for (;;) {
-    token = tokenizer.getToken();
+    token = tokenizer->getToken();
     tokenCategory = tokenTypeToCategory.at(token.type);
     switch (tokenCategory) {
     case TokenCategory::SEPARATOR:
-      DirectiveParsing(tokenizer, token);
-      continue;
+      if(ParseDirective(top)){
+        continue;
+      }
+      break;
     case TokenCategory::TYPE:
-      auto type = TypeParsing(tokenizer, token);
-      if
-      continue;
+      if (ParseDeclarationOrFunction(top)) {
+        continue;
+      }
+      break;
     default:
       printParsing(topParsingName, tokenCategory, token);
       break;
