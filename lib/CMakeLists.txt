@@ -12,9 +12,25 @@ add_library(FileReader STATIC
 target_include_directories(FileReader PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(FileReader PRIVATE ${llvm_libs})
 
-# Create a library target for FileReader
+# Create a library target for AST
+add_library(AST STATIC
+    AST/Declaration.cpp
+    AST/Top.cpp
+    AST/Types.cpp
+)
+target_include_directories(AST PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(AST PRIVATE ${llvm_libs})
+
+# Create a library target for IR
+add_library(IR STATIC
+    IR/IRGenerator.cpp
+)
+target_include_directories(IR PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(IR PRIVATE ${llvm_libs} AST)
+
+# Create a library target for Parser
 add_library(Parser STATIC
     Parser/Parser.cpp
 )
 target_include_directories(Parser PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(Parser PRIVATE ${llvm_libs} Lexer)
+target_link_libraries(Parser PRIVATE ${llvm_libs} Lexer IR) 

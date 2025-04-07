@@ -1,15 +1,15 @@
 # Create the test executable
-add_executable(testParser testParser.cpp)
+add_executable(testIRGenerator testIRGenerator.cpp)
 
 # Link against local GTest installation
-target_link_libraries(testParser PRIVATE 
+target_link_libraries(testIRGenerator PRIVATE 
     GTest::GTest 
     GTest::Main
     Threads::Threads
     # Add linking agains the specific lib.
-    Parser
     IR
+    AST
 )
 
 # Register the test with CTest
-add_test(NAME Parser COMMAND testParser)
+add_test(NAME IR COMMAND testIRGenerator)

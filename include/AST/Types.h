@@ -12,7 +12,7 @@ namespace AST::Types {
 // Its the literals that hold the actual value.
   
 class Type : public AST {
-  llvm::Value *codegen() { return nullptr; }
+  llvm::Value *codegen();
 };
 
 class Int : public Type {
@@ -20,7 +20,7 @@ public:
   Int() = default;
   Int(int value) : value(value) {}
 
-  llvm::Value *codegen() { return nullptr; }
+  llvm::Value *codegen();
 
 private:
   int value;
@@ -31,7 +31,7 @@ public:
   SingedInt32() = default;
   SingedInt32(int32_t value) : value(value) {}
 
-  llvm::Value *codegen() { return nullptr; }
+  llvm::Value *codegen();
 
 private:
   int32_t value;
@@ -42,7 +42,7 @@ public:
   UnsignedInt32() = default;
   UnsignedInt32(uint32_t value) : value(value) {}
 
-  llvm::Value *codegen() { return nullptr; }
+  llvm::Value *codegen();
 
 private:
   uint32_t value;
@@ -53,7 +53,7 @@ public:
   Bool() = default;
   Bool(bool value) : value(value) {}
 
-  llvm::Value *codegen() { return nullptr; }
+  llvm::Value *codegen();
 
 private:
   bool value;
@@ -64,7 +64,7 @@ public:
   String() = default;
   String(std::string value) : value(value) {}
 
-  llvm::Value *codegen() { return nullptr; }
+  llvm::Value *codegen();
 
 private:
   std::string value;
@@ -75,7 +75,7 @@ public:
   Char() = default;
   Char(char value) : value(value) {}
 
-  llvm::Value *codegen() { return nullptr; }
+  llvm::Value *codegen();
 
 private:
   char value;
@@ -85,7 +85,7 @@ class Identifier : public Type {
 public:
   Identifier(std::string name) : name(name) {}
 
-  llvm::Value *codegen() { return nullptr; }
+  llvm::Value *codegen();
 
 private:
   std::string name;

@@ -8,7 +8,7 @@ class Function : public AST {
 public:
   Function() {}
 
-  llvm::Value *codegen() { return nullptr; }
+  llvm::Value *codegen();
 
 private:
 };

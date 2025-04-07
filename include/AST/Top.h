@@ -7,15 +7,8 @@
 
 namespace AST {
 
-struct Top : public AST {
-  llvm::Value *codegen() {
-    std::vector<llvm::Value*> values;
-    for (auto declaration : declarations) {
-      values.emplace_back(declaration.codegen());
-    }
-    // For now do nothing
-    return nullptr;
-  }
+struct Top {
+  std::vector<llvm::Value*> codegen();
 
   std::vector<Declaration::Declaration> declarations;
   std::vector<Declaration::Declaration> directives;

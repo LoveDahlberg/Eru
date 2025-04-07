@@ -11,7 +11,7 @@ public:
   Declaration(const Types::Type &type, const Types::Identifier &name)
       : type(type), name(name) {}
 
-  llvm::Value *codegen() { return nullptr; }
+  llvm::Value *codegen();
 
 private:
   Types::Type type;
@@ -23,7 +23,7 @@ public:
   VariableDeclaration(const Types::Type &type, const Types::Identifier &name)
       : Declaration(type, name) {}
 
-  llvm::Value *codegen() { return nullptr; }
+  llvm::Value *codegen();
 };
 
 class FunctionDeclaration : public Declaration {
@@ -35,7 +35,7 @@ public:
   FunctionDeclaration(const Types::Type &type, const Types::Identifier &name)
       : Declaration(type, name) {}
 
-  llvm::Value *codegen() { return nullptr; }
+  llvm::Value *codegen();
 
 private:
   std::vector<Declaration> parameters;
