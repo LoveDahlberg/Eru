@@ -3,7 +3,7 @@
 
 #include <AST/AST.h>
 #include <AST/Declaration.h>
-#include <llvm-19/llvm/IR/Value.h>
+#include <llvm/IR/Value.h>
 
 namespace AST {
 

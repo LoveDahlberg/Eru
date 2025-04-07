@@ -1,8 +1,12 @@
+// Include
 #include <AST/Types.h>
 
+// llvm
+#include <llvm/IR/Type.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Constants.h>
+
 namespace AST::Types {
-
-
 
 llvm::Value* Type::codegen() {
   return nullptr;
@@ -10,7 +14,10 @@ llvm::Value* Type::codegen() {
 
 
 llvm::Value* Int::codegen() {
-  return nullptr;
+  auto ctx = llvm::LLVMContext();
+  auto type = llvm::Type::getInt32Ty(ctx);
+  auto contvalue = llvm::ConstantInt::get(type, 1);
+  return contvalue;
 }
 
 

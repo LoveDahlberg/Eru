@@ -46,8 +46,9 @@ message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}, ${LLVM_INCLUDE_DIRS}")
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-llvm_map_components_to_libnames(llvm_libs core support irreader)
+llvm_map_components_to_libnames(llvm_libs -19)
 add_compile_definitions(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+add_compile_options(-glldb)
 
 ############################
 # Includes and Libraries

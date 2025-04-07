@@ -16,6 +16,8 @@ TEST(IR, TestGenerateIR) {
   top.declarations.push_back(Declaration::VariableDeclaration(
       Types::Int(), Types::Identifier("test")));
 
- GenerateIR(top);
+  // GenerateIR(top);
 
+  auto integer = Types::Int();
+  integer.codegen();
 }

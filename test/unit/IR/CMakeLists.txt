@@ -1,8 +1,8 @@
 # Create the test executable
-add_executable(testIRGenerator testIRGenerator.cpp)
+add_executable(testIR testIRGenerator.cpp)
 
 # Link against local GTest installation
-target_link_libraries(testIRGenerator PRIVATE 
+target_link_libraries(testIR PRIVATE 
     GTest::GTest 
     GTest::Main
     Threads::Threads
@@ -12,4 +12,4 @@ target_link_libraries(testIRGenerator PRIVATE
 )
 
 # Register the test with CTest
-add_test(NAME IR COMMAND testIRGenerator)
+add_test(NAME testIR COMMAND testIRGenerator)
