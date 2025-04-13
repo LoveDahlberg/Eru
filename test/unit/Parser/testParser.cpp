@@ -10,17 +10,17 @@ using namespace Parser;
 
 TEST(Parser, TestDeclarations) {
   std::string stream = R"(
-    zero first
+    int first
     string second
 
-    third fourth()
+    int fourth()
     int bruh(char one)
     uint32 brotha(sint32 hello, bool world)
     )";
   stream += EOF;
 
   Lexer lexer(stream);
-  auto top = ParseTop(lexer);
+  auto parserItems = ParseTop(lexer);
 
-  EXPECT_EQ(top.declarations.size(), 5);
+  EXPECT_EQ(parserItems.top.declarations.size(), 5);
 }

@@ -8,46 +8,44 @@
 
 namespace AST::Types {
 
-llvm::Value* Type::codegen() {
-  return nullptr;
-}
+// llvm::Type* Type::codegen(llvm::Module* module) {
+//   return nullptr;
+// }
 
 
-llvm::Value* Int::codegen() {
-  auto ctx = llvm::LLVMContext();
-  auto type = llvm::Type::getInt32Ty(ctx);
-  auto contvalue = llvm::ConstantInt::get(type, 1);
-  return contvalue;
-}
+// llvm::Type* Int::codegen(llvm::Module* module) {
+//   auto ctx = llvm::LLVMContext();
+//   return llvm::Type::getInt32Ty(ctx);
+// }
 
 
-llvm::Value* SingedInt32::codegen() {
-  return nullptr;
-}
+// llvm::Type* SingedInt32::codegen(llvm::Module* module) {
+//   return nullptr;
+// }
 
 
-llvm::Value* UnsignedInt32::codegen() {
-  return nullptr;
-}
+// llvm::Type* UnsignedInt32::codegen(llvm::Module* module) {
+//   return nullptr;
+// }
 
 
-llvm::Value* Bool::codegen() {
-  return nullptr;
-}
+// llvm::Type* Bool::codegen(llvm::Module* module) {
+//   return nullptr;
+// }
 
 
-llvm::Value* String::codegen() {
-  return nullptr;
-}
+// llvm::Type* String::codegen(llvm::Module* module) {
+//   return nullptr;
+// }
 
 
-llvm::Value* Char::codegen() {
-  return nullptr;
-}
+// llvm::Type* Char::codegen(llvm::Module* module) {
+//   return nullptr;
+// }
 
 
-llvm::Value* Identifier::codegen() {
-  return nullptr;
-}
+// llvm::Type* Identifier::codegen(llvm::Module* module) {
+//   return nullptr;
+// }
 
 }

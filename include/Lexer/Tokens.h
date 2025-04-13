@@ -85,6 +85,7 @@ const std::unordered_map<char, TokenType> separatorOperatorToToken = {
 
 enum class TokenCategory {
   NONE,
+  IDENTIFER,
   KEYWORD,
   SEPARATOR,
   TYPE,
@@ -95,7 +96,7 @@ enum class TokenCategory {
 const std::unordered_map<TokenType, TokenCategory> tokenTypeToCategory{
     {TokenType::NONE, TokenCategory::NONE},
 
-    {TokenType::IDENTIFER, TokenCategory::TYPE},
+    {TokenType::IDENTIFER, TokenCategory::IDENTIFER},
 
     {TokenType::IF, TokenCategory::KEYWORD},
     {TokenType::ELSE, TokenCategory::KEYWORD},

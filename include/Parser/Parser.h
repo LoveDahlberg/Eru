@@ -1,4 +1,6 @@
 
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include <Lexer/Lexer.h>
 #include <Lexer/Tokens.h>
 
@@ -10,21 +12,34 @@ using namespace AST;
 
 namespace Parser {
 
-std::optional<Types::Identifier> ParseIdentifier(Lexer &lexer);
+struct parserItems {
+  parserItems(Lexer &lexer)
+      : context(new llvm::LLVMContext()), module(new llvm::Module("", *context)),
+        lexer(lexer) {}
+private:
+  llvm::LLVMContext* context;
+public:
+  llvm::Module* module;
+  Lexer lexer;
+  Top top;
+};
 
-std::optional<Types::Type> ParseType(Lexer &lexer);
+std::optional<std::string> ParseIdentifier(parserItems &items);
 
-std::optional<std::vector<Declaration::Declaration>> ParseParameters(Lexer &lexer);
+std::optional<llvm::Type *> ParseType(parserItems &items) ;
 
-bool ParseFunctionDefinition(Lexer &lexer, Top &top, const Types::Type &type,
-                             const Types::Identifier &identifier,
-                             std::vector<Declaration::Declaration> parameters);
+std::optional<std::vector<Declaration::VariableDeclaration>>
+ParseParameters(parserItems &items) ;
 
-bool ParseFunctionDefinitionOrDeclaration(Lexer &lexer, Top &top, const Types::Type &type,
-                                          const Types::Identifier &identifier);
+bool ParseFunctionDefinition(
+  parserItems &items, llvm::Type *type, std::string &identifier,
+  std::vector<Declaration::VariableDeclaration> parameters);
 
-bool ParseDeclarationOrFunction(Lexer &lexer, Top &top);
+bool ParseFunctionDefinitionOrDeclaration(parserItems &items, llvm::Type *type,
+    std::string &identifier);
 
-Top ParseTop(Lexer &lexer);
+bool ParseDeclarationOrFunction(parserItems &items);
+
+parserItems ParseTop(Lexer &lexer);
 
 } // namespace Parser

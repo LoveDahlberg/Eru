@@ -20,7 +20,7 @@ _____
 [top] -> {declaration} {top} | {directive} {top} | {function} {top} | END_OF_FILE
   
   [declaration] -> {type} (IDENTIFER) (NEWLINE) | {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) (NEWLINE)
-    [type] -> {data} | (IDENTIFER)
+    [type] -> {data}
       [data] -> (INT) | (SIGNED_INT_32) | (UNSIGNED_INT_32) | (BOOl) | (STRING) | (CHAR)    
     [parametersDeclaration] -> {parametersDeclarationList} | e
       [parametersDeclarationList] -> {type} (IDENTIFER) | {type} (IDENTIFER) (COMMA) {parametersDeclaration}

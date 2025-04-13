@@ -1,44 +1,43 @@
 
 #pragma once
 
+#include "llvm/IR/Type.h"
 #include <AST/AST.h>
 #include <AST/Types.h>
 
 namespace AST::Declaration {
 
-class Declaration : public AST {
-public:
-  Declaration(const Types::Type &type, const Types::Identifier &name)
+struct Declaration {
+  Declaration(llvm::Type *type, std::string name)
       : type(type), name(name) {}
 
-  llvm::Value *codegen();
+  virtual llvm::Value *codegen(llvm::Module& module) = 0;
 
-private:
-  Types::Type type;
-  Types::Identifier name;
+  llvm::Type *type;
+  std::string name;
 };
 
 class VariableDeclaration : public Declaration {
 public:
-  VariableDeclaration(const Types::Type &type, const Types::Identifier &name)
+  VariableDeclaration(llvm::Type *type, std::string name)
       : Declaration(type, name) {}
 
-  llvm::Value *codegen();
+llvm::Value *codegen(llvm::Module& module);
 };
 
 class FunctionDeclaration : public Declaration {
 public:
-  FunctionDeclaration(const Types::Type &type, const Types::Identifier &name,
-                      std::vector<Declaration> parameters)
+  FunctionDeclaration(llvm::Type *type, std::string name,
+                      std::vector<VariableDeclaration> parameters)
       : Declaration(type, name), parameters(parameters) {}
 
-  FunctionDeclaration(const Types::Type &type, const Types::Identifier &name)
+  FunctionDeclaration(llvm::Type *type, std::string name)
       : Declaration(type, name) {}
 
-  llvm::Value *codegen();
+  llvm::Value *codegen(llvm::Module &module);
 
 private:
-  std::vector<Declaration> parameters;
+  std::vector<VariableDeclaration> parameters;
 };
 
 } // namespace AST::Declaration

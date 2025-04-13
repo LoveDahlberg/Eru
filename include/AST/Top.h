@@ -8,10 +8,10 @@
 namespace AST {
 
 struct Top {
-  std::vector<llvm::Value*> codegen();
+  std::vector<llvm::Value *> codegen(llvm::Module& module);
 
-  std::vector<Declaration::Declaration> declarations;
-  std::vector<Declaration::Declaration> directives;
+  std::vector<Declaration::Declaration*> declarations;
+  std::vector<Declaration::Declaration*> directives;
   //   std::vector<Declaration::Declaration> functions;
 };
 
