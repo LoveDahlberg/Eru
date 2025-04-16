@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++ -gdwarf-4")
 
 project(project)
 
@@ -46,7 +46,7 @@ message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}, ${LLVM_INCLUDE_DIRS}")
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-llvm_map_components_to_libnames(llvm_libs -19)
+llvm_map_components_to_libnames(llvm_libs -20)
 add_compile_definitions(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
 add_compile_options(-glldb)
 
@@ -70,9 +70,9 @@ add_subdirectory(lib)
 add_executable(main lib/Main.cpp)
 
 # Link dependencies
-target_link_libraries(main PRIVATE 
+target_link_libraries(main PRIVATE
     # LLVM dependecies
-    ${llvm_libs}
+    ${LLVM_LIBRARIES}
     LibEdit::LibEdit
     zstd::libzstd_shared
     CURL::libcurl

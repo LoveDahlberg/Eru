@@ -5,6 +5,7 @@ cd googletest
 mkdir build
 cd build
 # Use the same compiler and flags as your project
-CXX=clang++ CXXFLAGS="-stdlib=libc++" cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/gtest-libcxx
+CXX=clang++ CXXFLAGS="-stdlib=libstdc++" cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/gtest-libstdc
+
 make
 sudo make install

@@ -1,1 +1,1 @@
-env CXX=clang++ C=clang cmake --debug-output ../proj -DLLVM_DIR="/home/love/repo/llvm/build/lib/cmake/llvm"  -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
+env CXX=clang++ C=clang cmake --debug-output ../proj -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON

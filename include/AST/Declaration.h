@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "llvm/IR/Type.h"
+#include <llvm/IR/Type.h>
 #include <AST/AST.h>
 #include <AST/Types.h>
 

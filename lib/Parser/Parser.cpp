@@ -26,10 +26,10 @@ constexpr auto typeParsingName = "TypeParsing";
 
 void printParsing(const char *parsingFunctionName, TokenCategory tokenCategory,
                   Token token) {
-  LogError("{}: Unexpected token of:\nCategory '{}'\n Type '{}'\n "
-           "Value '{}'\n",
-           parsingFunctionName, std::to_string(static_cast<int>(tokenCategory)),
-           std::to_string(static_cast<int>(token.type)), token.value);
+  // LogError("{}: Unexpected token of:\nCategory '{}'\n Type '{}'\n "
+  //          "Value '{}'\n",
+  //          parsingFunctionName, std::to_string(static_cast<int>(tokenCategory)),
+  //          std::to_string(static_cast<int>(token.type)), token.value);
 }
 
 bool ParseDirective(Top &top) { return false; }

@@ -3,6 +3,7 @@ add_executable(testParser testParser.cpp)
 
 # Link against local GTest installation
 target_link_libraries(testParser PRIVATE 
+    # ${LLVM_LIBRARIES}
     GTest::GTest 
     GTest::Main
     Threads::Threads
