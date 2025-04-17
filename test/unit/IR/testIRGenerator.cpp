@@ -1,4 +1,5 @@
 // include
+#include "AST/Declaration.h"
 #include <AST/Types.h>
 #include <IR/IRGenerator.h>
 
@@ -10,19 +11,38 @@
 #include <gmock/gmock-matchers.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <memory>
 
 using namespace IR;
 using namespace AST;
 
-TEST(IR, TestGenerateIR) {
+TEST(IR, testDeclaration) {
 
-  auto ctx =  new llvm::LLVMContext();
+  auto ctx = new llvm::LLVMContext();
   auto module = llvm::Module("", *ctx);
-
   Top top;
+
+  constexpr const char *variableName = "firstVariable";
   top.declarations.push_back(new Declaration::VariableDeclaration(
-      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), "test"));
+      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()),
+      variableName));
+
+  constexpr const char *functionName = "firstFunctionDeclaration";
+  top.declarations.push_back(new Declaration::FunctionDeclaration(
+      (llvm::Type *)llvm::Type::getInt1Ty(module.getContext()),
+      functionName,
+      {Declaration::VariableDeclaration(
+           (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()),
+           "firstParameter"),
+       Declaration::VariableDeclaration(
+           (llvm::Type *)llvm::Type::getInt1Ty(module.getContext()),
+           "firstParameter")}));
 
   GenerateIR(top, module);
+
+  auto generatedVariable = module.getGlobalVariable(variableName, true);
+  EXPECT_NE(generatedVariable, nullptr);
+
+  auto generatedFunction = module.getFunction(functionName);
+  EXPECT_NE(generatedFunction, nullptr);
+
 }

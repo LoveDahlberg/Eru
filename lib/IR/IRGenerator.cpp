@@ -13,8 +13,10 @@ namespace IR {
 
 void GenerateIR(AST::Top top, llvm::Module& module) {
   auto values = top.codegen(module);
+  std::cout << "GenerateIR\n";
   for (auto value : values) {
-    std::cout << "GenerateIR\n '" << value << "'";
+    value->print(llvm::outs(), false);
+    std::cout << "\n";
   }
 }
 

@@ -1,5 +1,5 @@
 
-// #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <Lexer/Lexer.h>
 #include <Lexer/Tokens.h>
@@ -32,8 +32,7 @@ std::optional<std::vector<Declaration::VariableDeclaration>>
 ParseParameters(parserItems &items) ;
 
 bool ParseFunctionDefinition(
-  parserItems &items, llvm::Type *type, std::string &identifier,
-  std::vector<Declaration::VariableDeclaration> parameters);
+  parserItems &items, Declaration::FunctionDeclaration* declaration);
 
 bool ParseFunctionDefinitionOrDeclaration(parserItems &items, llvm::Type *type,
     std::string &identifier);

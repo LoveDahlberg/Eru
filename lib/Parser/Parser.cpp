@@ -1,19 +1,18 @@
 
 // stl
-#include "AST/Declaration.h"
-#include "AST/Types.h"
-#include "Lexer/Tokens.h"
-#include "llvm/IR/Type.h"
 #include <optional>
 #include <string>
 #include <vector>
 
 // include
+#include "AST/Declaration.h"
+#include "Lexer/Tokens.h"
 #include <Parser/Parser.h>
 #include <Support/Constants.h>
 #include <Support/Log.h>
 
 // llvm
+#include "llvm/IR/Type.h"
 #include <llvm/Support/Error.h>
 
 namespace Parser {
@@ -28,11 +27,21 @@ void printParsing(const char *parsingFunctionName, TokenCategory tokenCategory,
                   Token token) {
   // LogError("{}: Unexpected token of:\nCategory '{}'\n Type '{}'\n "
   //          "Value '{}'\n",
-  //          parsingFunctionName, std::to_string(static_cast<int>(tokenCategory)),
+  //          parsingFunctionName,
+  //          std::to_string(static_cast<int>(tokenCategory)),
   //          std::to_string(static_cast<int>(token.type)), token.value);
 }
 
-bool ParseDirective(Top &top) { return false; }
+void skipUntilNotNewline(parserItems &items) {
+  if (items.lexer.getCurrentToken().type == Lexing::TokenType::NEWLINE) {
+    return;
+  }
+
+  while (items.lexer.generateNextToken().type != Lexing::TokenType::NEWLINE) {
+  }
+}
+
+bool ParseDirective(parserItems &items) { return true; }
 
 std::optional<std::string> ParseIdentifier(parserItems &items) {
   if (items.lexer.getCurrentToken().type != TokenType::IDENTIFER) {
@@ -131,9 +140,37 @@ ParseParameters(parserItems &items) {
   return parameters;
 }
 
+bool ParsePrimaryExpression() { return true; }
+
 bool ParseFunctionDefinition(
-    parserItems &items, llvm::Type *type, std::string &identifier,
-    std::vector<Declaration::VariableDeclaration> parameters) {
+    parserItems &items, Declaration::FunctionDeclaration* declaration) {
+  auto directive = ParseDirective(items);
+
+  // TODO, allow arbitrary amount of newlines in certain places. Especially
+  // here.
+  if (items.lexer.getCurrentToken().type != TokenType::LEFT_CURLY_BRACE) {
+    // err
+    return false;
+  }
+
+  // eat the {
+  items.lexer.generateNextToken();
+
+  if (!ParsePrimaryExpression()) {
+    return false;
+  }
+
+  if (items.lexer.getCurrentToken().type != TokenType::RIGHT_CURLY_BRACE) {
+    // err
+    return false;
+  }
+
+  // eat the }
+  items.lexer.generateNextToken();
+
+  // Create the function based on the declaration and the primary expression.
+  // items.top.functions.
+
   return true;
 }
 
@@ -158,13 +195,17 @@ bool ParseFunctionDefinitionOrDeclaration(parserItems &items, llvm::Type *type,
   // eat the )
   items.lexer.generateNextToken();
 
-  if (items.lexer.getCurrentToken().type == TokenType::NEWLINE) {
-    items.top.declarations.emplace_back(
-        new Declaration::FunctionDeclaration(type, identifier, *paramaters));
-    return true;
+  skipUntilNotNewline(items);
+  
+  auto declaration =
+      new Declaration::FunctionDeclaration(type, identifier, *paramaters);
+
+  if (items.lexer.getCurrentToken().type == TokenType::LEFT_BRACKET) {
+    return ParseFunctionDefinition(items, declaration);
   }
 
-  return ParseFunctionDefinition(items, type, identifier, *paramaters);
+  items.top.declarations.push_back(declaration);
+  return true;
 }
 
 bool ParseDeclarationOrFunction(parserItems &items) {
@@ -209,7 +250,7 @@ parserItems ParseTop(Lexer &lexer) {
         continue;
       }
 
-      if (ParseDirective(items.top)) {
+      if (ParseDirective(items)) {
         continue;
       }
       break;

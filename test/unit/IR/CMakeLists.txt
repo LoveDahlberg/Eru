@@ -13,4 +13,4 @@ target_link_libraries(testIR PRIVATE
 )
 
 # Register the test with CTest
-add_test(NAME testIR COMMAND testIRGenerator)
+add_test(NAME IR COMMAND testIR)
