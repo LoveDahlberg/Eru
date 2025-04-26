@@ -22,12 +22,12 @@ TEST(IR, testDeclaration) {
   Top top;
 
   constexpr const char *variableName = "firstVariable";
-  top.declarations.push_back(new Declaration::VariableDeclaration(
+  top.AddTopConstruct(new Declaration::VariableDeclaration(
       (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()),
       variableName));
 
   constexpr const char *functionName = "firstFunctionDeclaration";
-  top.declarations.push_back(new Declaration::FunctionDeclaration(
+  top.AddTopConstruct(new Declaration::FunctionDeclaration(
       (llvm::Type *)llvm::Type::getInt1Ty(module.getContext()),
       functionName,
       {Declaration::VariableDeclaration(

@@ -1,5 +1,4 @@
-Add tests for lexer and implement it.
-
-Add tests for File reader and implement it.
+Add clang formatter file
+    Fix so that "type *name" becomes "type* name"
 
 Add ninja to project

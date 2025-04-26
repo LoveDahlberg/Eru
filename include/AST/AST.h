@@ -1,23 +1,15 @@
-
 #pragma once
 
+#include <llvm/IR/Module.h>
 #include <llvm/IR/Value.h>
 
 namespace AST {
-
-/// Tpo AST construct, logic that
 struct AST {
-  // virtual ~AST() = default;
-  // virtual llvm::Value *codegen() = 0;
+  virtual llvm::Value *codegen(llvm::Module& module) = 0;
 };
 
-// class Directive : public AST {
-//   llvm::Value *codegen() { return nullptr; }
-// };
-
-// class Function : public AST {
-
-//   llvm::Value *codegen() { return nullptr; }
-// };
+struct GeneratingAST {
+  virtual std::vector<llvm::Value *> codegen(llvm::Module &module) = 0;
+};
 
 } // namespace AST

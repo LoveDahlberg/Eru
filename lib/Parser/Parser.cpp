@@ -41,7 +41,25 @@ void skipUntilNotNewline(parserItems &items) {
   }
 }
 
-bool ParseDirective(parserItems &items) { return true; }
+bool ParseDirective(parserItems &items) {
+  if (items.lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
+    // err
+    return false;
+  }
+
+  // Eat [
+  items.lexer.generateNextToken();
+
+  if (items.lexer.getCurrentToken().type != TokenType::RIGHT_BRACKET) {
+    // err
+    return false;
+  }
+
+  // Eat ]
+  items.lexer.generateNextToken();
+
+  return true;
+}
 
 std::optional<std::string> ParseIdentifier(parserItems &items) {
   if (items.lexer.getCurrentToken().type != TokenType::IDENTIFER) {
@@ -142,12 +160,13 @@ ParseParameters(parserItems &items) {
 
 bool ParsePrimaryExpression() { return true; }
 
-bool ParseFunctionDefinition(
-    parserItems &items, Declaration::FunctionDeclaration* declaration) {
+bool ParseFunctionDefinition(parserItems &items,
+                             Declaration::FunctionDeclaration *declaration) {
+
   auto directive = ParseDirective(items);
 
-  // TODO, allow arbitrary amount of newlines in certain places. Especially
-  // here.
+  skipUntilNotNewline(items);
+
   if (items.lexer.getCurrentToken().type != TokenType::LEFT_CURLY_BRACE) {
     // err
     return false;
@@ -160,6 +179,8 @@ bool ParseFunctionDefinition(
     return false;
   }
 
+  skipUntilNotNewline(items);
+
   if (items.lexer.getCurrentToken().type != TokenType::RIGHT_CURLY_BRACE) {
     // err
     return false;
@@ -169,6 +190,7 @@ bool ParseFunctionDefinition(
   items.lexer.generateNextToken();
 
   // Create the function based on the declaration and the primary expression.
+
   // items.top.functions.
 
   return true;
@@ -196,7 +218,7 @@ bool ParseFunctionDefinitionOrDeclaration(parserItems &items, llvm::Type *type,
   items.lexer.generateNextToken();
 
   skipUntilNotNewline(items);
-  
+
   auto declaration =
       new Declaration::FunctionDeclaration(type, identifier, *paramaters);
 
@@ -204,7 +226,7 @@ bool ParseFunctionDefinitionOrDeclaration(parserItems &items, llvm::Type *type,
     return ParseFunctionDefinition(items, declaration);
   }
 
-  items.top.declarations.push_back(declaration);
+  items.top.AddTopConstruct(declaration);
   return true;
 }
 
@@ -223,7 +245,7 @@ bool ParseDeclarationOrFunction(parserItems &items) {
 
   switch (items.lexer.getCurrentToken().type) {
   case TokenType::NEWLINE:
-    items.top.declarations.emplace_back(
+    items.top.AddTopConstruct(
         new Declaration::VariableDeclaration(*type, *identifier));
     return true;
   // Function declaration or defition

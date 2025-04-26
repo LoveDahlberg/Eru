@@ -19,34 +19,35 @@ _____
 
 [top] -> {declaration} {top} | {directive} {top} | {function} {top} | END_OF_FILE
   
-  [declaration] -> {type} (IDENTIFER) (NEWLINE) | {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) (NEWLINE)
-    [type] -> {data}
-      [data] -> (INT) | (SIGNED_INT_32) | (UNSIGNED_INT_32) | (BOOl) | (STRING) | (CHAR)    
-    [parametersDeclaration] -> {parametersDeclarationList} | e
-      [parametersDeclarationList] -> {type} (IDENTIFER) | {type} (IDENTIFER) (COMMA) {parametersDeclaration}
+  [declaration] -> {variableDeclaration} | {functionDeclaration}
+    [variableDeclaration] -> {type} (IDENTIFER) (NEWLINE) 
+      [type] -> {data}
+        [data] -> (INT) | (SIGNED_INT_32) | (UNSIGNED_INT_32) | (BOOl) | (STRING) | (CHAR)    
+    [functionDeclaration] -> {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) (NEWLINE)
+      [parametersDeclaration] -> {parametersDeclarationList} | e
+        [parametersDeclarationList] -> {type} (IDENTIFER) | {type} (IDENTIFER) (COMMA) {parametersDeclaration}
   
   [directive] -> (LEFT_BRACKET)(RIGHT_BRACKET)
 
   [function] -> {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) {directive} (LEFT_CURLY_BRACE) {primaryExpression} (RIGHT_CURLY_BRACE)
-    [primaryExpression] -> {declaration} {primaryExpression} | {assignment} {primaryExpression} | {controlflow} {primaryExpression} | e
+    [primaryExpression] -> {variableDeclaration} {primaryExpression} | {assignment} {primaryExpression} | {controlflow} {primaryExpression} | e
       [assignment] -> {assignmentTarget} (EQUAL) {assignmentExpression} (NEWLINE)
-        [assignmentTarget] -> {declaration} | (IDENTIFER) 
+        [assignmentTarget] -> {variableDeclaration} | (IDENTIFER) 
         
         [assignmentExpression] -> {assignmentExpressionTarget} {operator} {assignmentExpression} | {assignmentExpressionTarget} 
           [assignmentExpressionTarget] -> (IDENTIFER) | {literal} | {functionCall} 
             [literal] -> (STRING_LITERAL) | (INTEGER_LITERAL)          
             [functionCall] -> (IDENTIFER) (LEFT_PARENTHESIS) {parametersCall} (RIGHT_PARENTHESIS)
               [parametersCall] -> {prametersCallList} | e
-                [prametersCallList] -> {passable} | {passable} (COMMA) {prametersCallList}
-                  [passable] -> (IDENTIFER) | {literal}
-          [operator] -> (PLUS) | (MINUS) | e 
+                [prametersCallList] -> {assignmentExpressionTarget} | {assignmentExpressionTarget} (COMMA) {prametersCallList}
+          [operator] -> (PLUS) | (MINUS) 
 
       [controlflow] -> {conditionalBranch} | {functionCall}
         [conditionalBranch] -> (IF) {conditinalExpression} {continuedCondition}
           [conditinalExpression] -> (LEFT_PARENTHESIS) {booleanExpression} (RIGHT_PARENTHESIS) {primaryExpression} 
             [booleanExpression] -> {assignmentExpression} {booleanExpressionList}
-              [booleanExpressionList] -> {booleanConcat} {booleanExpression} | e
-                [booleanConcat] -> (AND) | (OR)
+              [booleanExpressionList] -> {booleanOperator} {booleanExpression} | e
+                [booleanOperator] -> (AND) | (OR)
           [continuedCondition] -> (ELSE) {conditinalExpression} | (ELIF) {conditinalExpression} {continuedCondition} | e
 
 _____
