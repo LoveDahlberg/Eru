@@ -5,7 +5,7 @@
 
 namespace AST::Declaration {
 
-struct Declaration : AST {
+struct Declaration : public AST {
   Declaration(llvm::Type *type, std::string name)
       : type(type), name(name) {}
 
@@ -24,7 +24,7 @@ llvm::Value *codegen(llvm::Module& module) override;
 class FunctionDeclaration : public Declaration {
 public:
   FunctionDeclaration(llvm::Type *type, std::string name,
-                      std::vector<VariableDeclaration> parameters)
+                      std::vector<VariableDeclaration*> parameters)
       : Declaration(type, name), parameters(parameters) {}
 
   FunctionDeclaration(llvm::Type *type, std::string name)
@@ -33,7 +33,7 @@ public:
   llvm::Value *codegen(llvm::Module &module) override;
 
 private:
-  std::vector<VariableDeclaration> parameters;
+  std::vector<VariableDeclaration*> parameters;
 };
 
 } // namespace AST::Declaration

@@ -1,6 +1,7 @@
 How to read
 
 // TODO explain in more detail how the | works and the recursive nature of everything..
+// TODO Add proper newlines after each grammar rule where its needed.
 
 Contains the grammar definition
 
@@ -19,8 +20,8 @@ _____
 
 [top] -> {declaration} {top} | {directive} {top} | {function} {top} | END_OF_FILE
   
-  [declaration] -> {variableDeclaration} | {functionDeclaration}
-    [variableDeclaration] -> {type} (IDENTIFER) (NEWLINE) 
+  [declaration] -> {variableDeclaration} (NEWLINE) | {functionDeclaration}
+    [variableDeclaration] -> {type} (IDENTIFER) 
       [type] -> {data}
         [data] -> (INT) | (SIGNED_INT_32) | (UNSIGNED_INT_32) | (BOOl) | (STRING) | (CHAR)    
     [functionDeclaration] -> {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) (NEWLINE)
@@ -30,7 +31,7 @@ _____
   [directive] -> (LEFT_BRACKET)(RIGHT_BRACKET)
 
   [function] -> {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) {directive} (LEFT_CURLY_BRACE) {primaryExpression} (RIGHT_CURLY_BRACE)
-    [primaryExpression] -> {variableDeclaration} {primaryExpression} | {assignment} {primaryExpression} | {controlflow} {primaryExpression} | e
+    [primaryExpression] -> {variableDeclaration} {primaryExpression} | {assignment} {primaryExpression} | {controlflow} {primaryExpression} | {functionCall} {primaryExpression}| e
       [assignment] -> {assignmentTarget} (EQUAL) {assignmentExpression} (NEWLINE)
         [assignmentTarget] -> {variableDeclaration} | (IDENTIFER) 
         
@@ -42,9 +43,9 @@ _____
                 [prametersCallList] -> {assignmentExpressionTarget} | {assignmentExpressionTarget} (COMMA) {prametersCallList}
           [operator] -> (PLUS) | (MINUS) 
 
-      [controlflow] -> {conditionalBranch} | {functionCall}
+      [controlflow] -> {conditionalBranch}
         [conditionalBranch] -> (IF) {conditinalExpression} {continuedCondition}
-          [conditinalExpression] -> (LEFT_PARENTHESIS) {booleanExpression} (RIGHT_PARENTHESIS) {primaryExpression} 
+          [conditinalExpression] -> (LEFT_PARENTHESIS) {booleanExpression} (RIGHT_PARENTHESIS) (LEFT_CURLY_BRACE) {primaryExpression} (RIGHT_CURLY_BRACE)
             [booleanExpression] -> {assignmentExpression} {booleanExpressionList}
               [booleanExpressionList] -> {booleanOperator} {booleanExpression} | e
                 [booleanOperator] -> (AND) | (OR)

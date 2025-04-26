@@ -88,7 +88,7 @@ enum class TokenCategory {
   IDENTIFER,
   KEYWORD,
   SEPARATOR,
-  TYPE,
+  DATA_TYPE,
   OPERATOR,
   LITERAL,
 };
@@ -114,12 +114,12 @@ const std::unordered_map<TokenType, TokenCategory> tokenTypeToCategory{
     {TokenType::COMMA, TokenCategory::SEPARATOR},
     {TokenType::NEWLINE, TokenCategory::SEPARATOR},
 
-    {TokenType::INT, TokenCategory::TYPE},
-    {TokenType::SIGNED_INT_32, TokenCategory::TYPE},
-    {TokenType::UNSIGNED_INT_32, TokenCategory::TYPE},
-    {TokenType::BOOl, TokenCategory::TYPE},
-    {TokenType::STRING, TokenCategory::TYPE},
-    {TokenType::CHAR, TokenCategory::TYPE},
+    {TokenType::INT, TokenCategory::DATA_TYPE},
+    {TokenType::SIGNED_INT_32, TokenCategory::DATA_TYPE},
+    {TokenType::UNSIGNED_INT_32, TokenCategory::DATA_TYPE},
+    {TokenType::BOOl, TokenCategory::DATA_TYPE},
+    {TokenType::STRING, TokenCategory::DATA_TYPE},
+    {TokenType::CHAR, TokenCategory::DATA_TYPE},
 
     {TokenType::PLUS, TokenCategory::OPERATOR},
     {TokenType::MINUS, TokenCategory::OPERATOR},

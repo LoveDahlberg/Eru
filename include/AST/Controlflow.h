@@ -34,18 +34,18 @@ struct BooleanExpression {
   booleanExpressionList* booleanExpressionList;
 };
 
-struct ConditionalExpression : AST {
+struct ConditionalExpression : public AST {
   BooleanExpression booleanExpression;
   PrimaryExpression::PrimaryExpression *primaryExpression;
 };
 
-struct ConditionalBranch : AST {
+struct ConditionalBranch : public AST {
   llvm::Value *codegen(llvm::Module &module) override;
 
   std::vector<ConditionalExpression *> conditionalChain;
 };
 
-struct Controlflow : AST {
+struct Controlflow : public AST {
   std::variant<Function::FunctionCall *, ConditionalBranch *>
       controlflowVariant;
 

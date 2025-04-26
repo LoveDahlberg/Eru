@@ -1,6 +1,7 @@
 
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+
 #include <Lexer/Lexer.h>
 #include <Lexer/Tokens.h>
 
@@ -28,7 +29,7 @@ std::optional<std::string> ParseIdentifier(parserItems &items);
 
 std::optional<llvm::Type *> ParseType(parserItems &items) ;
 
-std::optional<std::vector<Declaration::VariableDeclaration>>
+std::optional<std::vector<Declaration::VariableDeclaration*>>
 ParseParameters(parserItems &items) ;
 
 bool ParseFunctionDefinition(

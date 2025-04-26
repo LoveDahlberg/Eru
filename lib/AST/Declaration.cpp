@@ -22,7 +22,7 @@ llvm::Value *FunctionDeclaration::codegen(llvm::Module &module) {
 
   std::vector<llvm::Type *> parameterTypes;
   for (auto parameter : parameters) {
-    parameterTypes.emplace_back(parameter.type);
+    parameterTypes.emplace_back(parameter->type);
   }
 
   auto *functionType =
@@ -34,7 +34,7 @@ llvm::Value *FunctionDeclaration::codegen(llvm::Module &module) {
 
   unsigned Idx = 0;
   for (auto &parameter : function->args()) {
-    parameter.setName(parameters.at(Idx++).name);
+    parameter.setName(parameters.at(Idx++)->name);
   }
   return function;
 }

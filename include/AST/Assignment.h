@@ -25,7 +25,7 @@ struct AssignmentExpressionTarget : public AssignmentExpression {
       target;
 };
 
-class Assignment {
+class Assignment : public AST {
   std::variant<Declaration::VariableDeclaration, Types::NamedIdentifier>
       targetVariable;
   AssignmentExpression assignmentExpression;

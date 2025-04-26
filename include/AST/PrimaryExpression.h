@@ -1,10 +1,10 @@
 #pragma once
 
 #include <AST/AST.h>
+#include <AST/Assignment.h>
 #include <AST/Controlflow.h>
 #include <AST/Declaration.h>
 #include <AST/Function.h>
-#include <AST/Assignment.h>
 #include <AST/Types.h>
 
 namespace AST::PrimaryExpression {
@@ -13,17 +13,21 @@ namespace AST::PrimaryExpression {
 // that becomes a bit annyoing with circual references.
 template <typename T>
 concept ValidPrimaryExpressionType =
-    std::is_same_v<T, Declaration::VariableDeclaration> ||
-    std::is_same_v<T, Assignment::Assignment> ||
-    std::is_same_v<T, Controlflow::Controlflow>;
+    std::is_pointer_v<T> &&
+    (std::is_same_v<std::remove_pointer_t<T>,
+                    Declaration::VariableDeclaration> ||
+     std::is_same_v<std::remove_pointer_t<T>, Assignment::Assignment> ||
+     std::is_same_v<std::remove_pointer_t<T>, Controlflow::Controlflow> ||
+     std::is_same_v<std::remove_pointer_t<T>, Function::FunctionCall>);
 
-class PrimaryExpression {
-public:
+struct PrimaryExpression : public GeneratingAST {
   template <typename primaryExpressionConstruct>
     requires ValidPrimaryExpressionType<primaryExpressionConstruct>
-  void AddPrimaryExpression(primaryExpressionConstruct *construct) {
+  void AddExpression(primaryExpressionConstruct construct) {
     primaryExpressionConstructs.push_back(construct);
   }
+
+  std::vector<llvm::Value *> codegen(llvm::Module &module) override;
 
 private:
   std::vector<AST *> primaryExpressionConstructs;

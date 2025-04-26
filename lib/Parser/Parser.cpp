@@ -1,12 +1,17 @@
 
 // stl
+#include <AST/Assignment.h>
+#include <AST/Controlflow.h>
+#include <AST/Declaration.h>
+#include <AST/Function.h>
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
 
 // include
-#include "AST/Declaration.h"
-#include "Lexer/Tokens.h"
+#include <AST/PrimaryExpression.h>
+#include <Lexer/Tokens.h>
 #include <Parser/Parser.h>
 #include <Support/Constants.h>
 #include <Support/Log.h>
@@ -108,7 +113,7 @@ std::optional<llvm::Type *> ParseType(parserItems &items) {
   return type;
 }
 
-std::optional<Declaration::VariableDeclaration>
+std::optional<Declaration::VariableDeclaration *>
 ParseVariableDeclaration(parserItems &items) {
   auto type = ParseType(items);
   if (!type) {
@@ -122,20 +127,51 @@ ParseVariableDeclaration(parserItems &items) {
     return std::nullopt;
   }
 
-  return Declaration::VariableDeclaration(*type, *identifier);
+  return new Declaration::VariableDeclaration(*type, *identifier);
 }
 
-std::optional<std::vector<Declaration::VariableDeclaration>>
-ParseParameters(parserItems &items) {
+std::optional<Assignment::AssignmentExpressionTarget *>
+ParseAssignmentExpressionTarget(parserItems &items) {
+  return std::nullopt;
+}
 
-  std::vector<Declaration::VariableDeclaration> parameters;
+template <typename T>
+concept ValidParameterType =
+    std::is_pointer_v<T> &&
+    (std::is_same_v<std::remove_pointer_t<T>,
+                    Declaration::VariableDeclaration> ||
+     std::is_same_v<std::remove_pointer_t<T>,
+                    Assignment::AssignmentExpressionTarget>);
+
+/// This function is supposed to be used for parameter parsing for:
+/// - Function declarations and definitions -> type is
+///   Declaration::VariableDeclaration
+/// - Function calls -> type is Assignment::AssignmentExpressionTarget
+///
+///  The \a ValidParameterType concept restricts the usage outside of these
+///  types.
+///
+/// \param items ..
+/// \param ParseVariableType Parsing function to use for each of the two types.
+///                          ParseVariableDeclaration should be used for
+///                          VariableDeclaration.
+///                          ParseAssignmentExpressionTarget should be used for
+///                          AssignmentExpressionTarget.
+template <typename ParameterType>
+  requires ValidParameterType<ParameterType>
+std::optional<std::vector<ParameterType>>
+ParseParameters(parserItems &items,
+                std::function<std::optional<ParameterType>(parserItems &)>
+                    ParseVariableType) {
+
+  std::vector<ParameterType> parameters;
   if (items.lexer.getCurrentToken().type == TokenType::RIGHT_PARENTHESIS) {
     return parameters;
   }
 
   int loopCounter = 0;
   do {
-    auto parameterDeclaration = ParseVariableDeclaration(items);
+    auto parameterDeclaration = ParseVariableType(items);
     if (!parameterDeclaration) {
       // err
       return std::nullopt;
@@ -158,7 +194,174 @@ ParseParameters(parserItems &items) {
   return parameters;
 }
 
-bool ParsePrimaryExpression() { return true; }
+// std::vector<Assignment::AssignmentExpressionTarget *>
+// ParseCallParameters(parserItems &items) {
+//   return {};
+// }
+
+std::optional<Function::FunctionCall *>
+ParseFunctionCall(parserItems &items, std::string name = "") {
+
+  // If name is empty, parse the identifier. Otherwise assume that it was parsed
+  // before calling this function.
+  if (name.empty()) {
+    auto identifier = ParseIdentifier(items);
+    if (!identifier) {
+      // err
+      return std::nullopt;
+    }
+    name = *identifier;
+  }
+
+  if (items.lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
+    // err
+    return std::nullopt;
+  }
+
+  // eat the (
+  items.lexer.generateNextToken();
+
+  auto parameters = ParseParameters<Assignment::AssignmentExpressionTarget *>(
+      items, &ParseAssignmentExpressionTarget);
+  if (!parameters) {
+    // err
+    return std::nullopt;
+  }
+
+  if (items.lexer.getCurrentToken().type != TokenType::RIGHT_BRACKET) {
+    // err
+    return std::nullopt;
+  }
+
+  // eat the )
+  items.lexer.generateNextToken();
+
+  // TODO newline here?
+
+  return new Function::FunctionCall(name, *parameters);
+}
+
+std::optional<Controlflow::Controlflow *>
+ParseConditionalBranch(parserItems &items) {
+  return std::nullopt;
+}
+
+std::optional<Assignment::Assignment *>
+ParseAssignment(parserItems &items,
+                Declaration::VariableDeclaration *variableDeclaration) {
+  return std::nullopt;
+}
+
+std::optional<PrimaryExpression::PrimaryExpression *>
+ParsePrimaryExpression(parserItems &items) {
+  auto primaryExpression = new PrimaryExpression::PrimaryExpression;
+
+  if (items.lexer.getCurrentToken().type == TokenType::RIGHT_CURLY_BRACE) {
+    return primaryExpression;
+  }
+
+  do {
+    auto tokenCategory =
+        tokenTypeToCategory.at(items.lexer.getCurrentToken().type);
+    switch (tokenCategory) {
+
+    // Variable declaration or assignment.
+    case TokenCategory::DATA_TYPE: {
+
+      // Both start with a variable declaration.
+      auto parameterDeclaration = ParseVariableDeclaration(items);
+      if (!parameterDeclaration) {
+        // err
+        return std::nullopt;
+      }
+
+      // Assignment
+      if (items.lexer.getCurrentToken().type == TokenType::EQUAL) {
+        auto assignment = ParseAssignment(items, *parameterDeclaration);
+        if (!assignment) {
+          // err
+          return std::nullopt;
+        }
+        primaryExpression->AddExpression(*assignment);
+      }
+      // Only a declaration without assignment.
+      else {
+        primaryExpression->AddExpression(*parameterDeclaration);
+      }
+
+      break;
+    }
+
+    // ControlFlow.
+    case TokenCategory::KEYWORD: {
+      // Conditional branch.
+      // Always starts with an IF for now.
+      if (items.lexer.getCurrentToken().type != TokenType::IF) {
+        // err
+        return std::nullopt;
+      }
+
+      auto controlFlow = ParseConditionalBranch(items);
+      if (!controlFlow) {
+        // err
+        return std::nullopt;
+      }
+
+      primaryExpression->AddExpression(*controlFlow);
+      break;
+    }
+
+    // function call or assignment.
+    case TokenCategory::IDENTIFER: {
+
+      // Both start with an identifier.
+      auto identifier = ParseIdentifier(items);
+      if (!identifier) {
+        // err
+        return std::nullopt;
+      }
+
+      switch (items.lexer.getCurrentToken().type) {
+
+      // Assignment
+      case TokenType::EQUAL: {
+        auto assignment = ParseAssignment(
+            items, new Declaration::VariableDeclaration(nullptr, *identifier));
+        if (!assignment) {
+          // err
+          return std::nullopt;
+        }
+        primaryExpression->AddExpression(*assignment);
+        break;
+      }
+
+      // Function call
+      case TokenType::LEFT_PARENTHESIS: {
+        auto assignment = ParseFunctionCall(items, *identifier);
+        if (!assignment) {
+          // err
+          return std::nullopt;
+        }
+        primaryExpression->AddExpression(*assignment);
+        break;
+      }
+
+      default: {
+        // err
+        return std::nullopt;
+      }
+      }
+      break;
+    }
+    default: {
+      // err
+      return std::nullopt;
+    }
+    }
+  } while (items.lexer.generateNextToken().type !=
+           TokenType::RIGHT_CURLY_BRACE);
+  return primaryExpression;
+}
 
 bool ParseFunctionDefinition(parserItems &items,
                              Declaration::FunctionDeclaration *declaration) {
@@ -175,7 +378,9 @@ bool ParseFunctionDefinition(parserItems &items,
   // eat the {
   items.lexer.generateNextToken();
 
-  if (!ParsePrimaryExpression()) {
+  auto primaryExpression = ParsePrimaryExpression(items);
+  if (!primaryExpression) {
+    // err
     return false;
   }
 
@@ -190,8 +395,8 @@ bool ParseFunctionDefinition(parserItems &items,
   items.lexer.generateNextToken();
 
   // Create the function based on the declaration and the primary expression.
-
-  // items.top.functions.
+  items.top.AddTopConstruct(
+      new Function::FunctionDefinition(declaration, *primaryExpression));
 
   return true;
 }
@@ -201,7 +406,8 @@ bool ParseFunctionDefinitionOrDeclaration(parserItems &items, llvm::Type *type,
   // eat the (
   items.lexer.generateNextToken();
 
-  auto paramaters = ParseParameters(items);
+  auto paramaters = ParseParameters<Declaration::VariableDeclaration *>(
+      items, &ParseVariableDeclaration);
   if (!paramaters) {
     // err
     return false;
@@ -276,7 +482,7 @@ parserItems ParseTop(Lexer &lexer) {
         continue;
       }
       break;
-    case TokenCategory::TYPE:
+    case TokenCategory::DATA_TYPE:
       if (ParseDeclarationOrFunction(items)) {
         continue;
       }

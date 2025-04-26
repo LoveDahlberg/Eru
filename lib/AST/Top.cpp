@@ -1,5 +1,4 @@
 
-#include "AST/Declaration.h"
 #include <AST/Top.h>
 
 using namespace AST;

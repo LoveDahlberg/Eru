@@ -1,5 +1,5 @@
 // include
-#include "AST/Declaration.h"
+#include <AST/Declaration.h>
 #include <AST/Types.h>
 #include <IR/IRGenerator.h>
 
@@ -23,17 +23,15 @@ TEST(IR, testDeclaration) {
 
   constexpr const char *variableName = "firstVariable";
   top.AddTopConstruct(new Declaration::VariableDeclaration(
-      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()),
-      variableName));
+      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), variableName));
 
   constexpr const char *functionName = "firstFunctionDeclaration";
   top.AddTopConstruct(new Declaration::FunctionDeclaration(
-      (llvm::Type *)llvm::Type::getInt1Ty(module.getContext()),
-      functionName,
-      {Declaration::VariableDeclaration(
+      (llvm::Type *)llvm::Type::getInt1Ty(module.getContext()), functionName,
+      {new Declaration::VariableDeclaration(
            (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()),
            "firstParameter"),
-       Declaration::VariableDeclaration(
+       new Declaration::VariableDeclaration(
            (llvm::Type *)llvm::Type::getInt1Ty(module.getContext()),
            "firstParameter")}));
 
@@ -44,5 +42,4 @@ TEST(IR, testDeclaration) {
 
   auto generatedFunction = module.getFunction(functionName);
   EXPECT_NE(generatedFunction, nullptr);
-
 }
