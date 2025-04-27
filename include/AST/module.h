@@ -12,7 +12,7 @@ namespace AST {
 
 // TODO add directive
 // TODO try to use inheritence instead of typechecking like this
-/// ValidCompilationUnitType accepts any pointer where the class inherits from Declaration
+/// ValidTopType accepts any pointer where the class inherits from Declaration
 /// or exactly FunctionDefinition.
 template <typename T>
 concept ValidCompilationUnitType =
@@ -23,9 +23,9 @@ concept ValidCompilationUnitType =
 struct CompilationUnit : public GeneratingAST {
   std::vector<llvm::Value *> codegen(llvm::Module &module) override;
 
-  template <typename CompilationUnitItem>
-    requires ValidCompilationUnitType<CompilationUnitItem>
-  void AddCompilationUnitItems(CompilationUnitItem construct) {
+  template <typename topConstruct>
+    requires ValidCompilationUnitType<topConstruct>
+  void AddCompilationUnitConstruct(topConstruct construct) {
     compilationUnitItems.push_back(construct);
   }
 

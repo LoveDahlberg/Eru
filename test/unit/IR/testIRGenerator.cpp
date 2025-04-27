@@ -22,11 +22,11 @@ TEST(IR, testDeclaration) {
   CompilationUnit compilationUnit;
 
   constexpr const char *variableName = "firstVariable";
-  compilationUnit.AddTopConstruct(new Declaration::VariableDeclaration(
+  compilationUnit.AddCompilationUnitItems(new Declaration::VariableDeclaration(
       (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), variableName));
 
   constexpr const char *functionName = "firstFunctionDeclaration";
-  compilationUnit.AddTopConstruct(new Declaration::FunctionDeclaration(
+  compilationUnit.AddCompilationUnitItems(new Declaration::FunctionDeclaration(
       (llvm::Type *)llvm::Type::getInt1Ty(module.getContext()), functionName,
       {new Declaration::VariableDeclaration(
            (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()),

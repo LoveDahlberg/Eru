@@ -20,7 +20,7 @@ TEST(Parser, TestDeclarations) {
   stream += EOF;
 
   Lexer lexer(stream);
-  auto parserItems = ParseTop(lexer);
+  auto parserItems = ParseCompilationUnit(lexer);
 
-  EXPECT_EQ(parserItems.compilationUnit.GetTopConstruct().size(), 5);
+  EXPECT_EQ(parserItems.compilationUnit.GetAddCompilationUnitItems().size(), 5);
 }

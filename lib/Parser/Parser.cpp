@@ -24,7 +24,7 @@
 namespace Parser {
 
 // TODO move this to a printing file
-constexpr auto topParsingName = "TopParsing";
+constexpr auto CompilationUnitParsingName = "CompilationUnitParsing";
 constexpr auto declarationParsingName = "DeclarationParsing";
 constexpr auto directiveParsingName = "DirectiveParsing";
 constexpr auto typeParsingName = "TypeParsing";
@@ -635,7 +635,7 @@ bool ParseFunctionDefinition(parserItems &items,
   items.lexer.generateNextToken();
 
   // Create the function based on the declaration and the primary expression.
-  items.compilationUnit.AddTopConstruct(
+  items.compilationUnit.AddCompilationUnitItems(
       new Function::FunctionDefinition(declaration, *statement));
 
   return true;
@@ -672,7 +672,7 @@ bool ParseFunctionDefinitionOrDeclaration(parserItems &items, llvm::Type *type,
     return ParseFunctionDefinition(items, declaration);
   }
 
-  items.compilationUnit.AddTopConstruct(declaration);
+  items.compilationUnit.AddCompilationUnitItems(declaration);
   return true;
 }
 
@@ -691,7 +691,7 @@ bool ParseDeclarationOrFunction(parserItems &items) {
 
   switch (items.lexer.getCurrentToken().type) {
   case TokenType::NEWLINE:
-    items.compilationUnit.AddTopConstruct(
+    items.compilationUnit.AddCompilationUnitItems(
         new Declaration::VariableDeclaration(*type, *identifier));
     return true;
   // Function declaration or defition
@@ -705,7 +705,7 @@ bool ParseDeclarationOrFunction(parserItems &items) {
 }
 
 // TODO improve error handling
-parserItems ParseTop(Lexer &lexer) {
+parserItems ParseCompilationUnit(Lexer &lexer) {
   parserItems items(lexer);
 
   int loopCounter = 0;
@@ -732,7 +732,7 @@ parserItems ParseTop(Lexer &lexer) {
         break;
       }
       // err
-      printParsing(topParsingName, tokenCategory,
+      printParsing(CompilationUnitParsingName, tokenCategory,
                    items.lexer.getCurrentToken());
       break;
     }

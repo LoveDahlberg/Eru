@@ -2,6 +2,6 @@
 
 namespace IR {
 
-void GenerateIR(AST::CompilationUnit top, llvm::Module &module);
+void GenerateIR(AST::CompilationUnit compilationUnit, llvm::Module &module);
 
 }
