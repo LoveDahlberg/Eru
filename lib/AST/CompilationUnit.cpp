@@ -1,9 +1,9 @@
 
-#include <AST/Top.h>
+#include <AST/CompilationUnit.h>
 
 using namespace AST;
 
-std::vector<llvm::Value *> Top::codegen(llvm::Module& module) {
+std::vector<llvm::Value *> CompilationUnit::codegen(llvm::Module& module) {
   std::vector<llvm::Value *> values;
   for (auto constructs : topConstructs) {
     values.emplace_back(constructs->codegen(module));

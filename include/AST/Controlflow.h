@@ -4,13 +4,10 @@
 #include <AST/Assignment.h>
 #include <AST/Function.h>
 
-// stl
-#include <variant>
-
-// Make sure #include <AST/PrimaryExpression.h> is defined in cpp file before
+// Make sure #include <AST/Statement.h> is defined in cpp file before
 // this header.
-namespace AST::PrimaryExpression {
-class PrimaryExpression;
+namespace AST::Statement {
+class Statement;
 }
 
 namespace AST::Controlflow {
@@ -19,30 +16,22 @@ namespace AST::Controlflow {
 // TODO this could be useful for other AST types as well.
 struct Controlflow : public AST {};
 
-enum BooleanOperator { OR, AND, END };
-
-struct BooleanExpression {
-  Assignment::AssignmentExpressionTarget *assignmentExpressionTarget;
-  BooleanOperator booleanOperator;
-  BooleanExpression *booleanExpression;
-};
-
 class ConditionalBranch : public AST {
 public:
-  void addCondition(BooleanExpression *booleanExpression) {
-    booleanExpression = booleanExpression;
+  void addExpression(Expression::Expression *expression) {
+    expression = expression;
   }
 
-  void addPrimaryExpression(
-      PrimaryExpression::PrimaryExpression *primaryExpression) {
-    primaryExpression = primaryExpression;
+  void addStatement(
+    Statement::Statement *Statement) {
+        Statement = Statement;
   }
 
   llvm::Value *codegen(llvm::Module &module) override;
 
 private:
-  BooleanExpression *booleanExpression;
-  PrimaryExpression::PrimaryExpression *primaryExpression;
+  Expression::Expression *expression;
+  Statement::Statement *statement;
 };
 
 class ConditionalBranchingGroup : public Controlflow {

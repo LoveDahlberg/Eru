@@ -3,16 +3,16 @@
 #include <AST/AST.h>
 #include <AST/Declaration.h>
 
-// TODO make sure #include <AST/Assignment.h> is included before the this header
+// TODO make sure #include <AST/Expression.h> is included before the this header
 // in cpp file.
-namespace AST::Assignment {
-class AssignmentExpressionTarget;
+namespace AST::Expression {
+class ExpressionUnit;
 }
 
-// TODO make sure #include <AST/PrimayExpression.h> is included before the this
+// TODO make sure #include <AST/Statement.h> is included before the this
 // header in cpp file.
-namespace AST::PrimaryExpression {
-class PrimaryExpression;
+namespace AST::Statement {
+class Statement;
 }
 
 namespace AST::Function {
@@ -20,27 +20,27 @@ namespace AST::Function {
 class FunctionDefinition : public AST {
 public:
   FunctionDefinition(Declaration::FunctionDeclaration *declaration,
-    PrimaryExpression::PrimaryExpression *primaryExpression)
-      : declaration(declaration), primaryExpression(primaryExpression) {}
+    Statement::Statement *statement)
+      : declaration(declaration), statement(statement) {}
 
   llvm::Value *codegen(llvm::Module &module) override;
 
 private:
   Declaration::FunctionDeclaration *declaration;
-  PrimaryExpression::PrimaryExpression *primaryExpression;
+  Statement::Statement *statement;
 };
 
 class FunctionCall : public AST {
 public:
   FunctionCall(std::string name,
-               std::vector<Assignment::AssignmentExpressionTarget *> parameters)
+               std::vector<Expression::ExpressionUnit *> parameters)
       : name(name), parameters(parameters) {}
 
   llvm::Value *codegen(llvm::Module &module) override;
 
 private:
   std::string name;
-  std::vector<Assignment::AssignmentExpressionTarget *> parameters;
+  std::vector<Expression::ExpressionUnit *> parameters;
 };
 
 } // namespace AST::Function

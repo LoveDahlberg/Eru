@@ -21,8 +21,8 @@ _____
 formal grammar definition:
 _____
 
-[module] → {moduleItem} {module} | END_OF_FILE
-  [moduleItem] → {declaration} | {directive} | {functionDefinition}
+[compilationUnit] → {compilationUnitItem} {compilationUnit} | END_OF_FILE
+  [compilationUnitItem] → {declaration} | {directive} | {functionDefinition}
   
     [declaration] → {variableDeclaration} (NEWLINE) | {functionDeclaration}
       [variableDeclaration] → {type} (IDENTIFER) 
@@ -35,8 +35,8 @@ _____
     [directive] → (LEFT_BRACKET)(RIGHT_BRACKET)
 
     [functionDefinition] → {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) {directive} {block}
-      [block] → (LEFT_CURLY_BRACE) {statements} (RIGHT_CURLY_BRACE)
-        [statements] → {variableDeclaration} {statements} | {assignment} {statements} | {controlflow} {statements} | {functionCall} {statements} | e
+      [block] → (LEFT_CURLY_BRACE) {statement} (RIGHT_CURLY_BRACE)
+        [statement] → {variableDeclaration} {statement} | {assignment} {statement} | {controlflow} {statement} | {functionCall} {statement} | e
           [assignment] → {assignmentTarget} (EQUAL) {expression} (NEWLINE)
             [assignmentTarget] → {variableDeclaration} | (IDENTIFER) 
             

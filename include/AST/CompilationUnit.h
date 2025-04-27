@@ -20,7 +20,7 @@ concept ValidTopType =
     (std::is_base_of_v<Declaration::Declaration, std::remove_pointer_t<T>> ||
      std::is_same_v<Function::FunctionDefinition, std::remove_pointer_t<T>>);
 
-struct Top : public GeneratingAST {
+struct CompilationUnit : public GeneratingAST {
   std::vector<llvm::Value *> codegen(llvm::Module &module) override;
 
   template <typename topConstruct>

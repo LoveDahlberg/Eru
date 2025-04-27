@@ -11,8 +11,8 @@
 
 namespace IR {
 
-void GenerateIR(AST::Top top, llvm::Module& module) {
-  auto values = top.codegen(module);
+void GenerateIR(AST::CompilationUnit compilationUnit, llvm::Module& module) {
+  auto values = compilationUnit.codegen(module);
   std::cout << "GenerateIR\n";
   for (auto value : values) {
     value->print(llvm::outs(), false);

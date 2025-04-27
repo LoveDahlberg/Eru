@@ -19,14 +19,14 @@ TEST(IR, testDeclaration) {
 
   auto ctx = new llvm::LLVMContext();
   auto module = llvm::Module("", *ctx);
-  Top top;
+  CompilationUnit compilationUnit;
 
   constexpr const char *variableName = "firstVariable";
-  top.AddTopConstruct(new Declaration::VariableDeclaration(
+  compilationUnit.AddTopConstruct(new Declaration::VariableDeclaration(
       (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), variableName));
 
   constexpr const char *functionName = "firstFunctionDeclaration";
-  top.AddTopConstruct(new Declaration::FunctionDeclaration(
+  compilationUnit.AddTopConstruct(new Declaration::FunctionDeclaration(
       (llvm::Type *)llvm::Type::getInt1Ty(module.getContext()), functionName,
       {new Declaration::VariableDeclaration(
            (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()),
@@ -35,7 +35,7 @@ TEST(IR, testDeclaration) {
            (llvm::Type *)llvm::Type::getInt1Ty(module.getContext()),
            "firstParameter")}));
 
-  GenerateIR(top, module);
+  GenerateIR(compilationUnit, module);
 
   auto generatedVariable = module.getGlobalVariable(variableName, true);
   EXPECT_NE(generatedVariable, nullptr);

@@ -14,3 +14,6 @@ Trim includes in files.
 Go through TODO and add tasks
 
 Create a "ExpectAndEat" function for Parser.cpp instead of checking type and then skipping it everywhere.
+
+Refactor parser slightly, popping of items should match the rules in the grammar. For example
+block should pop { then parse statement and then pop }

@@ -5,7 +5,7 @@
 #include <Lexer/Lexer.h>
 #include <Lexer/Tokens.h>
 
-#include <AST/Top.h>
+#include <AST/CompilationUnit.h>
 #include <AST/Types.h>
 
 using namespace Lexing;
@@ -22,7 +22,7 @@ private:
 public:
   llvm::Module* module;
   Lexer lexer;
-  Top top;
+  CompilationUnit compilationUnit;
 };
 
 std::optional<std::string> ParseIdentifier(parserItems &items);

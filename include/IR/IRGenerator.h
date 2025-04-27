@@ -1,7 +1,7 @@
-#include <AST/Top.h>
+#include <AST/CompilationUnit.h>
 
 namespace IR {
 
-void GenerateIR(AST::Top top, llvm::Module &module);
+void GenerateIR(AST::CompilationUnit top, llvm::Module &module);
 
 }
