@@ -2,6 +2,9 @@ How to read
 
 // TODO explain in more detail how the | works and the recursive nature of everything..
 // TODO Add proper newlines after each grammar rule where its needed.
+// TODO when adding more operators, make sure associativity (result is different depending on grouping) is considered.
+//      also, might need to correct grammar when combining boolean operators and arithmetic. For example boolean is usually only allowed between
+//      expressions that are arithmatically created.
 
 Contains the grammar definition
 
@@ -18,73 +21,74 @@ _____
 formal grammar definition:
 _____
 
-[top] -> {declaration} {top} | {directive} {top} | {function} {top} | END_OF_FILE
+[module] → {moduleItem} {module} | END_OF_FILE
+  [moduleItem] → {declaration} | {directive} | {functionDefinition}
   
-  [declaration] -> {variableDeclaration} (NEWLINE) | {functionDeclaration}
-    [variableDeclaration] -> {type} (IDENTIFER) 
-      [type] -> {data}
-        [data] -> (INT) | (SIGNED_INT_32) | (UNSIGNED_INT_32) | (BOOl) | (STRING) | (CHAR)    
-    [functionDeclaration] -> {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) (NEWLINE)
-      [parametersDeclaration] -> {parametersDeclarationList} | e
-        [parametersDeclarationList] -> {type} (IDENTIFER) | {type} (IDENTIFER) (COMMA) {parametersDeclaration}
-  
-  [directive] -> (LEFT_BRACKET)(RIGHT_BRACKET)
+    [declaration] → {variableDeclaration} (NEWLINE) | {functionDeclaration}
+      [variableDeclaration] → {type} (IDENTIFER) 
+        [type] → {data}
+          [data] → (INT) | (SIGNED_INT_32) | (UNSIGNED_INT_32) | (BOOl) | (STRING) | (CHAR)    
+      [functionDeclaration] → {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) (NEWLINE)
+        [parametersDeclaration] → {parametersDeclarationList} | e
+          [parametersDeclarationList] → {type} (IDENTIFER) | {type} (IDENTIFER) (COMMA) {parametersDeclaration}
+    
+    [directive] → (LEFT_BRACKET)(RIGHT_BRACKET)
 
-  [function] -> {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) {directive} (LEFT_CURLY_BRACE) {primaryExpression} (RIGHT_CURLY_BRACE)
-    [primaryExpression] -> {variableDeclaration} {primaryExpression} | {assignment} {primaryExpression} | {controlflow} {primaryExpression} | {functionCall} {primaryExpression} | e
-      [assignment] -> {assignmentTarget} (EQUAL) {assignmentExpression} (NEWLINE)
-        [assignmentTarget] -> {variableDeclaration} | (IDENTIFER) 
-        
-        [assignmentExpression] -> {assignmentExpressionTarget} {operator} {assignmentExpression} | {assignmentExpressionTarget} 
-          [assignmentExpressionTarget] -> (IDENTIFER) | {literal} | {functionCall} 
-            [literal] -> (STRING_LITERAL) | (INTEGER_LITERAL)          
-            [functionCall] -> (IDENTIFER) (LEFT_PARENTHESIS) {parametersCall} (RIGHT_PARENTHESIS)
-              [parametersCall] -> {prametersCallList} | e
-                [prametersCallList] -> {assignmentExpressionTarget} | {assignmentExpressionTarget} (COMMA) {prametersCallList}
-          [operator] -> (PLUS) | (MINUS) 
+    [functionDefinition] → {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) {directive} {block}
+      [block] → (LEFT_CURLY_BRACE) {statements} (RIGHT_CURLY_BRACE)
+        [statements] → {variableDeclaration} {statements} | {assignment} {statements} | {controlflow} {statements} | {functionCall} {statements} | e
+          [assignment] → {assignmentTarget} (EQUAL) {expression} (NEWLINE)
+            [assignmentTarget] → {variableDeclaration} | (IDENTIFER) 
+            
+            [expression] → {expression} {operator} {operand} | {operand} 
+              [operand] → (IDENTIFER) | {literal} | {functionCall} 
+                [literal] → (STRING_LITERAL) | (INTEGER_LITERAL)          
+                [functionCall] → (IDENTIFER) (LEFT_PARENTHESIS) {parametersCall} (RIGHT_PARENTHESIS)
+                  [parametersCall] → {parametersCallList} | e
+                    [parametersCallList] → {expression} | {expression} (COMMA) {parametersCallList}
+              [operator] → {arithmeticOperator} | {booleanOperator}
+                [arithmeticOperator] → (PLUS) | (MINUS)
+                [booleanOperator] → (AND) | (OR)
 
-      [controlflow] -> {conditionalBranch}
-        [conditionalBranch] -> (IF) {conditinalExpression} {continuedCondition}
-          [conditinalExpression] -> (LEFT_PARENTHESIS) {booleanExpression} (RIGHT_PARENTHESIS) (LEFT_CURLY_BRACE) {primaryExpression} (RIGHT_CURLY_BRACE)
-            [booleanExpression] -> {assignmentExpression} {booleanExpressionList}
-              [booleanExpressionList] -> {booleanOperator} {booleanExpression} | e
-                [booleanOperator] -> (AND) | (OR)
-          [continuedCondition] -> (ELSE) {conditinalExpression} | (ELIF) {conditinalExpression} {continuedCondition} | e
+        [controlflow] → {conditionalBranch}
+          [conditionalBranch] → (IF) {ifClause} {block} {continuedCondition}
+            [ifClause] → (LEFT_PARENTHESIS) {expression} (RIGHT_PARENTHESIS)
+            [continuedCondition] → (ELSE) {block} | (ELIF) {ifClause} {block} {continuedCondition} | e
 
 _____
 
 Token definition:
 _____
 
-(IDENTIFER) -> [a-zA-Z_][a-zA-Z0-9_]*
+(IDENTIFER) → [a-zA-Z_][a-zA-Z0-9_]*
 
-(IF) -> if
-(ELSE) -> else
-(ELIF) -> elif
-(AND) -> and
-(OR) -> or
+(IF) → if
+(ELSE) → else
+(ELIF) → elif
+(AND) → and
+(OR) → or
 
-(LEFT_PARENTHESIS) -> (
-(RIGHT_PARENTHESIS) -> )
-(LEFT_CURLY_BRACE) -> {
-(RIGHT_CURLY_BRACE) -> }
-(LEFT_BRACKET) -> [
-(RIGHT_BRACKET) -> ]
-(COMMA) -> ,
-(NEWLINE) -> \n | \r | \n\r
+(LEFT_PARENTHESIS) → (
+(RIGHT_PARENTHESIS) → )
+(LEFT_CURLY_BRACE) → {
+(RIGHT_CURLY_BRACE) → }
+(LEFT_BRACKET) → [
+(RIGHT_BRACKET) → ]
+(COMMA) → ,
+(NEWLINE) → \n | \r | \n\r
 
-(INT) -> int
-(SIGNED_INT_32) -> sint32
-(UNSIGNED_INT_32) -> uint32
-(BOOL) -> true | false
-(STRING) -> string
-(CHAR) -> char
+(INT) → int
+(SIGNED_INT_32) → sint32
+(UNSIGNED_INT_32) → uint32
+(BOOL) → true | false
+(STRING) → string
+(CHAR) → char
 
-(PLUS) -> +
-(MINUS) -> -
-(EQUAL) -> =
+(PLUS) → +
+(MINUS) → -
+(EQUAL) → =
 
-(INTEGER_LITERAL) -> [0-9]+
-(STRING_LITERAL) -> ".*"
+(INTEGER_LITERAL) → [0-9]+
+(STRING_LITERAL) → ".*"
 
-(END_OF_FILE) -> EOF
+(END_OF_FILE) → EOF
