@@ -19,6 +19,7 @@ add_library(AST STATIC
     AST/Types.cpp
     AST/Function.cpp
     AST/PrimaryExpression.cpp
+    AST/Assignment.cpp
 )
 target_include_directories(AST PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(AST PRIVATE ${llvm_libs})

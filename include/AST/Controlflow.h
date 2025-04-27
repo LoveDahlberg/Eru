@@ -1,8 +1,8 @@
 #pragma once
 
 #include <AST/AST.h>
-#include <AST/Function.h>
 #include <AST/Assignment.h>
+#include <AST/Function.h>
 
 // stl
 #include <variant>
@@ -15,41 +15,45 @@ class PrimaryExpression;
 
 namespace AST::Controlflow {
 
-enum BooleanOperator {
-  OR,
-  AND
-};
+// Common type for all controlflow, to make it easier to group them.
+// TODO this could be useful for other AST types as well.
+struct Controlflow : public AST {};
 
-struct BooleanExpression;
-
-struct booleanExpressionList {
-  BooleanOperator booleanOperator;
-  BooleanExpression* booleanExpression;
-};
+enum BooleanOperator { OR, AND, END };
 
 struct BooleanExpression {
-  Assignment::AssignmentExpression* assignmentExpression;
-  
-  // Can be nullptr if empty.
-  booleanExpressionList* booleanExpressionList;
+  Assignment::AssignmentExpressionTarget *assignmentExpressionTarget;
+  BooleanOperator booleanOperator;
+  BooleanExpression *booleanExpression;
 };
 
-struct ConditionalExpression : public AST {
-  BooleanExpression booleanExpression;
+class ConditionalBranch : public AST {
+public:
+  void addCondition(BooleanExpression *booleanExpression) {
+    booleanExpression = booleanExpression;
+  }
+
+  void addPrimaryExpression(
+      PrimaryExpression::PrimaryExpression *primaryExpression) {
+    primaryExpression = primaryExpression;
+  }
+
+  llvm::Value *codegen(llvm::Module &module) override;
+
+private:
+  BooleanExpression *booleanExpression;
   PrimaryExpression::PrimaryExpression *primaryExpression;
 };
 
-struct ConditionalBranch : public AST {
-  llvm::Value *codegen(llvm::Module &module) override;
-
-  std::vector<ConditionalExpression *> conditionalChain;
-};
-
-struct Controlflow : public AST {
-  std::variant<Function::FunctionCall *, ConditionalBranch *>
-      controlflowVariant;
+class ConditionalBranchingGroup : public Controlflow {
+public:
+  ConditionalBranchingGroup(std::vector<ConditionalBranch *> conditionalChain)
+      : conditionalChain(conditionalChain) {}
 
   llvm::Value *codegen(llvm::Module &module) override;
+
+private:
+  std::vector<ConditionalBranch *> conditionalChain;
 };
 
 } // namespace AST::Controlflow

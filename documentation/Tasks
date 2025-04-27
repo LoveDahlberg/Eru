@@ -12,3 +12,5 @@ llvm passed pointers.
 Trim includes in files.
 
 Go through TODO and add tasks
+
+Create a "ExpectAndEat" function for Parser.cpp instead of checking type and then skipping it everywhere.

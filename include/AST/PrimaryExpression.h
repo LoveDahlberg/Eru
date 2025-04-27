@@ -14,11 +14,11 @@ namespace AST::PrimaryExpression {
 template <typename T>
 concept ValidPrimaryExpressionType =
     std::is_pointer_v<T> &&
-    (std::is_same_v<std::remove_pointer_t<T>,
-                    Declaration::VariableDeclaration> ||
-     std::is_same_v<std::remove_pointer_t<T>, Assignment::Assignment> ||
-     std::is_same_v<std::remove_pointer_t<T>, Controlflow::Controlflow> ||
-     std::is_same_v<std::remove_pointer_t<T>, Function::FunctionCall>);
+    (std::is_same_v<Declaration::VariableDeclaration,
+                    std::remove_pointer_t<T>> ||
+     std::is_same_v<Assignment::Assignment, std::remove_pointer_t<T>> ||
+     std::is_same_v<Function::FunctionCall, std::remove_pointer_t<T>> ||
+     std::is_base_of_v<Controlflow::Controlflow, std::remove_pointer_t<T>>);
 
 struct PrimaryExpression : public GeneratingAST {
   template <typename primaryExpressionConstruct>

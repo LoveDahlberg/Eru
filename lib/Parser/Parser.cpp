@@ -1,5 +1,6 @@
 
 // stl
+#include "AST/Types.h"
 #include <AST/Assignment.h>
 #include <AST/Controlflow.h>
 #include <AST/Declaration.h>
@@ -66,6 +67,21 @@ bool ParseDirective(parserItems &items) {
   return true;
 }
 
+std::optional<std::string> ParseLiteral(parserItems &items) {
+  if (items.lexer.getCurrentToken().type != TokenType::INTEGER_LITERAL &&
+      items.lexer.getCurrentToken().type != TokenType::STRING_LITERAL) {
+    // err
+    return std::nullopt;
+  }
+
+  // TODO might be issues to treat ints as strings here.
+  auto literal = items.lexer.getCurrentToken().value;
+
+  // Get next, current type saved.
+  items.lexer.generateNextToken();
+  return literal;
+}
+
 std::optional<std::string> ParseIdentifier(parserItems &items) {
   if (items.lexer.getCurrentToken().type != TokenType::IDENTIFER) {
     // err
@@ -130,8 +146,61 @@ ParseVariableDeclaration(parserItems &items) {
   return new Declaration::VariableDeclaration(*type, *identifier);
 }
 
+std::optional<Function::FunctionCall *>
+ParseFunctionCall(parserItems &items, std::string name = "");
+
 std::optional<Assignment::AssignmentExpressionTarget *>
 ParseAssignmentExpressionTarget(parserItems &items) {
+  // Determine the first target.
+  switch (items.lexer.getCurrentToken().type) {
+
+  // Identifier or function call
+  case TokenType::IDENTIFER: {
+    auto identifier = ParseIdentifier(items);
+    if (!identifier) {
+      // err
+      return std::nullopt;
+    }
+
+    // Function call
+    if (items.lexer.getCurrentToken().type == TokenType::LEFT_PARENTHESIS) {
+      auto functionCall = ParseFunctionCall(items, *identifier);
+      if (!functionCall) {
+        // err
+        return std::nullopt;
+      }
+      return new Assignment::AssignmentExpressionTarget(*functionCall);
+    }
+    // Identifier
+    return new Assignment::AssignmentExpressionTarget(
+        Types::NamedIdentifier(*identifier));
+  }
+
+  case TokenType::STRING_LITERAL: {
+    auto literal = ParseLiteral(items);
+    if (!literal) {
+      // err
+      return std::nullopt;
+    }
+    return new Assignment::AssignmentExpressionTarget(
+        Types::StringLiteral(*literal));
+  }
+
+  case TokenType::INTEGER_LITERAL: {
+    auto literal = ParseLiteral(items);
+    if (!literal) {
+      // err
+      return std::nullopt;
+    }
+    return new Assignment::AssignmentExpressionTarget(
+        Types::IntegerLiteral(*literal));
+  }
+
+  default: {
+    break;
+  }
+  }
+  // err
   return std::nullopt;
 }
 
@@ -194,13 +263,8 @@ ParseParameters(parserItems &items,
   return parameters;
 }
 
-// std::vector<Assignment::AssignmentExpressionTarget *>
-// ParseCallParameters(parserItems &items) {
-//   return {};
-// }
-
-std::optional<Function::FunctionCall *>
-ParseFunctionCall(parserItems &items, std::string name = "") {
+std::optional<Function::FunctionCall *> ParseFunctionCall(parserItems &items,
+                                                          std::string name) {
 
   // If name is empty, parse the identifier. Otherwise assume that it was parsed
   // before calling this function.
@@ -213,7 +277,7 @@ ParseFunctionCall(parserItems &items, std::string name = "") {
     name = *identifier;
   }
 
-  if (items.lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
+  if (items.lexer.getCurrentToken().type != TokenType::LEFT_PARENTHESIS) {
     // err
     return std::nullopt;
   }
@@ -228,7 +292,7 @@ ParseFunctionCall(parserItems &items, std::string name = "") {
     return std::nullopt;
   }
 
-  if (items.lexer.getCurrentToken().type != TokenType::RIGHT_BRACKET) {
+  if (items.lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
     // err
     return std::nullopt;
   }
@@ -241,15 +305,187 @@ ParseFunctionCall(parserItems &items, std::string name = "") {
   return new Function::FunctionCall(name, *parameters);
 }
 
-std::optional<Controlflow::Controlflow *>
-ParseConditionalBranch(parserItems &items) {
+std::optional<Controlflow::BooleanExpression*>
+ParseBooleanExpression(parserItems &items) {
+
+  // TODO, this must be merged with AssignmentExpression.
+
+  // do {
+  //   auto target = ParseAssignmentExpressionTarget(items);
+  //   if(!target)
+  //   {
+  //     // err
+  //     return std::nullopt;
+  //   }
+
+  // }while ()
   return std::nullopt;
 }
 
-std::optional<Assignment::Assignment *>
-ParseAssignment(parserItems &items,
-                Declaration::VariableDeclaration *variableDeclaration) {
-  return std::nullopt;
+std::optional<PrimaryExpression::PrimaryExpression *>
+ParsePrimaryExpression(parserItems &items);
+
+std::optional<Controlflow::ConditionalBranch *>
+ParseConditionalBranch(parserItems &items, bool start = false) {
+
+  // TODO could refactor this to be more readable.
+  if (start && items.lexer.getCurrentToken().type != TokenType::IF ||
+      !start && (items.lexer.getCurrentToken().type != TokenType::ELIF ||
+                 items.lexer.getCurrentToken().type == TokenType::ELSE)) {
+    // err
+    return std::nullopt;
+  }
+
+  bool isNotElse = items.lexer.getCurrentToken().type != TokenType::ELSE;
+
+  // Eat the if, elif or else
+  items.lexer.generateNextToken();
+
+  auto branch = new Controlflow::ConditionalBranch();
+
+  if (isNotElse) {
+
+    if (items.lexer.getCurrentToken().type != TokenType::LEFT_PARENTHESIS) {
+      // err
+      return std::nullopt;
+    }
+
+    // Eat the (
+    items.lexer.generateNextToken();
+
+    auto booleanExpression = ParseBooleanExpression(items);
+    if (!booleanExpression) {
+      // err
+      return std::nullopt;
+    }
+
+    if (items.lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
+      // err
+      return std::nullopt;
+    }
+    // Eat the )
+    items.lexer.generateNextToken();
+
+    branch->addCondition(*booleanExpression);
+  }
+
+  if (items.lexer.getCurrentToken().type != TokenType::LEFT_CURLY_BRACE) {
+    // err
+    return std::nullopt;
+  }
+
+  // Eat the {
+  items.lexer.generateNextToken();
+
+  auto primaryExpression = ParsePrimaryExpression(items);
+  if (!primaryExpression) {
+    // err
+    return std::nullopt;
+  }
+
+  if (items.lexer.getCurrentToken().type != TokenType::RIGHT_CURLY_BRACE) {
+    // err
+    return std::nullopt;
+  }
+
+  // Eat the }
+  items.lexer.generateNextToken();
+
+  branch->addPrimaryExpression(*primaryExpression);
+  return branch;
+}
+
+std::optional<Controlflow::ConditionalBranchingGroup *>
+ParseConditionalBranchingGroup(parserItems &items) {
+  std::vector<Controlflow::ConditionalBranch *> conditionalChain;
+
+  bool start = true;
+  do {
+    auto ConditionalBranch = ParseConditionalBranch(items, start);
+    if (!ConditionalBranch) {
+      // err
+      return std::nullopt;
+    }
+    start = false;
+    conditionalChain.push_back(*ConditionalBranch);
+  } while (items.lexer.getCurrentToken().type == TokenType::ELIF ||
+           items.lexer.getCurrentToken().type == TokenType::ELSE);
+
+  return new Controlflow::ConditionalBranchingGroup(conditionalChain);
+}
+
+std::optional<Assignment::AssignmentExpression *>
+ParseAssignmentExpression(parserItems &items) {
+
+  Assignment::AssignmentExpression *expression;
+
+  auto target = ParseAssignmentExpressionTarget(items);
+  if (!target) {
+    // err
+    return std::nullopt;
+  }
+  expression->firstTarget = *target;
+
+  // Check if assignment is over
+  if (items.lexer.getCurrentToken().type == TokenType::NEWLINE) {
+    expression->operation = Assignment::MathematicalOperator::END;
+    return expression;
+  }
+
+  // Parse mathematical operator
+  if (!Assignment::TokenToMathematicalOperator.contains(
+          items.lexer.getCurrentToken().type)) {
+    // err
+    return std::nullopt;
+  }
+
+  expression->operation = Assignment::TokenToMathematicalOperator.at(
+      items.lexer.getCurrentToken().type);
+
+  auto secondTargetExpression = ParseAssignmentExpression(items);
+  if (!secondTargetExpression) {
+    // err
+    return std::nullopt;
+  }
+
+  expression->SecondTarget = *secondTargetExpression;
+  return expression;
+}
+
+std::optional<Assignment::Assignment *> ParseAssignment(
+    parserItems &items,
+    Declaration::VariableDeclaration *variableDeclaration = nullptr) {
+
+  // If not null, variable information already parsed.
+  if (variableDeclaration == nullptr) {
+    // TODO implement parsing of variable declaration or single identifier
+    return std::nullopt;
+  }
+
+  if (items.lexer.getCurrentToken().type != TokenType::EQUAL) {
+    // err
+    return std::nullopt;
+  }
+
+  // Eat the =
+  items.lexer.generateNextToken();
+
+  Assignment::Assignment *assignment;
+  if (variableDeclaration->type == nullptr) {
+    assignment = new Assignment::Assignment({variableDeclaration->name});
+  } else {
+    assignment = new Assignment::Assignment(variableDeclaration);
+  }
+
+  auto assignmentExpression = ParseAssignmentExpression(items);
+  if (!assignmentExpression) {
+    // err
+    return std::nullopt;
+  }
+
+  assignment->setExpression(*assignmentExpression);
+
+  return assignment;
 }
 
 std::optional<PrimaryExpression::PrimaryExpression *>
@@ -301,7 +537,7 @@ ParsePrimaryExpression(parserItems &items) {
         return std::nullopt;
       }
 
-      auto controlFlow = ParseConditionalBranch(items);
+      auto controlFlow = ParseConditionalBranchingGroup(items);
       if (!controlFlow) {
         // err
         return std::nullopt;
@@ -311,7 +547,7 @@ ParsePrimaryExpression(parserItems &items) {
       break;
     }
 
-    // function call or assignment.
+    // Function call or assignment.
     case TokenCategory::IDENTIFER: {
 
       // Both start with an identifier.
@@ -321,6 +557,7 @@ ParsePrimaryExpression(parserItems &items) {
         return std::nullopt;
       }
 
+      // TODO move this switch case to getter function.
       switch (items.lexer.getCurrentToken().type) {
 
       // Assignment

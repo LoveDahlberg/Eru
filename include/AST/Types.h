@@ -14,7 +14,7 @@ struct StringLiteral {
   std::string value;
 };
 struct IntegerLiteral {
-  int value;
+  std::string value;
 };
 
 } // namespace AST::Types
