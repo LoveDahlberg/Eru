@@ -40,6 +40,6 @@ bool ParseFunctionDefinitionOrDeclaration(parserItems &items, llvm::Type *type,
 
 bool ParseDeclarationOrFunction(parserItems &items);
 
-parserItems ParseCompilationUnit(Lexer &lexer);
+std::optional<parserItems> ParseCompilationUnit(Lexer &lexer);
 
 } // namespace Parser

@@ -22,5 +22,31 @@ TEST(Parser, TestDeclarations) {
   Lexer lexer(stream);
   auto parserItems = ParseCompilationUnit(lexer);
 
-  EXPECT_EQ(parserItems.compilationUnit.GetAddCompilationUnitItems().size(), 5);
+  ASSERT_TRUE(parserItems);
+
+  EXPECT_EQ((*parserItems).compilationUnit.GetAddCompilationUnitItems().size(), 5);
+}
+
+
+TEST(Parser, TestFunctions) {
+  std::string stream = R"(
+    int function(int a, bool b) [] {
+      int first = 3 - "asd"
+      bool second = 2
+
+      third()
+      if(1 + 2) {
+        int aa
+      }
+      else {
+        int bb
+      }
+    }
+    )";
+  stream += EOF;
+
+  Lexer lexer(stream);
+  auto parserItems = ParseCompilationUnit(lexer);
+
+  ASSERT_TRUE(parserItems);
 }

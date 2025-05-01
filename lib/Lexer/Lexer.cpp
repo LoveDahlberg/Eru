@@ -18,6 +18,8 @@ int Lexer::getNext() {
   }
   assert(index + 1 > index && "index is overflowing");
 
+  parsedInput += getCurrent();
+
   return input[++index];
 }
 

@@ -17,3 +17,9 @@ Create a "ExpectAndEat" function for Parser.cpp instead of checking type and the
 
 Refactor parser slightly, popping of items should match the rules in the grammar. For example
 block should pop { then parse statement and then pop }
+
+Finish testing (on a high level) of the parser. Then refactor (move it) to a separate file hierarcy, because 
+it will note scale further as is.
+
+Add lookahead for parser and a lookahead until next newline. Use it to fix finding of function def
+vs decl and parsing of if statments (lookahead if there is a else or ifelse)

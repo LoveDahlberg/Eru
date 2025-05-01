@@ -21,6 +21,7 @@ add_library(AST STATIC
     AST/Statement.cpp
     AST/Assignment.cpp
     AST/Controlflow.cpp
+    AST/Expression.cpp
 )
 target_include_directories(AST PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(AST PRIVATE ${llvm_libs})

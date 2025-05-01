@@ -39,11 +39,18 @@ void printParsing(const char *parsingFunctionName, TokenCategory tokenCategory,
 }
 
 void skipUntilNotNewline(parserItems &items) {
-  if (items.lexer.getCurrentToken().type == Lexing::TokenType::NEWLINE) {
+  if (items.lexer.getCurrentToken().type != Lexing::TokenType::NEWLINE) {
     return;
   }
 
-  while (items.lexer.generateNextToken().type != Lexing::TokenType::NEWLINE) {
+  int loopCounter = 0;
+  while (items.lexer.generateNextToken().type == Lexing::TokenType::NEWLINE) {
+    if (items.lexer.getCurrentToken().type == Lexing::TokenType::END_OF_FILE) {
+      return;
+    }
+    if (loopCounter++ > loopLimit) {
+      return;
+    }
   }
 }
 
@@ -211,6 +218,8 @@ ParseExpressionUnit(parserItems &items) {
   auto unit = new Expression::ExpressionUnit();
   unit->operand = *operand;
 
+  // skipUntilNotNewline(items);
+
   // TODO create proper operator map and category.
   switch (items.lexer.getCurrentToken().type) {
   case TokenType::AND:
@@ -230,6 +239,7 @@ ParseExpressionUnit(parserItems &items) {
   }
 
   default: {
+    // No operation after operand
     break;
   }
   }
@@ -339,7 +349,7 @@ std::optional<Function::FunctionCall *> ParseFunctionCall(parserItems &items,
 
 std::optional<Expression::Expression *> ParseExpression(parserItems &items) {
 
-  Expression::Expression *expression;
+  auto expression = new Expression::Expression();
 
   int loopCounter = 0;
   do {
@@ -366,11 +376,17 @@ std::optional<Controlflow::ConditionalBranch *>
 ParseConditionalBranch(parserItems &items, bool start = false) {
 
   // TODO could refactor this to be more readable.
-  if (start && items.lexer.getCurrentToken().type != TokenType::IF ||
-      !start && (items.lexer.getCurrentToken().type != TokenType::ELIF ||
-                 items.lexer.getCurrentToken().type == TokenType::ELSE)) {
-    // err
-    return std::nullopt;
+  if (start) {
+    if (items.lexer.getCurrentToken().type != TokenType::IF) {
+      // err
+      return std::nullopt;
+    }
+  } else {
+    if (items.lexer.getCurrentToken().type != TokenType::ELIF &&
+        items.lexer.getCurrentToken().type != TokenType::ELSE) {
+      // err
+      return std::nullopt;
+    }
   }
 
   bool isNotElse = items.lexer.getCurrentToken().type != TokenType::ELSE;
@@ -405,6 +421,8 @@ ParseConditionalBranch(parserItems &items, bool start = false) {
 
     branch->addExpression(*expression);
   }
+
+  skipUntilNotNewline(items);
 
   if (items.lexer.getCurrentToken().type != TokenType::LEFT_CURLY_BRACE) {
     // err
@@ -445,6 +463,7 @@ ParseConditionalBranchingGroup(parserItems &items) {
     }
     start = false;
     conditionalChain.push_back(*ConditionalBranch);
+    skipUntilNotNewline(items);
   } while (items.lexer.getCurrentToken().type == TokenType::ELIF ||
            items.lexer.getCurrentToken().type == TokenType::ELSE);
 
@@ -499,7 +518,11 @@ std::optional<Statement::Statement *> ParseStatement(parserItems &items) {
     return statement;
   }
 
+  int loopCounter = 0;
+  bool generateNewToken;
   do {
+    generateNewToken = true;
+    skipUntilNotNewline(items);
     auto tokenCategory =
         tokenTypeToCategory.at(items.lexer.getCurrentToken().type);
     switch (tokenCategory) {
@@ -547,6 +570,10 @@ std::optional<Statement::Statement *> ParseStatement(parserItems &items) {
       }
 
       statement->AddStatement(*controlFlow);
+
+      // ParseConditionalBranchingGroup already sets the index to the next
+      // element to parse.
+      generateNewToken = false;
       break;
     }
 
@@ -598,8 +625,14 @@ std::optional<Statement::Statement *> ParseStatement(parserItems &items) {
       return std::nullopt;
     }
     }
-  } while (items.lexer.generateNextToken().type !=
-           TokenType::RIGHT_CURLY_BRACE);
+
+    if (generateNewToken && items.lexer.generateNextToken().type ==
+                                TokenType::RIGHT_CURLY_BRACE ||
+        items.lexer.getCurrentToken().type == TokenType::RIGHT_CURLY_BRACE) {
+      break;
+    }
+
+  } while (loopCounter++ < loopLimit);
   return statement;
 }
 
@@ -663,6 +696,9 @@ bool ParseFunctionDefinitionOrDeclaration(parserItems &items, llvm::Type *type,
   // eat the )
   items.lexer.generateNextToken();
 
+  // TODO If its a definition, we can have newlines and then a {.
+  // If its a declaration, we can have a newline, but then the next valid item will
+  // appear. Should add a lookahead here.
   skipUntilNotNewline(items);
 
   auto declaration =
@@ -705,11 +741,12 @@ bool ParseDeclarationOrFunction(parserItems &items) {
 }
 
 // TODO improve error handling
-parserItems ParseCompilationUnit(Lexer &lexer) {
+std::optional<parserItems> ParseCompilationUnit(Lexer &lexer) {
   parserItems items(lexer);
 
   int loopCounter = 0;
   do {
+    // TODO should just be able to skip all newlines here.
     auto tokenCategory =
         tokenTypeToCategory.at(items.lexer.generateNextToken().type);
     switch (tokenCategory) {
@@ -721,20 +758,20 @@ parserItems ParseCompilationUnit(Lexer &lexer) {
       if (ParseDirective(items)) {
         continue;
       }
-      break;
+      return std::nullopt;
     case TokenCategory::DATA_TYPE:
       if (ParseDeclarationOrFunction(items)) {
         continue;
       }
-      break;
+      return std::nullopt;
     default:
       if (items.lexer.getCurrentToken().type == TokenType::END_OF_FILE) {
         break;
       }
       // err
-      printParsing(CompilationUnitParsingName, tokenCategory,
-                   items.lexer.getCurrentToken());
-      break;
+      // printParsing(CompilationUnitParsingName, tokenCategory,
+      //              items.lexer.getCurrentToken());
+      return std::nullopt;
     }
     // Break the main loop
     break;

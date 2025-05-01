@@ -65,6 +65,7 @@ private:
   Token getUnknown();
 
   const std::string input;
+  std::string parsedInput;
   long long unsigned index = 0;
   int currentChar = ' ';
   Token currentToken;
