@@ -455,7 +455,9 @@ ParseConditionalBranchingGroup(parserItems &items) {
   std::vector<Controlflow::ConditionalBranch *> conditionalChain;
 
   bool start = true;
+  Token lookaheadToken;
   do {
+    skipUntilNotNewline(items);
     auto ConditionalBranch = ParseConditionalBranch(items, start);
     if (!ConditionalBranch) {
       // err
@@ -463,9 +465,10 @@ ParseConditionalBranchingGroup(parserItems &items) {
     }
     start = false;
     conditionalChain.push_back(*ConditionalBranch);
-    skipUntilNotNewline(items);
-  } while (items.lexer.getCurrentToken().type == TokenType::ELIF ||
-           items.lexer.getCurrentToken().type == TokenType::ELSE);
+
+    lookaheadToken = items.lexer.lookaheadTokenNotNewline();
+  } while (lookaheadToken.type == TokenType::ELIF ||
+           lookaheadToken.type == TokenType::ELSE);
 
   return new Controlflow::ConditionalBranchingGroup(conditionalChain);
 }
@@ -570,10 +573,6 @@ std::optional<Statement::Statement *> ParseStatement(parserItems &items) {
       }
 
       statement->AddStatement(*controlFlow);
-
-      // ParseConditionalBranchingGroup already sets the index to the next
-      // element to parse.
-      generateNewToken = false;
       break;
     }
 
@@ -626,9 +625,7 @@ std::optional<Statement::Statement *> ParseStatement(parserItems &items) {
     }
     }
 
-    if (generateNewToken && items.lexer.generateNextToken().type ==
-                                TokenType::RIGHT_CURLY_BRACE ||
-        items.lexer.getCurrentToken().type == TokenType::RIGHT_CURLY_BRACE) {
+    if (items.lexer.generateNextToken().type == TokenType::RIGHT_CURLY_BRACE) {
       break;
     }
 
@@ -686,25 +683,21 @@ bool ParseFunctionDefinitionOrDeclaration(parserItems &items, llvm::Type *type,
     return false;
   }
 
-  // TODO strictly not needed, as a valid ParseParameters will leave the
-  // parenthesis here. But its more correct to check it here too.
   if (items.lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
     // err
     return false;
   }
 
-  // eat the )
-  items.lexer.generateNextToken();
-
-  // TODO If its a definition, we can have newlines and then a {.
-  // If its a declaration, we can have a newline, but then the next valid item will
-  // appear. Should add a lookahead here.
-  skipUntilNotNewline(items);
-
   auto declaration =
       new Declaration::FunctionDeclaration(type, identifier, *paramaters);
 
-  if (items.lexer.getCurrentToken().type == TokenType::LEFT_BRACKET) {
+  // Lookahead and get the next non newline token.
+  auto lookaheadToken = items.lexer.lookaheadTokenNotNewline();
+
+  // eat the ), needed before leaving this function.
+  items.lexer.generateNextToken();
+
+  if (lookaheadToken.type == TokenType::LEFT_BRACKET) {
     return ParseFunctionDefinition(items, declaration);
   }
 

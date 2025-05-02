@@ -43,6 +43,24 @@ public:
     return currentToken;
   }
 
+  Token lookaheadToken() {
+    auto startIndex = index;
+    auto temporaryToken = getNextToken();
+    index = startIndex;
+    return temporaryToken;
+  }
+
+  Token lookaheadTokenNotNewline()
+  {
+    auto startIndex = index;
+    Token temporaryToken;
+    do {
+      temporaryToken = getNextToken();
+    }while (temporaryToken.type == TokenType::NEWLINE);
+    index = startIndex;
+    return temporaryToken;
+  }
+
   Token getCurrentToken(){
     return currentToken;
   }
