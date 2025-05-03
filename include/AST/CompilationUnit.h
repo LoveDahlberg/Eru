@@ -2,7 +2,7 @@
 #pragma once
 
 #include <AST/AST.h>
-#include <AST/Declaration.h>
+#include <AST/VariableDeclaration.h>
 #include <AST/Function.h>
 
 // stl
@@ -12,13 +12,13 @@ namespace AST {
 
 // TODO add directive
 // TODO try to use inheritence instead of typechecking like this
-/// ValidCompilationUnitType accepts any pointer where the class inherits from Declaration
-/// or exactly FunctionDefinition.
+/// ValidCompilationUnitType accepts any pointer where the class is VariableDeclaration
+/// or FunctionDefinition.
 template <typename T>
 concept ValidCompilationUnitType =
     std::is_pointer_v<T> &&
-    (std::is_base_of_v<Declaration::Declaration, std::remove_pointer_t<T>> ||
-     std::is_same_v<Function::FunctionDefinition, std::remove_pointer_t<T>>);
+    (std::is_same_v<VariableDeclaration::VariableDeclaration, std::remove_pointer_t<T>> ||
+     std::is_same_v<Function::Function, std::remove_pointer_t<T>>);
 
 struct CompilationUnit : public GeneratingAST {
   std::vector<llvm::Value *> codegen(llvm::Module &module) override;

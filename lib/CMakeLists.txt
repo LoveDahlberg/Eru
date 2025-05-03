@@ -1,4 +1,3 @@
-
 # Create a library target for Lexer
 add_library(Lexer STATIC
     Lexer/Lexer.cpp)
@@ -35,7 +34,17 @@ target_link_libraries(IR PRIVATE ${llvm_libs} AST)
 
 # Create a library target for Parser
 add_library(Parser STATIC
-    Parser/Parser.cpp
+    Parser/Syntax/VariableDeclaration.cpp
+    Parser/Syntax/Assignment.cpp
+    Parser/Syntax/CompilationUnit.cpp
+    Parser/Syntax/ControlFlow.cpp
+    Parser/Syntax/Directive.cpp
+    Parser/Syntax/Expression.cpp
+    Parser/Syntax/Function.cpp
+    Parser/Syntax/Identifier.cpp
+    Parser/Syntax/Literal.cpp
+    Parser/Syntax/Statement.cpp
+    Parser/Syntax/Type.cpp
 )
 target_include_directories(Parser PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(Parser PRIVATE ${llvm_libs} Lexer IR) 
+target_link_libraries(Parser PRIVATE ${llvm_libs} Lexer IR)

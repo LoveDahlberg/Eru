@@ -1,4 +1,4 @@
-#include <AST/Declaration.h>
+#include <AST/VariableDeclaration.h>
 
 // llvm
 #include <llvm/IR/Function.h>
@@ -9,32 +9,32 @@
 // stl
 #include <vector>
 
-using namespace AST::Declaration;
+using namespace AST::VariableDeclaration;
 
 llvm::Value *VariableDeclaration::codegen(llvm::Module &module) {
   return new llvm::GlobalVariable(
-      module, Declaration::type, false, llvm::GlobalValue::PrivateLinkage,
-      nullptr, Declaration::name, nullptr,
+      module, VariableDeclaration::type, false, llvm::GlobalValue::PrivateLinkage,
+      nullptr, VariableDeclaration::name, nullptr,
       llvm::GlobalValue::ThreadLocalMode::NotThreadLocal, std::nullopt, false);
 }
 
-llvm::Value *FunctionDeclaration::codegen(llvm::Module &module) {
+// llvm::Value *FunctionDeclaration::codegen(llvm::Module &module) {
 
-  std::vector<llvm::Type *> parameterTypes;
-  for (auto parameter : parameters) {
-    parameterTypes.emplace_back(parameter->type);
-  }
+//   std::vector<llvm::Type *> parameterTypes;
+//   for (auto parameter : parameters) {
+//     parameterTypes.emplace_back(parameter->type);
+//   }
 
-  auto *functionType =
-      llvm::FunctionType::get(Declaration::type, parameterTypes, false);
+//   auto *functionType =
+//       llvm::FunctionType::get(Declaration::type, parameterTypes, false);
 
-  auto function =
-      llvm::Function::Create(functionType, llvm::GlobalValue::PrivateLinkage,
-                             Declaration::name, &module);
+//   auto function =
+//       llvm::Function::Create(functionType, llvm::GlobalValue::PrivateLinkage,
+//                              Declaration::name, &module);
 
-  unsigned Idx = 0;
-  for (auto &parameter : function->args()) {
-    parameter.setName(parameters.at(Idx++)->name);
-  }
-  return function;
-}
+//   unsigned Idx = 0;
+//   for (auto &parameter : function->args()) {
+//     parameter.setName(parameters.at(Idx++)->name);
+//   }
+//   return function;
+// }

@@ -4,7 +4,7 @@
 
 #include <Lexer/Lexer.h>
 #include <Lexer/Tokens.h>
-#include <Parser/Parser.h>
+#include <Parser/Syntax/CompilationUnit.h>
 
 using namespace Parser;
 
@@ -20,7 +20,7 @@ TEST(Parser, TestDeclarations) {
   stream += EOF;
 
   Lexer lexer(stream);
-  auto parserItems = ParseCompilationUnit(lexer);
+  auto parserItems = Syntax::ParseCompilationUnit(lexer);
 
   ASSERT_TRUE(parserItems);
 
@@ -32,21 +32,27 @@ TEST(Parser, TestFunctions) {
   std::string stream = R"(
     int function(int a, bool b) [] {
       int first = 3 - "asd"
-      bool second = 2
+      bool second = 2 + a
 
-      third()
+      char cc = third()
       if(1 + 2) {
         int aa
+        something(aa, b)
       }
-      else {
+      elif(second){
+        somethingElse(first)
+      }
+      else
+      {
         int bb
+        alsoSomething(a, bb, cc)
       }
     }
     )";
   stream += EOF;
 
   Lexer lexer(stream);
-  auto parserItems = ParseCompilationUnit(lexer);
+  auto parserItems = Syntax::ParseCompilationUnit(lexer);
 
   ASSERT_TRUE(parserItems);
 }

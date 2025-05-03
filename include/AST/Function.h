@@ -1,7 +1,7 @@
 #pragma once
 
 #include <AST/AST.h>
-#include <AST/Declaration.h>
+#include <AST/VariableDeclaration.h>
 
 // TODO make sure #include <AST/Expression.h> is included before the this header
 // in cpp file.
@@ -17,17 +17,35 @@ class Statement;
 
 namespace AST::Function {
 
-class FunctionDefinition : public AST {
+class FunctionBody : public AST {
 public:
-  FunctionDefinition(Declaration::FunctionDeclaration *declaration,
-    Statement::Statement *statement)
-      : declaration(declaration), statement(statement) {}
+  FunctionBody(Statement::Statement *statement) : statement(statement) {}
 
   llvm::Value *codegen(llvm::Module &module) override;
 
 private:
-  Declaration::FunctionDeclaration *declaration;
   Statement::Statement *statement;
+};
+
+class Function : public AST {
+public:
+  // TODO type and name can be passed as a variableDeclaration, if it make sense
+  // for IR generation.
+  Function(llvm::Type *type, std::string name,
+           std::vector<VariableDeclaration::VariableDeclaration *> parameters)
+      : type(type), name(name), parameters(parameters) {}
+
+  Function(llvm::Type *type, std::string name) : type(type), name(name) {}
+
+  llvm::Value *codegen(llvm::Module &module) override;
+
+  void addFunctionBody(FunctionBody *body) { body = body; }
+
+private:
+  std::vector<VariableDeclaration::VariableDeclaration *> parameters;
+  llvm::Type *type;
+  std::string name;
+  FunctionBody *body;
 };
 
 class FunctionCall : public AST {

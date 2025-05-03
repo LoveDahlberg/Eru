@@ -1,7 +1,7 @@
 #pragma once
 
 #include <AST/AST.h>
-#include <AST/Declaration.h>
+#include <AST/VariableDeclaration.h>
 #include <AST/Function.h>
 #include <AST/Types.h>
 #include <AST/Expression.h>
@@ -16,7 +16,7 @@ namespace AST::Assignment {
 class Assignment : public AST {
 public:
   // When assignment is done with declaration.
-  Assignment(Declaration::VariableDeclaration *target)
+  Assignment(VariableDeclaration::VariableDeclaration *target)
       : target(target) {}
 
   // When assignment is done on a previously declared variable.
@@ -30,7 +30,7 @@ public:
   llvm::Value *codegen(llvm::Module &module) override;
 
 private:
-  std::variant<Declaration::VariableDeclaration *, Types::NamedIdentifier>
+  std::variant<VariableDeclaration::VariableDeclaration *, Types::NamedIdentifier>
       target;
   Expression::Expression* expression;
 };

@@ -22,38 +22,38 @@ formal grammar definition:
 _____
 
 [compilationUnit] → {compilationUnitItem} {compilationUnit} | END_OF_FILE
-  [compilationUnitItem] → {declaration} | {directive} | {functionDefinition}
+  [compilationUnitItem] → {variableDeclaration} | {directive} | {function}
   
-    [declaration] → {variableDeclaration} (NEWLINE) | {functionDeclaration}
-      [variableDeclaration] → {type} (IDENTIFER) 
-        [type] → {data}
-          [data] → (INT) | (SIGNED_INT_32) | (UNSIGNED_INT_32) | (BOOl) | (STRING) | (CHAR)    
-      [functionDeclaration] → {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) (NEWLINE)
-        [parametersDeclaration] → {parametersDeclarationList} | e
-          [parametersDeclarationList] → {type} (IDENTIFER) | {type} (IDENTIFER) (COMMA) {parametersDeclaration}
+    [variableDeclaration] → {type} (IDENTIFER) 
+      [type] → {data}
+        [data] → (INT) | (SIGNED_INT_32) | (UNSIGNED_INT_32) | (BOOl) | (STRING) | (CHAR)    
     
     [directive] → (LEFT_BRACKET)(RIGHT_BRACKET)
 
-    [functionDefinition] → {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) {directive} {block}
-      [block] → (LEFT_CURLY_BRACE) {statement} (RIGHT_CURLY_BRACE)
-        [statement] → {variableDeclaration} {statement} | {assignment} {statement} | {controlflow} {statement} | {functionCall} {statement} | e
-          [assignment] → {assignmentTarget} (EQUAL) {expression} (NEWLINE)
-            [assignmentTarget] → {variableDeclaration} | (IDENTIFER) 
-            
-            [expression] → {expression} {operator} {operand} | {operand} 
-              [operand] → (IDENTIFER) | {literal} | {functionCall} 
-                [literal] → (STRING_LITERAL) | (INTEGER_LITERAL)          
-                [functionCall] → (IDENTIFER) (LEFT_PARENTHESIS) {parametersCall} (RIGHT_PARENTHESIS)
-                  [parametersCall] → {parametersCallList} | e
-                    [parametersCallList] → {expression} | {expression} (COMMA) {parametersCallList}
-              [operator] → {arithmeticOperator} | {booleanOperator}
-                [arithmeticOperator] → (PLUS) | (MINUS)
-                [booleanOperator] → (AND) | (OR)
+    [function] → {type} (IDENTIFER) (LEFT_PARENTHESIS) {parametersDeclaration} (RIGHT_PARENTHESIS) {functionBody}
+      [parametersDeclaration] → {parametersDeclarationList} | e
+        [parametersDeclarationList] → {type} (IDENTIFER) | {type} (IDENTIFER) (COMMA) {parametersDeclaration}
+      
+      [functionBody] → {directive} {block} | e
+        [block] → (LEFT_CURLY_BRACE) {statement} (RIGHT_CURLY_BRACE)
+          [statement] → {variableDeclaration} {statement} | {assignment} {statement} | {controlflow} {statement} | {functionCall} {statement} | e
+            [assignment] → {assignmentTarget} (EQUAL) {expression} (NEWLINE)
+              [assignmentTarget] → {variableDeclaration} | (IDENTIFER) 
+              
+              [expression] → {expression} {operator} {operand} | {operand} 
+                [operand] → (IDENTIFER) | {literal} | {functionCall} 
+                  [literal] → (STRING_LITERAL) | (INTEGER_LITERAL)          
+                  [functionCall] → (IDENTIFER) (LEFT_PARENTHESIS) {parametersCall} (RIGHT_PARENTHESIS)
+                    [parametersCall] → {parametersCallList} | e
+                      [parametersCallList] → {expression} | {expression} (COMMA) {parametersCallList}
+                [operator] → {arithmeticOperator} | {booleanOperator}
+                  [arithmeticOperator] → (PLUS) | (MINUS)
+                  [booleanOperator] → (AND) | (OR)
 
-        [controlflow] → {conditionalBranch}
-          [conditionalBranch] → (IF) {ifClause} {block} {continuedCondition}
-            [ifClause] → (LEFT_PARENTHESIS) {expression} (RIGHT_PARENTHESIS)
-            [continuedCondition] → (ELSE) {block} | (ELIF) {ifClause} {block} {continuedCondition} | e
+          [controlflow] → {conditionalBranch}
+            [conditionalBranch] → (IF) {ifClause} {block} {continuedCondition}
+              [ifClause] → (LEFT_PARENTHESIS) {expression} (RIGHT_PARENTHESIS)
+              [continuedCondition] → (ELSE) {block} | (ELIF) {ifClause} {block} {continuedCondition} | e
 
 _____
 

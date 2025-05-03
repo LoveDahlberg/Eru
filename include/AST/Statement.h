@@ -3,7 +3,7 @@
 #include <AST/AST.h>
 #include <AST/Assignment.h>
 #include <AST/Controlflow.h>
-#include <AST/Declaration.h>
+#include <AST/VariableDeclaration.h>
 #include <AST/Function.h>
 #include <AST/Types.h>
 
@@ -14,7 +14,7 @@ namespace AST::Statement {
 template <typename T>
 concept ValidstatementType =
     std::is_pointer_v<T> &&
-    (std::is_same_v<Declaration::VariableDeclaration,
+    (std::is_same_v<VariableDeclaration::VariableDeclaration,
                     std::remove_pointer_t<T>> ||
      std::is_same_v<Assignment::Assignment, std::remove_pointer_t<T>> ||
      std::is_same_v<Function::FunctionCall, std::remove_pointer_t<T>> ||

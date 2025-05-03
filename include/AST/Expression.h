@@ -1,3 +1,5 @@
+#pragma once
+
 #include <AST/AST.h>
 #include <AST/Function.h>
 #include <AST/Types.h>
