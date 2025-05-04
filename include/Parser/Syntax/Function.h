@@ -7,7 +7,7 @@ using namespace ::AST::Function;
 using functionAST = ::AST::Function::Function;
 
 namespace Parser::Syntax::Function {
-bool ParseFunction(syntaxItems &items, variableDeclarationAST *declaration);
+bool ParseFunction(syntaxItems &items, Variable *declaration);
 
 std::optional<FunctionCall *> ParseFunctionCall(syntaxItems &items,
                                                 std::string name);
@@ -15,12 +15,12 @@ std::optional<FunctionCall *> ParseFunctionCall(syntaxItems &items,
 template <typename T>
 concept ValidParameterType =
     std::is_pointer_v<T> &&
-    (std::is_same_v<variableDeclarationAST, std::remove_pointer_t<T>> ||
+    (std::is_same_v<Variable, std::remove_pointer_t<T>> ||
      std::is_same_v<AST::Expression::ExpressionUnit, std::remove_pointer_t<T>>);
 
 /// This function is supposed to be used for parameter parsing for:
 /// - Function declarations and definitions -> type is
-///   AST::VariableDeclaration::VariableDeclaration
+///   AST::VariableDeclaration::Variable
 /// - Function calls -> type is Expression::ExpressionUnit
 ///
 ///  The \a ValidParameterType concept restricts the usage outside of these
@@ -28,7 +28,7 @@ concept ValidParameterType =
 ///
 /// \param items ..
 /// \param ParseVariableType Parsing function to use for each of the two types.
-///                          ParseVariableDeclaration should be used for
+///                          Variable should be used for
 ///                          VariableDeclaration.
 ///                          ParseAssignmentExpressionTarget should be used for
 ///                          Expression::ExpressionUnit.

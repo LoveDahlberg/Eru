@@ -1,13 +1,13 @@
 #pragma once
 
-#include <Parser/Syntax/Syntax.h>
 #include <AST/VariableDeclaration.h>
+#include <Parser/Syntax/Syntax.h>
 
+using namespace ::AST::VariableDeclaration;
 using variableDeclarationAST = ::AST::VariableDeclaration::VariableDeclaration;
 
 namespace Parser::Syntax::VariableDeclaration {
 
-  std::optional<variableDeclarationAST *>
-  ParseVariableDeclaration(syntaxItems &items);
+std::optional<Variable *> ParseVariable(syntaxItems &items);
 
 }

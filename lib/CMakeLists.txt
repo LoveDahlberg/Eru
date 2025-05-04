@@ -13,7 +13,7 @@ target_link_libraries(FileReader PRIVATE ${llvm_libs})
 
 # Create a library target for AST
 add_library(AST STATIC
-    AST/Declaration.cpp
+    AST/VariableDeclaration.cpp
     AST/CompilationUnit.cpp
     AST/Types.cpp
     AST/Function.cpp

@@ -10,5 +10,5 @@ using assignmentAST = ::AST::Assignment::Assignment;
 namespace Parser::Syntax::Assignment {
 std::optional<assignmentAST *>
 ParseAssignment(syntaxItems &items,
-                variableDeclarationAST *variableDeclaration = nullptr);
+  Variable *variable = nullptr);
 }

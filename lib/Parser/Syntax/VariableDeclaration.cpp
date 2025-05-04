@@ -5,8 +5,8 @@
 
 namespace Parser::Syntax::VariableDeclaration {
 
-std::optional<variableDeclarationAST *>
-ParseVariableDeclaration(syntaxItems &items) {
+std::optional<Variable *>
+ParseVariable(syntaxItems &items) {
   auto type = Type::ParseType(items);
   if (!type) {
     // err
@@ -19,7 +19,7 @@ ParseVariableDeclaration(syntaxItems &items) {
     return std::nullopt;
   }
 
-  return new variableDeclarationAST(*type, *identifier);
+  return new Variable(*type, *identifier);
 }
 } // namespace Parser::Syntax::Declaration
 

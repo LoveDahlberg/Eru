@@ -1,10 +1,10 @@
 #include <Parser/Syntax/Statement.h>
 
-#include <Parser/Syntax/VariableDeclaration.h>
 #include <Parser/Syntax/Assignment.h>
-#include <Parser/Syntax/Identifier.h>
 #include <Parser/Syntax/ControlFlow.h>
 #include <Parser/Syntax/Function.h>
+#include <Parser/Syntax/Identifier.h>
+#include <Parser/Syntax/VariableDeclaration.h>
 
 namespace Parser::Syntax::Statement {
 
@@ -28,7 +28,7 @@ std::optional<statementAST *> ParseStatement(syntaxItems &items) {
     case TokenCategory::DATA_TYPE: {
 
       // Both start with a variable declaration.
-      auto parameterDeclaration = VariableDeclaration::ParseVariableDeclaration(items);
+      auto parameterDeclaration = VariableDeclaration::ParseVariable(items);
       if (!parameterDeclaration) {
         // err
         return std::nullopt;
@@ -36,7 +36,8 @@ std::optional<statementAST *> ParseStatement(syntaxItems &items) {
 
       // Assignment
       if (items.lexer.getCurrentToken().type == TokenType::EQUAL) {
-        auto assignment = Assignment::ParseAssignment(items, *parameterDeclaration);
+        auto assignment =
+            Assignment::ParseAssignment(items, *parameterDeclaration);
         if (!assignment) {
           // err
           return std::nullopt;
@@ -45,7 +46,8 @@ std::optional<statementAST *> ParseStatement(syntaxItems &items) {
       }
       // Only a declaration without assignment.
       else {
-        statement->AddStatement(*parameterDeclaration);
+        statement->AddStatement(
+            new variableDeclarationAST(*parameterDeclaration));
       }
 
       break;
@@ -86,7 +88,7 @@ std::optional<statementAST *> ParseStatement(syntaxItems &items) {
       // Assignment
       case TokenType::EQUAL: {
         auto assignment = Assignment::ParseAssignment(
-            items, new variableDeclarationAST(nullptr, *identifier));
+            items, new Variable(nullptr, *identifier));
         if (!assignment) {
           // err
           return std::nullopt;

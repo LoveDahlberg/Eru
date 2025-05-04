@@ -32,17 +32,17 @@ public:
   // TODO type and name can be passed as a variableDeclaration, if it make sense
   // for IR generation.
   Function(llvm::Type *type, std::string name,
-           std::vector<VariableDeclaration::VariableDeclaration *> parameters)
+           std::vector<VariableDeclaration::Variable *> parameters)
       : type(type), name(name), parameters(parameters) {}
 
   Function(llvm::Type *type, std::string name) : type(type), name(name) {}
 
   llvm::Value *codegen(llvm::Module &module) override;
 
-  void addFunctionBody(FunctionBody *body) { body = body; }
+  void addFunctionBody(FunctionBody *body) { this->body = body; }
 
 private:
-  std::vector<VariableDeclaration::VariableDeclaration *> parameters;
+  std::vector<VariableDeclaration::Variable *> parameters;
   llvm::Type *type;
   std::string name;
   FunctionBody *body;

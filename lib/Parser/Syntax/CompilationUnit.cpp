@@ -10,18 +10,18 @@
 namespace Parser::Syntax {
 
 bool ParseVariableDeclarationOrFunction(syntaxItems &items) {
-  auto variableDeclaration =
-      VariableDeclaration::ParseVariableDeclaration(items);
-  if (!variableDeclaration) {
+  auto variable =
+      VariableDeclaration::ParseVariable(items);
+  if (!variable) {
     // err
     return false;
   }
 
   if (items.lexer.getCurrentToken().type == TokenType::LEFT_PARENTHESIS) {
-    return Function::ParseFunction(items, *variableDeclaration);
+    return Function::ParseFunction(items, *variable);
   }
 
-  items.compilationUnit.AddCompilationUnitItems(*variableDeclaration);
+  items.compilationUnit.AddCompilationUnitItems(new variableDeclarationAST(*variable));
   return true;
 }
 

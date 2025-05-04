@@ -20,17 +20,17 @@ concept ValidstatementType =
      std::is_same_v<Function::FunctionCall, std::remove_pointer_t<T>> ||
      std::is_base_of_v<Controlflow::Controlflow, std::remove_pointer_t<T>>);
 
-struct Statement : public GeneratingAST {
-  template <typename statementConstruct>
-    requires ValidstatementType<statementConstruct>
-  void AddStatement(statementConstruct construct) {
-    statementConstructs.push_back(construct);
+struct Statement : public AST {
+  template <typename statementType>
+    requires ValidstatementType<statementType>
+  void AddStatement(statementType construct) {
+    statements.push_back(construct);
   }
 
-  std::vector<llvm::Value *> codegen(llvm::Module &module) override;
+  llvm::Value * codegen(llvm::Module &module) override;
 
 private:
-  std::vector<AST *> statementConstructs;
+  std::vector<AST *> statements;
 };
 
 } // namespace AST::Statement

@@ -82,12 +82,12 @@ std::optional<FunctionBody *> ParseFunctionBody(syntaxItems &items) {
   return new FunctionBody(*statement);
 }
 
-bool ParseFunction(syntaxItems &items, variableDeclarationAST *declaration) {
+bool ParseFunction(syntaxItems &items, Variable *variable) {
   // eat the (
   items.lexer.generateNextToken();
 
-  auto paramaters = ParseParameters<variableDeclarationAST *>(
-      items, &VariableDeclaration::ParseVariableDeclaration);
+  auto paramaters = ParseParameters<Variable *>(
+      items, &VariableDeclaration::ParseVariable);
   if (!paramaters) {
     // err
     return false;
@@ -105,7 +105,7 @@ bool ParseFunction(syntaxItems &items, variableDeclarationAST *declaration) {
   items.lexer.generateNextToken();
 
   auto function =
-      new functionAST(declaration->type, declaration->name, *paramaters);
+      new functionAST(variable->type, variable->name, *paramaters);
 
   if (lookaheadToken.type == TokenType::LEFT_BRACKET) {
     auto functionBody = ParseFunctionBody(items);

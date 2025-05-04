@@ -5,14 +5,23 @@
 
 namespace AST::VariableDeclaration {
 
+struct Variable {
+  llvm::Type *type;
+  std::string name;
+};
+
 struct VariableDeclaration : public AST {
   VariableDeclaration(llvm::Type *type, std::string name)
-      : type(type), name(name) {}
+      : variable(new Variable{type, name}) {}
+
+  VariableDeclaration(Variable* variable) : variable(variable) {}
 
   llvm::Value *codegen(llvm::Module &module) override;
 
-  llvm::Type *type;
-  std::string name;
+  Variable* variable;
+
+  // TODO semantic analysis should figure out what IR this should create.
+  bool global = false;
 };
 
 } // namespace AST::VariableDeclaration
