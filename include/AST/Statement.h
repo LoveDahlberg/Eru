@@ -27,7 +27,7 @@ struct Statement : public AST {
     statements.push_back(construct);
   }
 
-  llvm::Value * codegen(llvm::Module &module) override;
+  llvm::Value * codegen(codeGenItems& items) override;
 
 private:
   std::vector<AST *> statements;

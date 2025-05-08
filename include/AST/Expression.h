@@ -11,19 +11,21 @@
 
 namespace AST::Expression {
 
-enum class ArithmeticOperator { PLUS, MINUS, END };
+enum class ArithmeticOperator { PLUS, MINUS };
 // TODO move this to appropriate parsing function.
-const std::unordered_map<Lexing::TokenType, ArithmeticOperator> TokenToArithmeticOperator = {
-  { Lexing::TokenType::PLUS, ArithmeticOperator::PLUS},
-  { Lexing::TokenType::MINUS, ArithmeticOperator::MINUS},
-  };
+const std::unordered_map<Lexing::TokenType, ArithmeticOperator>
+    TokenToArithmeticOperator = {
+        {Lexing::TokenType::PLUS, ArithmeticOperator::PLUS},
+        {Lexing::TokenType::MINUS, ArithmeticOperator::MINUS},
+};
 
-enum class BooleanOperator { OR, AND, END };
+enum class BooleanOperator { OR, AND };
 // TODO move this to appropriate parsing function.
-const std::unordered_map<Lexing::TokenType, BooleanOperator> TokenToBooleanOperator = {
-  { Lexing::TokenType::AND, BooleanOperator::AND},
-  { Lexing::TokenType::OR, BooleanOperator::OR},
-  };
+const std::unordered_map<Lexing::TokenType, BooleanOperator>
+    TokenToBooleanOperator = {
+        {Lexing::TokenType::AND, BooleanOperator::AND},
+        {Lexing::TokenType::OR, BooleanOperator::OR},
+};
 
 using Operator = std::variant<ArithmeticOperator, BooleanOperator>;
 
@@ -39,15 +41,14 @@ struct ExpressionUnit {
 
 class Expression : public AST {
 public:
-  llvm::Value *codegen(llvm::Module &module) override;
+  llvm::Value *codegen(codeGenItems& items) override;
 
-  void addExpressionUnit(ExpressionUnit* expressionUnit)
-  {
+  void addExpressionUnit(ExpressionUnit *expressionUnit) {
     ExpressionUnits.push_back(expressionUnit);
   }
 
 private:
-  std::vector<ExpressionUnit*> ExpressionUnits;
+  std::vector<ExpressionUnit *> ExpressionUnits;
 };
 
 // a + b + c + d

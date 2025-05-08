@@ -21,7 +21,7 @@ concept ValidCompilationUnitType =
      std::is_same_v<Function::Function, std::remove_pointer_t<T>>);
 
 struct CompilationUnit : public GeneratingAST {
-  std::vector<llvm::Value *> codegen(llvm::Module &module) override;
+  std::vector<llvm::Value *> codegen(codeGenItems& items) override;
 
   template <typename CompilationUnitItem>
     requires ValidCompilationUnitType<CompilationUnitItem>

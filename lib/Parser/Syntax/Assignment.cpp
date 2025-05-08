@@ -35,7 +35,7 @@ std::optional<assignmentAST *> ParseAssignment(syntaxItems &items,
     return std::nullopt;
   }
 
-  assignment->setExpression(*expression);
+  assignment->setExpression(&*expression);
 
   if (items.lexer.getCurrentToken().type != TokenType::NEWLINE) {
     // err

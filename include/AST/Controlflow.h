@@ -27,7 +27,7 @@ public:
         Statement = Statement;
   }
 
-  llvm::Value *codegen(llvm::Module &module) override;
+  llvm::Value *codegen(codeGenItems& items) override;
 
 private:
   Expression::Expression *expression;
@@ -39,7 +39,7 @@ public:
   ConditionalBranchingGroup(std::vector<ConditionalBranch *> conditionalChain)
       : conditionalChain(conditionalChain) {}
 
-  llvm::Value *codegen(llvm::Module &module) override;
+  llvm::Value *codegen(codeGenItems& items) override;
 
 private:
   std::vector<ConditionalBranch *> conditionalChain;

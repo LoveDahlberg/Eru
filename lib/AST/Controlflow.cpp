@@ -2,9 +2,9 @@
 
 namespace AST::Controlflow {
 
-llvm::Value *ConditionalBranchingGroup::codegen(llvm::Module &module) {
+llvm::Value *ConditionalBranchingGroup::codegen(codeGenItems& items) {
   return nullptr;
 }
 
-llvm::Value *ConditionalBranch::codegen(llvm::Module &module) { return nullptr; }
+llvm::Value *ConditionalBranch::codegen(codeGenItems& items) { return nullptr; }
 } // namespace AST::Function

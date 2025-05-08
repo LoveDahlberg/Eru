@@ -2,6 +2,7 @@
 
 namespace IR {
 
-void GenerateIR(AST::CompilationUnit compilationUnit, llvm::Module &module);
+std::vector<llvm::Value *> GenerateIR(AST::CompilationUnit compilationUnit,
+                                      llvm::Module &module);
 
 }

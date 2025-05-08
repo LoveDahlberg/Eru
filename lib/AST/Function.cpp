@@ -5,13 +5,13 @@
 
 namespace AST::Function {
 
-llvm::Value *FunctionCall::codegen(llvm::Module &module) { return nullptr; }
+llvm::Value *FunctionCall::codegen(codeGenItems &items) { return nullptr; }
 
-llvm::Value *FunctionBody::codegen(llvm::Module &module) {
-  return statement == nullptr ? nullptr : statement->codegen(module);
+llvm::Value *FunctionBody::codegen(codeGenItems &items) {
+  return statement == nullptr ? nullptr : statement->codegen(items);
 }
 
-llvm::Value *Function::codegen(llvm::Module &module) {
+llvm::Value *Function::codegen(codeGenItems &items) {
 
   std::vector<llvm::Type *> parameterTypes;
   for (auto parameter : parameters) {
@@ -21,7 +21,7 @@ llvm::Value *Function::codegen(llvm::Module &module) {
   auto *functionType = llvm::FunctionType::get(type, parameterTypes, false);
 
   auto function = llvm::Function::Create(
-      functionType, llvm::GlobalValue::PrivateLinkage, name, &module);
+      functionType, llvm::GlobalValue::PrivateLinkage, name, &items.module);
 
   unsigned Idx = 0;
   for (auto &parameter : function->args()) {
@@ -29,12 +29,12 @@ llvm::Value *Function::codegen(llvm::Module &module) {
   }
 
   if (body != nullptr) {
-    auto *start = body->codegen(module);
-    if (auto block = llvm::dyn_cast<llvm::BasicBlock>(start)) {
-      function->insert(function->getIterator()->begin(), block);
+    items.currentFunction = function;
+    if (body->codegen(items) == nullptr) {
+      return nullptr;
     }
   }
-
+  items.currentFunction = nullptr;
   return function;
 }
 } // namespace AST::Function

@@ -23,11 +23,11 @@ public:
   Assignment(Types::NamedIdentifier target)
       : target(target) {}
 
-  void setExpression(Expression::Expression* expression){
-    expression = expression;
+  void setExpression(Expression::Expression** expression){
+    this->expression = *expression;
   }
 
-  llvm::Value *codegen(llvm::Module &module) override;
+  llvm::Value *codegen(codeGenItems& items) override;
 
 private:
   std::variant<VariableDeclaration::VariableDeclaration *, Types::NamedIdentifier>

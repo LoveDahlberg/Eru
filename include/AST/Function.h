@@ -21,7 +21,7 @@ class FunctionBody : public AST {
 public:
   FunctionBody(Statement::Statement *statement) : statement(statement) {}
 
-  llvm::Value *codegen(llvm::Module &module) override;
+  llvm::Value *codegen(codeGenItems& items) override;
 
 private:
   Statement::Statement *statement;
@@ -37,7 +37,7 @@ public:
 
   Function(llvm::Type *type, std::string name) : type(type), name(name) {}
 
-  llvm::Value *codegen(llvm::Module &module) override;
+  llvm::Value *codegen(codeGenItems& items) override;
 
   void addFunctionBody(FunctionBody *body) { this->body = body; }
 
@@ -54,7 +54,7 @@ public:
                std::vector<Expression::ExpressionUnit *> parameters)
       : name(name), parameters(parameters) {}
 
-  llvm::Value *codegen(llvm::Module &module) override;
+  llvm::Value *codegen(codeGenItems& items) override;
 
 private:
   std::string name;

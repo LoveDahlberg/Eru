@@ -16,7 +16,7 @@ struct VariableDeclaration : public AST {
 
   VariableDeclaration(Variable* variable) : variable(variable) {}
 
-  llvm::Value *codegen(llvm::Module &module) override;
+  llvm::Value *codegen(codeGenItems& items) override;
 
   Variable* variable;
 

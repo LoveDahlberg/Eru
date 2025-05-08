@@ -1,15 +1,25 @@
 #pragma once
 
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Value.h>
 
 namespace AST {
+
+struct codeGenItems
+{
+  codeGenItems(llvm::Module& module) : module(module) {}
+  llvm::Module& module;
+  llvm::IRBuilder<> *builder = nullptr;
+  llvm::Function *currentFunction = nullptr;
+};
+
 struct AST {
-  virtual llvm::Value *codegen(llvm::Module& module) = 0;
+  virtual llvm::Value *codegen(codeGenItems& items) = 0;
 };
 
 struct GeneratingAST {
-  virtual std::vector<llvm::Value *> codegen(llvm::Module &module) = 0;
+  virtual std::vector<llvm::Value *> codegen(codeGenItems& items) = 0;
 };
 
 } // namespace AST

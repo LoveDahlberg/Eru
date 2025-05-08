@@ -7,19 +7,20 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Type.h>
 
-// stl
-#include <vector>
-
 using namespace AST::VariableDeclaration;
 
-llvm::Value *VariableDeclaration::codegen(llvm::Module &module) {
+llvm::Value *VariableDeclaration::codegen(codeGenItems &items) {
   if (global) {
     return new llvm::GlobalVariable(
-        module, variable->type, false, llvm::GlobalValue::PrivateLinkage,
+        items.module, variable->type, false, llvm::GlobalValue::PrivateLinkage,
         nullptr, variable->name, nullptr,
         llvm::GlobalValue::ThreadLocalMode::NotThreadLocal, std::nullopt,
         false);
   }
-  return new llvm::AllocaInst(variable->type, 0, nullptr, {}, variable->name,
-                              nullptr);
+
+  if (items.builder == nullptr) {
+    return nullptr;
+  }
+
+  return items.builder->CreateAlloca(variable->type, nullptr, variable->name);
 }

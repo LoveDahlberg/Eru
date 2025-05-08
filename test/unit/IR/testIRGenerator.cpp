@@ -1,4 +1,6 @@
 // include
+#include "AST/Assignment.h"
+#include "AST/Expression.h"
 #include <AST/Function.h>
 #include <AST/Statement.h>
 #include <AST/Types.h>
@@ -17,7 +19,7 @@
 using namespace IR;
 using namespace AST;
 
-TEST(IR, testDeclaration) {
+TEST(IR, testGlobalVarialbe) {
 
   auto ctx = new llvm::LLVMContext();
   auto module = llvm::Module("", *ctx);
@@ -29,38 +31,19 @@ TEST(IR, testDeclaration) {
   variable->global = true;
   compilationUnit.AddCompilationUnitItems(variable);
 
-  //   constexpr const char *functionName = "firstFunctionDeclaration";
-  //   compilationUnit.AddCompilationUnitItems(new Function::Function(
-  //       (llvm::Type *)llvm::Type::getInt1Ty(module.getContext()),
-  //       functionName, {new VariableDeclaration::VariableDeclaration(
-  //            (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()),
-  //            "firstParameter"),
-  //        new VariableDeclaration::VariableDeclaration(
-  //            (llvm::Type *)llvm::Type::getInt1Ty(module.getContext()),
-  //            "firstParameter")}));
-
-  GenerateIR(compilationUnit, module);
+  auto cuItems = GenerateIR(compilationUnit, module);
+  EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
 
   auto generatedVariable = module.getGlobalVariable(variableName, true);
   EXPECT_NE(generatedVariable, nullptr);
-
-  //   auto generatedFunction = module.getFunction(functionName);
-  //   EXPECT_NE(generatedFunction, nullptr);
 }
 
-TEST(IR, testFunction) {
-  auto ctx = new llvm::LLVMContext();
-  auto module = llvm::Module("", *ctx);
-  CompilationUnit compilationUnit;
-
+Statement::Statement *CreateFunctionAndGetInsideStmnt(llvm::Module &module,
+                                                      CompilationUnit &cu) {
   constexpr const char *name = "function";
-  constexpr const char *variableName = "firstVariable";
 
-  // Create statement and add a single variable declaration in it.
+  // Create statement.
   auto statement = new Statement::Statement();
-  auto variable = new VariableDeclaration::VariableDeclaration(
-      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), variableName);
-  statement->AddStatement(variable);
 
   // Create function and add statement in it.
   auto function = new Function::Function(
@@ -68,7 +51,69 @@ TEST(IR, testFunction) {
   auto body = new Function::FunctionBody(statement);
   function->addFunctionBody(body);
 
-  compilationUnit.AddCompilationUnitItems(function);
+  cu.AddCompilationUnitItems(function);
 
-  GenerateIR(compilationUnit, module);
+  return statement;
+}
+
+TEST(IR, testFunction) {
+  auto ctx = new llvm::LLVMContext();
+  auto module = llvm::Module("", *ctx);
+  CompilationUnit compilationUnit;
+
+  auto statement = CreateFunctionAndGetInsideStmnt(module, compilationUnit);
+
+  // constexpr const char *variableName = "firstVariable";
+  // auto variable = new VariableDeclaration::VariableDeclaration(
+  //     (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()),
+  //     variableName);
+  // statement->AddStatement(variable);
+
+  auto cuItems = GenerateIR(compilationUnit, module);
+  EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
+}
+
+TEST(IR, testFunctionVariable) {
+  auto ctx = new llvm::LLVMContext();
+  auto module = llvm::Module("", *ctx);
+  CompilationUnit compilationUnit;
+
+  auto statement = CreateFunctionAndGetInsideStmnt(module, compilationUnit);
+
+  constexpr const char *variableName = "firstVariable";
+  auto variable = new VariableDeclaration::VariableDeclaration(
+      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), variableName);
+  statement->AddStatement(variable);
+
+  auto cuItems = GenerateIR(compilationUnit, module);
+  EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
+}
+
+TEST(IR, testDeclarationAssignment) {
+  auto ctx = new llvm::LLVMContext();
+  auto module = llvm::Module("", *ctx);
+  CompilationUnit compilationUnit;
+
+  auto statement = CreateFunctionAndGetInsideStmnt(module, compilationUnit);
+
+  constexpr const char *variableName = "firstVariable";
+  auto variable = new VariableDeclaration::VariableDeclaration(
+      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), variableName);
+
+  auto assignment = new Assignment::Assignment(variable);
+
+  auto expression = new Expression::Expression();
+  auto unit1 = new Expression::ExpressionUnit(
+      Types::IntegerLiteral("1"), Expression::ArithmeticOperator::PLUS);
+  expression->addExpressionUnit(unit1);
+
+  auto unit2 = new Expression::ExpressionUnit(Types::IntegerLiteral("2"));
+  expression->addExpressionUnit(unit2);
+
+  assignment->setExpression(&expression);
+
+  statement->AddStatement(assignment);
+
+  auto cuItems = GenerateIR(compilationUnit, module);
+  EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
 }
