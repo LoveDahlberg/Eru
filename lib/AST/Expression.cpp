@@ -2,61 +2,63 @@
 
 // llvm
 #include <llvm/IR/Constants.h>
+#include <optional>
 #include <variant>
 
 namespace AST::Expression {
 
-llvm::Value *Expression::codegen(codeGenItems& items) {
+llvm::Value *getOperand(codeGenItems &items, ExpressionUnit *expressionUnit) {
+  if (std::holds_alternative<Types::IntegerLiteral>(expressionUnit->operand)) {
+    auto integerLiteral =
+        std::get<Types::IntegerLiteral>(expressionUnit->operand);
 
-  // for (auto expressionUnit : ExpressionUnits) {
+    return llvm::ConstantInt::get(
+        llvm::Type::getInt32Ty(items.module.getContext()),
+        stoi(integerLiteral.value));
+  }
+  // TODO Add the rest
+  return nullptr;
+}
 
-  //   llvm::Value *operand = nullptr;
+// TODO: Only handle integer subtraction and addition for now, add more
+// operations after semantic parsing is implemented.
+llvm::Value *Expression::codegen(codeGenItems &items) {
+  if (items.builder == nullptr) {
+    return nullptr;
+  }
 
-  //   // Check operand being held.
-  //   if (std::holds_alternative<Types::IntegerLiteral>(
-  //           expressionUnit->operand)) {
-  //     auto integerLiteral =
-  //         std::get<Types::IntegerLiteral>(expressionUnit->operand);
+  llvm::Value *totalValue = nullptr;
+  bool firstExpressionUnit = true;
+  for (auto expressionUnit : ExpressionUnits) {
 
-  //     operand =
-  //         llvm::ConstantInt::get(llvm::Type::getInt32Ty(module.getContext()),
-  //                                stoi(integerLiteral.value));
-  //   } else {
-  //     // Add the rest
-  //     return nullptr;
-  //   }
+    // Check operand being held.
+    llvm::Value *operand = getOperand(items, expressionUnit);
 
-  //   if (!expressionUnit->operation) {
-  //     // end of expression.
-  //   }
+    if (firstExpressionUnit) {
+      firstExpressionUnit = false;
+      totalValue = operand;
+      continue;
+    }
+    if (std::holds_alternative<ArithmeticOperator>(
+            *expressionUnit->operation)) {
+      auto arithmeticOperator =
+          std::get<ArithmeticOperator>(*expressionUnit->operation);
 
-  //   if (std::holds_alternative<ArithmeticOperator>(
-  //           *expressionUnit->operation)) {
-  //     auto arithmeticOperator =
-  //             std::get<ArithmeticOperator>(*expressionUnit->operation);
+      switch (arithmeticOperator) {
+      case ArithmeticOperator::PLUS: {
+        totalValue = items.builder->CreateAdd(totalValue, operand);
+        break;
+      }
 
-  //     switch(arithmeticOperator)
-  //     {
-  //     case ArithmeticOperator::PLUS:
-  //     {
-        
-  //       break;
-  //     }
-        
-  //     case ArithmeticOperator::MINUS:
-  //     {
-  //       break;
-  //     }
-  //     }
-  //   }
+      case ArithmeticOperator::MINUS: {
+        totalValue = items.builder->CreateSub(totalValue, operand);
+        break;
+      }
+      }
+    }
+  }
 
-  //   // switch (expressionUnit->operation) {
-
-  //   // }
-  // }
-
-  return llvm::ConstantInt::get(llvm::Type::getInt32Ty(items.module.getContext()),
-                                42);
+  return totalValue;
 }
 
 } // namespace AST::Expression

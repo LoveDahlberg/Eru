@@ -16,20 +16,21 @@ namespace AST::Controlflow {
 // TODO this could be useful for other AST types as well.
 struct Controlflow : public AST {};
 
-class ConditionalBranch : public AST {
-public:
-  void addExpression(Expression::Expression *expression) {
-    expression = expression;
+struct ConditionalBranch {
+  ConditionalBranch(Expression::Expression **expression,
+                    Statement::Statement **statement)
+      : expression(*expression), statement(*statement) {}
+
+  ConditionalBranch() : expression(nullptr), statement(nullptr) {}
+
+  void addExpression(Expression::Expression **expression) {
+    this->expression = *expression;
   }
 
-  void addStatement(
-    Statement::Statement *Statement) {
-        Statement = Statement;
+  void addStatement(Statement::Statement **statement) {
+    this->statement = *statement;
   }
 
-  llvm::Value *codegen(codeGenItems& items) override;
-
-private:
   Expression::Expression *expression;
   Statement::Statement *statement;
 };
@@ -39,7 +40,7 @@ public:
   ConditionalBranchingGroup(std::vector<ConditionalBranch *> conditionalChain)
       : conditionalChain(conditionalChain) {}
 
-  llvm::Value *codegen(codeGenItems& items) override;
+  llvm::Value *codegen(codeGenItems &items) override;
 
 private:
   std::vector<ConditionalBranch *> conditionalChain;

@@ -52,7 +52,7 @@ std::optional<ConditionalBranch *> ParseConditionalBranch(syntaxItems &items,
     // Eat the )
     items.lexer.generateNextToken();
 
-    branch->addExpression(*expression);
+    branch->addExpression(&*expression);
   }
 
   skipUntilNotNewline(items);
@@ -79,7 +79,7 @@ std::optional<ConditionalBranch *> ParseConditionalBranch(syntaxItems &items,
   // Eat the }
   items.lexer.generateNextToken();
 
-  branch->addStatement(*statement);
+  branch->addStatement(&*statement);
   return branch;
 }
 

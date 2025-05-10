@@ -5,7 +5,24 @@
 
 namespace AST::Function {
 
-llvm::Value *FunctionCall::codegen(codeGenItems &items) { return nullptr; }
+llvm::Value *FunctionCall::codegen(codeGenItems &items) {
+  if (items.builder == nullptr) {
+    return nullptr;
+  }
+
+  // TODO make use of symbol table here?
+  auto callingFunction = items.module.getFunction(name);
+  if (callingFunction == nullptr) {
+    return nullptr;
+  }
+
+  std::vector<llvm::Value *> evaluatedParameters;
+  for (auto paramter : parameters) {
+    evaluatedParameters.push_back(paramter->codegen(items));
+  }
+
+  return items.builder->CreateCall(callingFunction, evaluatedParameters);
+}
 
 llvm::Value *FunctionBody::codegen(codeGenItems &items) {
   return statement == nullptr ? nullptr : statement->codegen(items);
@@ -29,6 +46,14 @@ llvm::Value *Function::codegen(codeGenItems &items) {
   }
 
   if (body != nullptr) {
+    auto &context = items.module.getContext();
+    auto *basicBlock =
+        llvm::BasicBlock::Create(context, "statement", function);
+    if (items.builder == nullptr) {
+      items.builder = new llvm::IRBuilder<llvm::NoFolder>(context);
+    }
+    items.builder->SetInsertPoint(basicBlock);
+
     items.currentFunction = function;
     if (body->codegen(items) == nullptr) {
       return nullptr;

@@ -1,5 +1,6 @@
 // include
 #include "AST/Assignment.h"
+#include "AST/Controlflow.h"
 #include "AST/Expression.h"
 #include <AST/Function.h>
 #include <AST/Statement.h>
@@ -10,6 +11,7 @@
 // llvm
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/Verifier.h>
 
 // getst
 #include <gmock/gmock-matchers.h>
@@ -36,10 +38,12 @@ TEST(IR, testGlobalVarialbe) {
 
   auto generatedVariable = module.getGlobalVariable(variableName, true);
   EXPECT_NE(generatedVariable, nullptr);
+
+  EXPECT_TRUE(llvm::verifyModule(module));
 }
 
-Statement::Statement *CreateFunctionAndGetInsideStmnt(llvm::Module &module,
-                                                      CompilationUnit &cu) {
+Statement::Statement *CreateTestFunctionAndGetInsideStmnt(llvm::Module &module,
+                                                          CompilationUnit &cu) {
   constexpr const char *name = "function";
 
   // Create statement.
@@ -61,10 +65,12 @@ TEST(IR, testFunction) {
   auto module = llvm::Module("", *ctx);
   CompilationUnit compilationUnit;
 
-  auto statement = CreateFunctionAndGetInsideStmnt(module, compilationUnit);
+  auto statement = CreateTestFunctionAndGetInsideStmnt(module, compilationUnit);
 
   auto cuItems = GenerateIR(compilationUnit, module);
   EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
+
+  EXPECT_TRUE(llvm::verifyModule(module));
 }
 
 TEST(IR, testFunctionVariable) {
@@ -72,7 +78,7 @@ TEST(IR, testFunctionVariable) {
   auto module = llvm::Module("", *ctx);
   CompilationUnit compilationUnit;
 
-  auto statement = CreateFunctionAndGetInsideStmnt(module, compilationUnit);
+  auto statement = CreateTestFunctionAndGetInsideStmnt(module, compilationUnit);
 
   constexpr const char *variableName = "firstVariable";
   auto variable = new VariableDeclaration::VariableDeclaration(
@@ -81,6 +87,8 @@ TEST(IR, testFunctionVariable) {
 
   auto cuItems = GenerateIR(compilationUnit, module);
   EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
+
+  EXPECT_TRUE(llvm::verifyModule(module));
 }
 
 TEST(IR, testDeclarationAssignment) {
@@ -88,7 +96,7 @@ TEST(IR, testDeclarationAssignment) {
   auto module = llvm::Module("", *ctx);
   CompilationUnit compilationUnit;
 
-  auto statement = CreateFunctionAndGetInsideStmnt(module, compilationUnit);
+  auto statement = CreateTestFunctionAndGetInsideStmnt(module, compilationUnit);
 
   constexpr const char *variableName = "firstVariable";
   auto variable = new VariableDeclaration::VariableDeclaration(
@@ -105,10 +113,106 @@ TEST(IR, testDeclarationAssignment) {
       Expression::ArithmeticOperator::PLUS, Types::IntegerLiteral("2"));
   expression->addExpressionUnit(unit2);
 
+  auto unit3 = new Expression::ExpressionUnit(
+      Expression::ArithmeticOperator::PLUS, Types::IntegerLiteral("6"));
+  expression->addExpressionUnit(unit3);
+
+  auto unit4 = new Expression::ExpressionUnit(
+      Expression::ArithmeticOperator::MINUS, Types::IntegerLiteral("4"));
+  expression->addExpressionUnit(unit4);
+
   assignment->setExpression(&expression);
 
   statement->AddStatement(assignment);
 
   auto cuItems = GenerateIR(compilationUnit, module);
   EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
+  EXPECT_TRUE(llvm::verifyModule(module));
+}
+
+TEST(IR, testFunctionCall) {
+  auto ctx = new llvm::LLVMContext();
+  auto module = llvm::Module("", *ctx);
+  CompilationUnit compilationUnit;
+
+  constexpr const auto functionToCall = "functionToCall";
+  constexpr const auto parameterName = "firstParameter";
+
+  auto parametersDeclaration = new VariableDeclaration::Variable(
+      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), parameterName);
+  auto functionDeclaration = new Function::Function(
+      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), functionToCall,
+      {parametersDeclaration});
+  compilationUnit.AddCompilationUnitItems(functionDeclaration);
+
+  auto statement = CreateTestFunctionAndGetInsideStmnt(module, compilationUnit);
+
+  auto expression = new Expression::Expression();
+  auto unit1 =
+      new Expression::ExpressionUnit(std::nullopt, Types::IntegerLiteral("1"));
+  expression->addExpressionUnit(unit1);
+  auto call = new Function::FunctionCall(functionToCall, {expression});
+
+  statement->AddStatement(call);
+
+  auto cuItems = GenerateIR(compilationUnit, module);
+  EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
+  EXPECT_TRUE(llvm::verifyModule(module));
+}
+
+TEST(IR, testConditionalBranch) {
+  auto ctx = new llvm::LLVMContext();
+  auto module = llvm::Module("", *ctx);
+  CompilationUnit compilationUnit;
+
+  auto statement = CreateTestFunctionAndGetInsideStmnt(module, compilationUnit);
+
+  std::vector<Controlflow::ConditionalBranch *> conditionalChain;
+
+  // The first if condition
+  auto expressionIf = new Expression::Expression();
+  auto unit1 =
+      new Expression::ExpressionUnit(std::nullopt, Types::IntegerLiteral("1"));
+  expressionIf->addExpressionUnit(unit1);
+
+  // The body of the first if statement
+  auto statementIf = new Statement::Statement();
+  constexpr const char *variableNameIf = "ifVariable";
+  auto variableIf = new VariableDeclaration::VariableDeclaration(
+      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()),
+      variableNameIf);
+  statementIf->AddStatement(variableIf);
+
+  auto branchIf =
+      new Controlflow::ConditionalBranch(&expressionIf, &statementIf);
+  conditionalChain.push_back(branchIf);
+
+  // The elif condition
+  auto expressionElif = new Expression::Expression();
+  expressionElif->addExpressionUnit(unit1);
+
+  // The body of the elif statement
+  auto statementElif = new Statement::Statement();
+  statementElif->AddStatement(variableIf);
+
+  auto branchElif =
+      new Controlflow::ConditionalBranch(&expressionElif, &statementElif);
+  conditionalChain.push_back(branchElif);
+
+  // The else condition
+  // The body of the else statement
+  auto statementElse = new Statement::Statement();
+  statementElse->AddStatement(variableIf);
+
+  auto branchElse = new Controlflow::ConditionalBranch();
+  branchElse->addStatement(&statementElse);
+  conditionalChain.push_back(branchElse);
+
+  auto branch = new Controlflow::ConditionalBranchingGroup(conditionalChain);
+
+  statement->AddStatement(branch);
+
+  auto cuItems = GenerateIR(compilationUnit, module);
+  EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
+  EXPECT_TRUE(llvm::verifyModule(module));
 }
