@@ -6,7 +6,7 @@
 // TODO make sure #include <AST/Expression.h> is included before the this header
 // in cpp file.
 namespace AST::Expression {
-class ExpressionUnit;
+class Expression;
 }
 
 // TODO make sure #include <AST/Statement.h> is included before the this
@@ -51,14 +51,14 @@ private:
 class FunctionCall : public AST {
 public:
   FunctionCall(std::string name,
-               std::vector<Expression::ExpressionUnit *> parameters)
+               std::vector<Expression::Expression *> parameters)
       : name(name), parameters(parameters) {}
 
   llvm::Value *codegen(codeGenItems& items) override;
 
 private:
   std::string name;
-  std::vector<Expression::ExpressionUnit *> parameters;
+  std::vector<Expression::Expression *> parameters;
 };
 
 } // namespace AST::Function

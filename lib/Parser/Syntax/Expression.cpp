@@ -56,7 +56,36 @@ std::optional<Operand> ParseOperand(syntaxItems &items) {
   return std::nullopt;
 }
 
-std::optional<ExpressionUnit *> ParseExpressionUnit(syntaxItems &items) {
+std::optional<ExpressionUnit *> ParseExpressionUnit(syntaxItems &items,
+                                                    bool firstUnit) {
+
+  auto unit = new ExpressionUnit();
+
+  if (!firstUnit) {
+    // TODO create proper operator map and category.
+    switch (items.lexer.getCurrentToken().type) {
+    case TokenType::AND:
+    case TokenType::OR: {
+      unit->operation =
+          TokenToBooleanOperator.at(items.lexer.getCurrentToken().type);
+      items.lexer.generateNextToken();
+      break;
+    }
+
+    case TokenType::PLUS:
+    case TokenType::MINUS: {
+      unit->operation =
+          TokenToArithmeticOperator.at(items.lexer.getCurrentToken().type);
+      items.lexer.generateNextToken();
+      break;
+    }
+
+    default: {
+      // err
+      return std::nullopt;
+    }
+    }
+  }
 
   auto operand = ParseOperand(items);
   if (!operand) {
@@ -64,34 +93,7 @@ std::optional<ExpressionUnit *> ParseExpressionUnit(syntaxItems &items) {
     return std::nullopt;
   }
 
-  auto unit = new ExpressionUnit();
   unit->operand = *operand;
-
-  // skipUntilNotNewline(items);
-
-  // TODO create proper operator map and category.
-  switch (items.lexer.getCurrentToken().type) {
-  case TokenType::AND:
-  case TokenType::OR: {
-    unit->operation =
-        TokenToBooleanOperator.at(items.lexer.getCurrentToken().type);
-    items.lexer.generateNextToken();
-    break;
-  }
-
-  case TokenType::PLUS:
-  case TokenType::MINUS: {
-    unit->operation =
-        TokenToArithmeticOperator.at(items.lexer.getCurrentToken().type);
-    items.lexer.generateNextToken();
-    break;
-  }
-
-  default: {
-    // No operation after operand
-    break;
-  }
-  }
 
   return unit;
 }
@@ -100,18 +102,24 @@ std::optional<expressionAST *> ParseExpression(syntaxItems &items) {
 
   auto expression = new expressionAST();
 
+  bool firstIteration = true;
   int loopCounter = 0;
   do {
-    auto target = ParseExpressionUnit(items);
+    auto target = ParseExpressionUnit(items, firstIteration);
     if (!target) {
       // err
       return std::nullopt;
     }
 
+    firstIteration = false;
+
     expression->addExpressionUnit(*target);
 
-    // Expression is over if no extra operand was parsed at the end.
-    if ((*target)->operation == std::nullopt) {
+    // TODO create proper operator map and category.
+    auto nextTokenType = items.lexer.getCurrentToken().type;
+    // Expression is over if next token isn't a operator
+    if (nextTokenType != TokenType::PLUS && nextTokenType != TokenType::MINUS &&
+        nextTokenType != TokenType::OR && nextTokenType != TokenType::AND) {
       break;
     }
   } while (loopCounter++ < loopLimit);

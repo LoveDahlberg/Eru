@@ -30,8 +30,8 @@ std::optional<FunctionCall *> ParseFunctionCall(syntaxItems &items,
   // eat the (
   items.lexer.generateNextToken();
 
-  auto parameters = ParseParameters<ExpressionUnit *>(
-      items, &Expression::ParseExpressionUnit);
+  auto parameters = ParseParameters<expressionAST *>(
+      items, &Expression::ParseExpression);
   if (!parameters) {
     // err
     return std::nullopt;

@@ -33,10 +33,10 @@ using Operand = std::variant<Types::NamedIdentifier, Types::StringLiteral,
                              Types::IntegerLiteral, Function::FunctionCall *>;
 
 struct ExpressionUnit {
-  Operand operand;
-
-  // Is END at the end of expression.
+  // Is nullopt on first .
   std::optional<Operator> operation;
+
+  Operand operand;
 };
 
 class Expression : public AST {

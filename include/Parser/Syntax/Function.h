@@ -16,12 +16,12 @@ template <typename T>
 concept ValidParameterType =
     std::is_pointer_v<T> &&
     (std::is_same_v<Variable, std::remove_pointer_t<T>> ||
-     std::is_same_v<AST::Expression::ExpressionUnit, std::remove_pointer_t<T>>);
+     std::is_same_v<::AST::Expression::Expression, std::remove_pointer_t<T>>);
 
 /// This function is supposed to be used for parameter parsing for:
 /// - Function declarations and definitions -> type is
 ///   AST::VariableDeclaration::Variable
-/// - Function calls -> type is Expression::ExpressionUnit
+/// - Function calls -> type is Expression::Expression
 ///
 ///  The \a ValidParameterType concept restricts the usage outside of these
 ///  types.
@@ -31,7 +31,7 @@ concept ValidParameterType =
 ///                          Variable should be used for
 ///                          VariableDeclaration.
 ///                          ParseAssignmentExpressionTarget should be used for
-///                          Expression::ExpressionUnit.
+///                          Expression::Expression.
 template <typename ParameterType>
   requires ValidParameterType<ParameterType>
 std::optional<std::vector<ParameterType>>

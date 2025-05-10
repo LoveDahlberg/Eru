@@ -63,12 +63,6 @@ TEST(IR, testFunction) {
 
   auto statement = CreateFunctionAndGetInsideStmnt(module, compilationUnit);
 
-  // constexpr const char *variableName = "firstVariable";
-  // auto variable = new VariableDeclaration::VariableDeclaration(
-  //     (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()),
-  //     variableName);
-  // statement->AddStatement(variable);
-
   auto cuItems = GenerateIR(compilationUnit, module);
   EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
 }
@@ -103,11 +97,12 @@ TEST(IR, testDeclarationAssignment) {
   auto assignment = new Assignment::Assignment(variable);
 
   auto expression = new Expression::Expression();
-  auto unit1 = new Expression::ExpressionUnit(
-      Types::IntegerLiteral("1"), Expression::ArithmeticOperator::PLUS);
+  auto unit1 =
+      new Expression::ExpressionUnit(std::nullopt, Types::IntegerLiteral("1"));
   expression->addExpressionUnit(unit1);
 
-  auto unit2 = new Expression::ExpressionUnit(Types::IntegerLiteral("2"));
+  auto unit2 = new Expression::ExpressionUnit(
+      Expression::ArithmeticOperator::PLUS, Types::IntegerLiteral("2"));
   expression->addExpressionUnit(unit2);
 
   assignment->setExpression(&expression);
