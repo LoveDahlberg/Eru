@@ -17,7 +17,7 @@ llvm::Value *Statement::codegen(codeGenItems &items) {
   }
 
   // TODO what to return here?
-  return items.builder->CreateRetVoid();
+  return items.builder->GetInsertBlock();
 }
 
 } // namespace AST::Statement

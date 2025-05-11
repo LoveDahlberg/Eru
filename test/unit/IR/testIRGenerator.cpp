@@ -39,7 +39,7 @@ TEST(IR, testGlobalVarialbe) {
   auto generatedVariable = module.getGlobalVariable(variableName, true);
   EXPECT_NE(generatedVariable, nullptr);
 
-  EXPECT_TRUE(llvm::verifyModule(module));
+  EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
 
 Statement::Statement *CreateTestFunctionAndGetInsideStmnt(llvm::Module &module,
@@ -70,7 +70,7 @@ TEST(IR, testFunction) {
   auto cuItems = GenerateIR(compilationUnit, module);
   EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
 
-  EXPECT_TRUE(llvm::verifyModule(module));
+  EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
 
 TEST(IR, testFunctionVariable) {
@@ -88,7 +88,7 @@ TEST(IR, testFunctionVariable) {
   auto cuItems = GenerateIR(compilationUnit, module);
   EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
 
-  EXPECT_TRUE(llvm::verifyModule(module));
+  EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
 
 TEST(IR, testDeclarationAssignment) {
@@ -127,7 +127,7 @@ TEST(IR, testDeclarationAssignment) {
 
   auto cuItems = GenerateIR(compilationUnit, module);
   EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
-  EXPECT_TRUE(llvm::verifyModule(module));
+  EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
 
 TEST(IR, testFunctionCall) {
@@ -157,7 +157,7 @@ TEST(IR, testFunctionCall) {
 
   auto cuItems = GenerateIR(compilationUnit, module);
   EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
-  EXPECT_TRUE(llvm::verifyModule(module));
+  EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
 
 TEST(IR, testConditionalBranch) {
@@ -214,5 +214,5 @@ TEST(IR, testConditionalBranch) {
 
   auto cuItems = GenerateIR(compilationUnit, module);
   EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
-  EXPECT_TRUE(llvm::verifyModule(module));
+  EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }

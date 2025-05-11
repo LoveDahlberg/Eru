@@ -12,7 +12,7 @@ using namespace AST::VariableDeclaration;
 llvm::Value *VariableDeclaration::codegen(codeGenItems &items) {
   if (global) {
     return new llvm::GlobalVariable(
-        items.module, variable->type, false, llvm::GlobalValue::PrivateLinkage,
+        items.module, variable->type, false, llvm::GlobalValue::ExternalLinkage,
         nullptr, variable->name, nullptr,
         llvm::GlobalValue::ThreadLocalMode::NotThreadLocal, std::nullopt,
         false);

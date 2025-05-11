@@ -1,7 +1,8 @@
 #include <AST/Function.h>
 #include <AST/Statement.h>
-#include <llvm-19/llvm/IR/BasicBlock.h>
-#include <llvm-19/llvm/Support/Casting.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/Support/Casting.h>
+#include <llvm/IR/Type.h>
 
 namespace AST::Function {
 
@@ -38,7 +39,7 @@ llvm::Value *Function::codegen(codeGenItems &items) {
   auto *functionType = llvm::FunctionType::get(type, parameterTypes, false);
 
   auto function = llvm::Function::Create(
-      functionType, llvm::GlobalValue::PrivateLinkage, name, &items.module);
+      functionType, llvm::GlobalValue::ExternalLinkage, name, &items.module);
 
   unsigned Idx = 0;
   for (auto &parameter : function->args()) {
@@ -47,8 +48,7 @@ llvm::Value *Function::codegen(codeGenItems &items) {
 
   if (body != nullptr) {
     auto &context = items.module.getContext();
-    auto *basicBlock =
-        llvm::BasicBlock::Create(context, "statement", function);
+    auto *basicBlock = llvm::BasicBlock::Create(context, "statement", function);
     if (items.builder == nullptr) {
       items.builder = new llvm::IRBuilder<llvm::NoFolder>(context);
     }
@@ -58,7 +58,15 @@ llvm::Value *Function::codegen(codeGenItems &items) {
     if (body->codegen(items) == nullptr) {
       return nullptr;
     }
+
+    if (type->isIntegerTy(32)) {
+      items.builder->CreateRet(llvm::ConstantInt::get(
+          type, 0));
+    } else {
+      return nullptr;
+    }
   }
+
   items.currentFunction = nullptr;
   return function;
 }
