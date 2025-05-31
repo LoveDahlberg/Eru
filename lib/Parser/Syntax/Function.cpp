@@ -1,15 +1,15 @@
 
 #include <Parser/Syntax/Directive.h>
+#include <Parser/Syntax/Expression.h>
 #include <Parser/Syntax/Function.h>
+#include <Parser/Syntax/Identifier.h>
 #include <Parser/Syntax/Statement.h>
 #include <Parser/Syntax/VariableDeclaration.h>
-#include <Parser/Syntax/Identifier.h>
-#include <Parser/Syntax/Expression.h>
 
 namespace Parser::Syntax::Function {
 
 std::optional<FunctionCall *> ParseFunctionCall(syntaxItems &items,
-                                                          std::string name) {
+                                                std::string name) {
 
   // If name is empty, parse the identifier. Otherwise assume that it was parsed
   // before calling this function.
@@ -30,8 +30,8 @@ std::optional<FunctionCall *> ParseFunctionCall(syntaxItems &items,
   // eat the (
   items.lexer.generateNextToken();
 
-  auto parameters = ParseParameters<expressionAST *>(
-      items, &Expression::ParseExpression);
+  auto parameters =
+      ParseParameters<expressionAST *>(items, &Expression::ParseExpression);
   if (!parameters) {
     // err
     return std::nullopt;
@@ -50,9 +50,7 @@ std::optional<FunctionCall *> ParseFunctionCall(syntaxItems &items,
   return new FunctionCall(name, *parameters);
 }
 
-std::optional<FunctionBody *> ParseFunctionBody(syntaxItems &items) {
-  auto directive = Directive::ParseDirective(items);
-
+std::optional<Block *> ParseBlock(syntaxItems &items) {
   skipUntilNotNewline(items);
 
   if (items.lexer.getCurrentToken().type != TokenType::LEFT_CURLY_BRACE) {
@@ -69,6 +67,20 @@ std::optional<FunctionBody *> ParseFunctionBody(syntaxItems &items) {
     return std::nullopt;
   }
 
+  auto block = new Block(*statement);
+
+  if (items.lexer.getCurrentToken().type == TokenType::RETURN) {
+    // eat the return
+    items.lexer.generateNextToken();
+
+    auto expression = Expression::ParseExpression(items);
+    if (!expression) {
+      // err
+      return std::nullopt;
+    }
+    block->addReturn(*expression);
+  }
+
   skipUntilNotNewline(items);
 
   if (items.lexer.getCurrentToken().type != TokenType::RIGHT_CURLY_BRACE) {
@@ -79,15 +91,27 @@ std::optional<FunctionBody *> ParseFunctionBody(syntaxItems &items) {
   // eat the }
   items.lexer.generateNextToken();
 
-  return new FunctionBody(*statement);
+  return block;
+}
+
+std::optional<FunctionBody *> ParseFunctionBody(syntaxItems &items) {
+  auto directive = Directive::ParseDirective(items);
+
+  auto block = ParseBlock(items);
+  if (!block) {
+    // err
+    return std::nullopt;
+  }
+
+  return new FunctionBody(*block);
 }
 
 bool ParseFunction(syntaxItems &items, Variable *variable) {
   // eat the (
   items.lexer.generateNextToken();
 
-  auto paramaters = ParseParameters<Variable *>(
-      items, &VariableDeclaration::ParseVariable);
+  auto paramaters =
+      ParseParameters<Variable *>(items, &VariableDeclaration::ParseVariable);
   if (!paramaters) {
     // err
     return false;
@@ -104,8 +128,7 @@ bool ParseFunction(syntaxItems &items, Variable *variable) {
   // eat the ), needed before leaving this function.
   items.lexer.generateNextToken();
 
-  auto function =
-      new functionAST(variable->type, variable->name, *paramaters);
+  auto function = new functionAST(variable->type, variable->name, *paramaters);
 
   if (lookaheadToken.type == TokenType::LEFT_BRACKET) {
     auto functionBody = ParseFunctionBody(items);

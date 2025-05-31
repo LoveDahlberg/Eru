@@ -7,6 +7,8 @@ using namespace ::AST::Function;
 using functionAST = ::AST::Function::Function;
 
 namespace Parser::Syntax::Function {
+std::optional<Block *> ParseBlock(syntaxItems &items);
+
 bool ParseFunction(syntaxItems &items, Variable *declaration);
 
 std::optional<FunctionCall *> ParseFunctionCall(syntaxItems &items,

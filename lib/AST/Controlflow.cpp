@@ -1,5 +1,4 @@
 #include <AST/Controlflow.h>
-#include <AST/Statement.h>
 
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constant.h>
@@ -36,9 +35,12 @@ llvm::Value *ConditionalBranchingGroup::codegen(codeGenItems &items) {
   }
 
   auto &context = items.module.getContext();
+
+  // The merge block is where all branches converge.
   auto mergeBlock =
       llvm::BasicBlock::Create(context, "exit", items.currentFunction);
 
+  // Loop through all branches.
   int branchNumber;
   for (branchNumber = 0; branchNumber < conditionalChain.size();
        ++branchNumber) {
@@ -55,14 +57,21 @@ llvm::Value *ConditionalBranchingGroup::codegen(codeGenItems &items) {
         llvm::BasicBlock::Create(context, "else", items.currentFunction);
 
     items.builder->CreateCondBr(currentComparisonResult, trueBlock, falseBlock);
-    items.builder->SetInsertPoint(trueBlock);
 
-    if (conditionalChain.at(branchNumber)->statement->codegen(items) ==
-        nullptr) {
+    // Create the content of the true basic block.
+    items.builder->SetInsertPoint(trueBlock);
+    if (conditionalChain.at(branchNumber)->block->codegen(items) == nullptr) {
       return nullptr;
     }
 
-    items.builder->CreateBr(mergeBlock);
+    // Check if the true basic block has generated a return.
+    // If so, don't create a branch to the merge block.
+    if (trueBlock->getTerminator() == nullptr) {
+      items.builder->CreateBr(mergeBlock);
+    }
+
+    // Set insertion point to the false block. This is the start of the next
+    // comparison.
     items.builder->SetInsertPoint(falseBlock);
   }
 
@@ -71,7 +80,7 @@ llvm::Value *ConditionalBranchingGroup::codegen(codeGenItems &items) {
   items.builder->SetInsertPoint(mergeBlock);
 
   // TODO properly implement phiNode
-  //auto *Phi = items.builder->CreatePHI(llvm::Type::getInt32Ty(context),
+  // auto *Phi = items.builder->CreatePHI(llvm::Type::getInt32Ty(context),
   //                                     branchNumber, "r");
   return mergeBlock;
 }

@@ -2,7 +2,6 @@
 #include <AST/Statement.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/Support/Casting.h>
-#include <llvm/IR/Type.h>
 
 namespace AST::Function {
 
@@ -25,8 +24,29 @@ llvm::Value *FunctionCall::codegen(codeGenItems &items) {
   return items.builder->CreateCall(callingFunction, evaluatedParameters);
 }
 
+llvm::Value *Block::codegen(codeGenItems &items) {
+  auto statementResult = statement->codegen(items);
+
+  // If the returnValue is nullptr, then it means this block has no return (this
+  // is ok). Note that this block is not an IR basic block, it is the grammar
+  // block.
+  if (returnValue == nullptr || statementResult == nullptr) {
+    return statementResult;
+  }
+
+  auto value = returnValue->codegen(items);
+  if (value == nullptr) {
+    return nullptr;
+  }
+
+  return items.builder->CreateRet(value);
+}
+
 llvm::Value *FunctionBody::codegen(codeGenItems &items) {
-  return statement == nullptr ? nullptr : statement->codegen(items);
+
+  // Generate directive
+
+  return block == nullptr ? nullptr : block->codegen(items);
 }
 
 llvm::Value *Function::codegen(codeGenItems &items) {
@@ -48,7 +68,7 @@ llvm::Value *Function::codegen(codeGenItems &items) {
 
   if (body != nullptr) {
     auto &context = items.module.getContext();
-    auto *basicBlock = llvm::BasicBlock::Create(context, "statement", function);
+    auto *basicBlock = llvm::BasicBlock::Create(context, "block", function);
     if (items.builder == nullptr) {
       items.builder = new llvm::IRBuilder<llvm::NoFolder>(context);
     }
@@ -56,13 +76,6 @@ llvm::Value *Function::codegen(codeGenItems &items) {
 
     items.currentFunction = function;
     if (body->codegen(items) == nullptr) {
-      return nullptr;
-    }
-
-    if (type->isIntegerTy(32)) {
-      items.builder->CreateRet(llvm::ConstantInt::get(
-          type, 0));
-    } else {
       return nullptr;
     }
   }

@@ -34,8 +34,8 @@ _____
       [parametersDeclaration] → {parametersDeclarationList} | e
         [parametersDeclarationList] → {type} (IDENTIFER) | {type} (IDENTIFER) (COMMA) {parametersDeclaration}
       
-      [functionBody] → {directive} {block} | e
-        [block] → (LEFT_CURLY_BRACE) {statement} (RIGHT_CURLY_BRACE)
+      [functionBody] → {directive} {block}
+        [block] → (LEFT_CURLY_BRACE) {statement} {return} (RIGHT_CURLY_BRACE)
           [statement] → {variableDeclaration} {statement} | {assignment} {statement} | {controlflow} {statement} | {functionCall} {statement} | e
             [assignment] → {assignmentTarget} (EQUAL) {expression} (NEWLINE)
               [assignmentTarget] → {variableDeclaration} | (IDENTIFER) 
@@ -54,7 +54,8 @@ _____
             [conditionalBranch] → (IF) {ifClause} {block} {continuedCondition}
               [ifClause] → (LEFT_PARENTHESIS) {expression} (RIGHT_PARENTHESIS)
               [continuedCondition] → (ELSE) {block} | (ELIF) {ifClause} {block} {continuedCondition} | e
-
+          [return] → (RETURN) [expression] | e
+        
 _____
 
 Token definition:
@@ -67,6 +68,7 @@ _____
 (ELIF) → elif
 (AND) → and
 (OR) → or
+(RETURN) → return 
 
 (LEFT_PARENTHESIS) → (
 (RIGHT_PARENTHESIS) → )

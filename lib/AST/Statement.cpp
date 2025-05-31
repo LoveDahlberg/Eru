@@ -9,9 +9,11 @@ llvm::Value *Statement::codegen(codeGenItems &items) {
     return nullptr;
   }
 
+  // Generate all ValidstatementType statements
   for (auto statement : statements) {
-    auto start = statement->codegen(items);
-    if (start == nullptr) {
+    auto segment = statement->codegen(items);
+    if (segment == nullptr) {
+      // err
       return nullptr;
     }
   }

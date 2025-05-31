@@ -11,7 +11,8 @@ namespace Parser::Syntax::Statement {
 std::optional<statementAST *> ParseStatement(syntaxItems &items) {
   auto statement = new statementAST;
 
-  if (items.lexer.getCurrentToken().type == TokenType::RIGHT_CURLY_BRACE) {
+  if (items.lexer.getCurrentToken().type == TokenType::RETURN ||
+      items.lexer.getCurrentToken().type == TokenType::RIGHT_CURLY_BRACE) {
     return statement;
   }
 
@@ -121,7 +122,10 @@ std::optional<statementAST *> ParseStatement(syntaxItems &items) {
     }
     }
 
-    if (items.lexer.generateNextToken().type == TokenType::RIGHT_CURLY_BRACE) {
+    // Check if we should stop.
+    items.lexer.generateNextToken();
+    if (items.lexer.getCurrentToken().type == TokenType::RETURN ||
+        items.lexer.getCurrentToken().type == TokenType::RIGHT_CURLY_BRACE) {
       break;
     }
 

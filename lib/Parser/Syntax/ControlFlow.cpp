@@ -1,6 +1,7 @@
 
 #include <Parser/Syntax/ControlFlow.h>
 #include <Parser/Syntax/Expression.h>
+#include <Parser/Syntax/Function.h>
 #include <Parser/Syntax/Statement.h>
 
 namespace Parser::Syntax::Controlflow {
@@ -55,31 +56,13 @@ std::optional<ConditionalBranch *> ParseConditionalBranch(syntaxItems &items,
     branch->addExpression(&*expression);
   }
 
-  skipUntilNotNewline(items);
-
-  if (items.lexer.getCurrentToken().type != TokenType::LEFT_CURLY_BRACE) {
+  auto block = Function::ParseBlock(items);
+  if (!block) {
     // err
     return std::nullopt;
   }
 
-  // Eat the {
-  items.lexer.generateNextToken();
-
-  auto statement = Statement::ParseStatement(items);
-  if (!statement) {
-    // err
-    return std::nullopt;
-  }
-
-  if (items.lexer.getCurrentToken().type != TokenType::RIGHT_CURLY_BRACE) {
-    // err
-    return std::nullopt;
-  }
-
-  // Eat the }
-  items.lexer.generateNextToken();
-
-  branch->addStatement(&*statement);
+  branch->addBlock(&*block);
   return branch;
 }
 

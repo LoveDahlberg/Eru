@@ -4,12 +4,6 @@
 #include <AST/Assignment.h>
 #include <AST/Function.h>
 
-// Make sure #include <AST/Statement.h> is defined in cpp file before
-// this header.
-namespace AST::Statement {
-class Statement;
-}
-
 namespace AST::Controlflow {
 
 // Common type for all controlflow, to make it easier to group them.
@@ -18,21 +12,19 @@ struct Controlflow : public AST {};
 
 struct ConditionalBranch {
   ConditionalBranch(Expression::Expression **expression,
-                    Statement::Statement **statement)
-      : expression(*expression), statement(*statement) {}
+                    Function::Block **block)
+      : expression(*expression), block(*block) {}
 
-  ConditionalBranch() : expression(nullptr), statement(nullptr) {}
+  ConditionalBranch() : expression(nullptr), block(nullptr) {}
 
   void addExpression(Expression::Expression **expression) {
     this->expression = *expression;
   }
 
-  void addStatement(Statement::Statement **statement) {
-    this->statement = *statement;
-  }
+  void addBlock(Function::Block **block) { this->block = *block; }
 
   Expression::Expression *expression;
-  Statement::Statement *statement;
+  Function::Block *block;
 };
 
 class ConditionalBranchingGroup : public Controlflow {

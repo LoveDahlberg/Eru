@@ -42,6 +42,15 @@ TEST(IR, testGlobalVarialbe) {
   EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
 
+Expression::Expression *
+CreateTestExpression(std::optional<::AST::Expression::Operator> opreator,
+                     ::AST::Expression::Operand operand) {
+  auto expression = new Expression::Expression();
+  auto unit = new Expression::ExpressionUnit(opreator, operand);
+  expression->addExpressionUnit(unit);
+  return expression;
+}
+
 Statement::Statement *CreateTestFunctionAndGetInsideStmnt(llvm::Module &module,
                                                           CompilationUnit &cu) {
   constexpr const char *name = "function";
@@ -49,10 +58,15 @@ Statement::Statement *CreateTestFunctionAndGetInsideStmnt(llvm::Module &module,
   // Create statement.
   auto statement = new Statement::Statement();
 
-  // Create function and add statement in it.
+  // Create block
+  auto block = new Function::Block(
+      statement,
+      CreateTestExpression(std::nullopt, Types::IntegerLiteral("1")));
+
+  // Create function and add a block into it.
   auto function = new Function::Function(
       (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), name);
-  auto body = new Function::FunctionBody(statement);
+  auto body = new Function::FunctionBody(block);
   function->addFunctionBody(body);
 
   cu.AddCompilationUnitItems(function);
@@ -147,11 +161,9 @@ TEST(IR, testFunctionCall) {
 
   auto statement = CreateTestFunctionAndGetInsideStmnt(module, compilationUnit);
 
-  auto expression = new Expression::Expression();
-  auto unit1 =
-      new Expression::ExpressionUnit(std::nullopt, Types::IntegerLiteral("1"));
-  expression->addExpressionUnit(unit1);
-  auto call = new Function::FunctionCall(functionToCall, {expression});
+  auto call = new Function::FunctionCall(
+      functionToCall,
+      {CreateTestExpression(std::nullopt, Types::IntegerLiteral("1"))});
 
   statement->AddStatement(call);
 
@@ -170,33 +182,36 @@ TEST(IR, testConditionalBranch) {
   std::vector<Controlflow::ConditionalBranch *> conditionalChain;
 
   // The first if condition
-  auto expressionIf = new Expression::Expression();
-  auto unit1 =
-      new Expression::ExpressionUnit(std::nullopt, Types::IntegerLiteral("1"));
-  expressionIf->addExpressionUnit(unit1);
+  auto expressionIf =
+      CreateTestExpression(std::nullopt, Types::IntegerLiteral("1"));
 
   // The body of the first if statement
   auto statementIf = new Statement::Statement();
-  constexpr const char *variableNameIf = "ifVariable";
   auto variableIf = new VariableDeclaration::VariableDeclaration(
-      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()),
-      variableNameIf);
+      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), "ifVariable");
   statementIf->AddStatement(variableIf);
 
-  auto branchIf =
-      new Controlflow::ConditionalBranch(&expressionIf, &statementIf);
+  auto blockIf = new Function::Block(
+      statementIf,
+      CreateTestExpression(std::nullopt, Types::IntegerLiteral("1")));
+
+  auto branchIf = new Controlflow::ConditionalBranch(&expressionIf, &blockIf);
   conditionalChain.push_back(branchIf);
 
   // The elif condition
-  auto expressionElif = new Expression::Expression();
-  expressionElif->addExpressionUnit(unit1);
+  auto expressionElif =
+      CreateTestExpression(std::nullopt, Types::IntegerLiteral("1"));
 
   // The body of the elif statement
   auto statementElif = new Statement::Statement();
   statementElif->AddStatement(variableIf);
 
+  auto blockElIf = new Function::Block(
+      statementElif,
+      CreateTestExpression(std::nullopt, Types::IntegerLiteral("2")));
+
   auto branchElif =
-      new Controlflow::ConditionalBranch(&expressionElif, &statementElif);
+      new Controlflow::ConditionalBranch(&expressionElif, &blockElIf);
   conditionalChain.push_back(branchElif);
 
   // The else condition
@@ -204,8 +219,12 @@ TEST(IR, testConditionalBranch) {
   auto statementElse = new Statement::Statement();
   statementElse->AddStatement(variableIf);
 
+  auto blockElse = new Function::Block(
+      statementElse,
+      CreateTestExpression(std::nullopt, Types::IntegerLiteral("3")));
+
   auto branchElse = new Controlflow::ConditionalBranch();
-  branchElse->addStatement(&statementElse);
+  branchElse->addBlock(&blockElse);
   conditionalChain.push_back(branchElse);
 
   auto branch = new Controlflow::ConditionalBranchingGroup(conditionalChain);

@@ -24,9 +24,9 @@ TEST(Parser, TestDeclarations) {
 
   ASSERT_TRUE(parserItems);
 
-  EXPECT_EQ((*parserItems).compilationUnit.GetAddCompilationUnitItems().size(), 5);
+  EXPECT_EQ((*parserItems).compilationUnit.GetAddCompilationUnitItems().size(),
+            5);
 }
-
 
 TEST(Parser, TestFunctions) {
   std::string stream = R"(
@@ -41,12 +41,14 @@ TEST(Parser, TestFunctions) {
       }
       elif(second){
         somethingElse(first)
+        return 2
       }
       else
       {
         int bb
         alsoSomething(a, bb, cc)
       }
+      return 1
     }
     )";
   stream += EOF;
@@ -56,3 +58,5 @@ TEST(Parser, TestFunctions) {
 
   ASSERT_TRUE(parserItems);
 }
+
+// TODO add more tests for each sub category.

@@ -17,14 +17,34 @@ class Statement;
 
 namespace AST::Function {
 
-class FunctionBody : public AST {
+/// TODO this might be better to keep in another file/namespace.
+class Block : public AST {
 public:
-  FunctionBody(Statement::Statement *statement) : statement(statement) {}
+  Block(Statement::Statement *statement) : statement(statement) {}
 
-  llvm::Value *codegen(codeGenItems& items) override;
+  Block(Statement::Statement *statement, Expression::Expression *returnValue)
+      : statement(statement), returnValue(returnValue) {}
+
+  llvm::Value *codegen(codeGenItems &items) override;
+
+  void addReturn(Expression::Expression *returnValue) {
+    this->returnValue = returnValue;
+  }
 
 private:
   Statement::Statement *statement;
+  Expression::Expression *returnValue;
+};
+
+class FunctionBody : public AST {
+public:
+  FunctionBody(Block *block) : block(block) {}
+
+  llvm::Value *codegen(codeGenItems &items) override;
+
+private:
+  // TODO add directive
+  Block *block;
 };
 
 class Function : public AST {
@@ -37,13 +57,17 @@ public:
 
   Function(llvm::Type *type, std::string name) : type(type), name(name) {}
 
-  llvm::Value *codegen(codeGenItems& items) override;
+  llvm::Value *codegen(codeGenItems &items) override;
 
   void addFunctionBody(FunctionBody *body) { this->body = body; }
 
 private:
   std::vector<VariableDeclaration::Variable *> parameters;
+
+  // TODO might not need this type during codegen, only need to check it during
+  // semantic passes.
   llvm::Type *type;
+
   std::string name;
   FunctionBody *body;
 };
@@ -54,7 +78,7 @@ public:
                std::vector<Expression::Expression *> parameters)
       : name(name), parameters(parameters) {}
 
-  llvm::Value *codegen(codeGenItems& items) override;
+  llvm::Value *codegen(codeGenItems &items) override;
 
 private:
   std::string name;
