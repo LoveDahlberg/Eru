@@ -172,6 +172,32 @@ TEST(IR, testFunctionCall) {
   EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
 
+Controlflow::Controlflow *
+CreateSingleTestConditionalBranch(llvm::Module &module,
+                                  bool hasReturnValue = true) {
+  std::vector<Controlflow::ConditionalBranch *> conditionalChain;
+  // The first if condition
+  auto expressionIf =
+      CreateTestExpression(std::nullopt, Types::IntegerLiteral("1"));
+
+  // The body of the first if statement
+  auto statementIf = new Statement::Statement();
+  auto variableIf = new VariableDeclaration::VariableDeclaration(
+      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()),
+      "testIfVariable");
+  statementIf->AddStatement(variableIf);
+
+  auto blockIf = new Function::Block(
+      statementIf,
+      hasReturnValue
+          ? CreateTestExpression(std::nullopt, Types::IntegerLiteral("42"))
+          : nullptr);
+
+  auto branchIf = new Controlflow::ConditionalBranch(&expressionIf, &blockIf);
+  conditionalChain.push_back(branchIf);
+  return new Controlflow::ConditionalBranchingGroup(conditionalChain);
+}
+
 TEST(IR, testConditionalBranch) {
   auto ctx = new llvm::LLVMContext();
   auto module = llvm::Module("", *ctx);
@@ -200,15 +226,16 @@ TEST(IR, testConditionalBranch) {
 
   // The elif condition
   auto expressionElif =
-      CreateTestExpression(std::nullopt, Types::IntegerLiteral("1"));
+      CreateTestExpression(std::nullopt, Types::IntegerLiteral("2"));
 
   // The body of the elif statement
   auto statementElif = new Statement::Statement();
   statementElif->AddStatement(variableIf);
+  statementElif->AddStatement(CreateSingleTestConditionalBranch(module));
 
   auto blockElIf = new Function::Block(
       statementElif,
-      CreateTestExpression(std::nullopt, Types::IntegerLiteral("2")));
+      nullptr);
 
   auto branchElif =
       new Controlflow::ConditionalBranch(&expressionElif, &blockElIf);

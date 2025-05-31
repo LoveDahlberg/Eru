@@ -64,9 +64,11 @@ llvm::Value *ConditionalBranchingGroup::codegen(codeGenItems &items) {
       return nullptr;
     }
 
-    // Check if the true basic block has generated a return.
+    // Check if the current basic block has generated a return.
     // If so, don't create a branch to the merge block.
-    if (trueBlock->getTerminator() == nullptr) {
+    // Note that we have to check the builders current block and not the true
+    // block directly, as the block can split off into other blocks.
+    if (items.builder->GetInsertBlock()->getTerminator() == nullptr) {
       items.builder->CreateBr(mergeBlock);
     }
 
