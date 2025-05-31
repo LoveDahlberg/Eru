@@ -1,9 +1,9 @@
 
-#include <Parser/Syntax/Literal.h>
+#include <Parser/Literal.h>
 
-namespace Parser::Syntax::Literal {
+namespace Parser::Literal {
 
-std::optional<std::string> ParseLiteral(syntaxItems &items) {
+std::optional<std::string> ParseLiteral(ParserItems &items) {
   if (items.lexer.getCurrentToken().type != TokenType::INTEGER_LITERAL &&
       items.lexer.getCurrentToken().type != TokenType::STRING_LITERAL) {
     // err
@@ -18,4 +18,4 @@ std::optional<std::string> ParseLiteral(syntaxItems &items) {
   return literal;
 }
 
-} // namespace Parser::Syntax::Literal
+} // namespace Parser::Literal

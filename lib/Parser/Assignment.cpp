@@ -1,11 +1,11 @@
 
-#include "Parser/Syntax/VariableDeclaration.h"
-#include <Parser/Syntax/Assignment.h>
-#include <Parser/Syntax/Expression.h>
+#include "Parser/VariableDeclaration.h"
+#include <Parser/Assignment.h>
+#include <Parser/Expression.h>
 
-namespace Parser::Syntax::Assignment {
+namespace Parser::Assignment {
 
-std::optional<assignmentAST *> ParseAssignment(syntaxItems &items,
+std::optional<assignmentAST *> ParseAssignment(ParserItems &items,
                                                Variable *variable) {
 
   // If not null, variable information already parsed.
@@ -45,4 +45,4 @@ std::optional<assignmentAST *> ParseAssignment(syntaxItems &items,
   return assignment;
 }
 
-} // namespace Parser::Syntax::Assignment
+} // namespace Parser::Assignment

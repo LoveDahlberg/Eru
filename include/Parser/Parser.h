@@ -14,10 +14,10 @@
 
 using namespace Lexing;
 
-namespace Parser::Syntax {
+namespace Parser {
 
-struct syntaxItems {
-  syntaxItems(Lexer &lexer)
+struct ParserItems {
+  ParserItems(Lexer &lexer)
       : context(new llvm::LLVMContext()), module(new llvm::Module("", *context)),
         lexer(lexer) {}
 private:
@@ -29,7 +29,7 @@ public:
 };
 
 
-inline void skipUntilNotNewline(syntaxItems &items) {
+inline void skipUntilNotNewline(ParserItems &items) {
   if (items.lexer.getCurrentToken().type != Lexing::TokenType::NEWLINE) {
     return;
   }

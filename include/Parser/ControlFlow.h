@@ -1,13 +1,13 @@
 #pragma once
 
-#include <Parser/Syntax/Syntax.h>
+#include <Parser/Parser.h>
 
 #include <AST/Controlflow.h>
 
 using namespace ::AST::Controlflow;
 
-namespace Parser::Syntax::Controlflow {
+namespace Parser::Controlflow {
 std::optional<ConditionalBranchingGroup *>
-ParseConditionalBranchingGroup(syntaxItems &items);
+ParseConditionalBranchingGroup(ParserItems &items);
 
 }

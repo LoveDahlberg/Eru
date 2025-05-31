@@ -1,8 +1,8 @@
-#include <Parser/Syntax/Identifier.h>
+#include <Parser/Identifier.h>
 
-namespace Parser::Syntax::Identifier {
+namespace Parser::Identifier {
 
-std::optional<std::string> ParseIdentifier(syntaxItems &items) {
+std::optional<std::string> ParseIdentifier(ParserItems &items) {
   if (items.lexer.getCurrentToken().type != TokenType::IDENTIFER) {
     // err
     return std::nullopt;
@@ -15,4 +15,4 @@ std::optional<std::string> ParseIdentifier(syntaxItems &items) {
   return identifier;
 }
 
-} // namespace Parser::Syntax::Identifier
+} // namespace Parser::Identifier

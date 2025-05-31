@@ -1,12 +1,12 @@
 // Include
-#include <Parser/Syntax/VariableDeclaration.h>
-#include <Parser/Syntax/Identifier.h>
-#include <Parser/Syntax/Type.h>
+#include <Parser/VariableDeclaration.h>
+#include <Parser/Identifier.h>
+#include <Parser/Type.h>
 
-namespace Parser::Syntax::VariableDeclaration {
+namespace Parser::VariableDeclaration {
 
 std::optional<Variable *>
-ParseVariable(syntaxItems &items) {
+ParseVariable(ParserItems &items) {
   auto type = Type::ParseType(items);
   if (!type) {
     // err
@@ -21,5 +21,5 @@ ParseVariable(syntaxItems &items) {
 
   return new Variable(*type, *identifier);
 }
-} // namespace Parser::Syntax::Declaration
+} // namespace Parser::Declaration
 

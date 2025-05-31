@@ -1,17 +1,17 @@
 #pragma once
 
-#include <Parser/Syntax/Syntax.h>
-#include <Parser/Syntax/VariableDeclaration.h>
+#include <Parser/Parser.h>
+#include <Parser/VariableDeclaration.h>
 
 using namespace ::AST::Function;
 using functionAST = ::AST::Function::Function;
 
-namespace Parser::Syntax::Function {
-std::optional<Block *> ParseBlock(syntaxItems &items);
+namespace Parser::Function {
+std::optional<Block *> ParseBlock(ParserItems &items);
 
-bool ParseFunction(syntaxItems &items, Variable *declaration);
+bool ParseFunction(ParserItems &items, Variable *declaration);
 
-std::optional<FunctionCall *> ParseFunctionCall(syntaxItems &items,
+std::optional<FunctionCall *> ParseFunctionCall(ParserItems &items,
                                                 std::string name);
 
 template <typename T>
@@ -37,8 +37,8 @@ concept ValidParameterType =
 template <typename ParameterType>
   requires ValidParameterType<ParameterType>
 std::optional<std::vector<ParameterType>>
-ParseParameters(syntaxItems &items,
-                std::function<std::optional<ParameterType>(syntaxItems &)>
+ParseParameters(ParserItems &items,
+                std::function<std::optional<ParameterType>(ParserItems &)>
                     ParseVariableType) {
 
   std::vector<ParameterType> parameters;
@@ -70,4 +70,4 @@ ParseParameters(syntaxItems &items,
 
   return parameters;
 }
-} // namespace Parser::Syntax::Function
+} // namespace Parser::Function

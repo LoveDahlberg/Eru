@@ -1,12 +1,12 @@
 
-#include <Parser/Syntax/ControlFlow.h>
-#include <Parser/Syntax/Expression.h>
-#include <Parser/Syntax/Function.h>
-#include <Parser/Syntax/Statement.h>
+#include <Parser/ControlFlow.h>
+#include <Parser/Expression.h>
+#include <Parser/Function.h>
+#include <Parser/Statement.h>
 
-namespace Parser::Syntax::Controlflow {
+namespace Parser::Controlflow {
 
-std::optional<ConditionalBranch *> ParseConditionalBranch(syntaxItems &items,
+std::optional<ConditionalBranch *> ParseConditionalBranch(ParserItems &items,
                                                           bool start = false) {
 
   // TODO could refactor this to be more readable.
@@ -67,7 +67,7 @@ std::optional<ConditionalBranch *> ParseConditionalBranch(syntaxItems &items,
 }
 
 std::optional<ConditionalBranchingGroup *>
-ParseConditionalBranchingGroup(syntaxItems &items) {
+ParseConditionalBranchingGroup(ParserItems &items) {
   std::vector<ConditionalBranch *> conditionalChain;
 
   bool start = true;
@@ -88,4 +88,4 @@ ParseConditionalBranchingGroup(syntaxItems &items) {
 
   return new ConditionalBranchingGroup(conditionalChain);
 }
-} // namespace Parser::Syntax::Controlflow
+} // namespace Parser::Controlflow

@@ -1,15 +1,15 @@
 
 // include
-#include <Parser/Syntax/CompilationUnit.h>
-#include <Parser/Syntax/Directive.h>
-#include <Parser/Syntax/Function.h>
-#include <Parser/Syntax/Identifier.h>
-#include <Parser/Syntax/Type.h>
-#include <Parser/Syntax/VariableDeclaration.h>
+#include <Parser/CompilationUnit.h>
+#include <Parser/Directive.h>
+#include <Parser/Function.h>
+#include <Parser/Identifier.h>
+#include <Parser/Type.h>
+#include <Parser/VariableDeclaration.h>
 
-namespace Parser::Syntax {
+namespace Parser {
 
-bool ParseVariableDeclarationOrFunction(syntaxItems &items) {
+bool ParseVariableDeclarationOrFunction(ParserItems &items) {
   auto variable =
       VariableDeclaration::ParseVariable(items);
   if (!variable) {
@@ -26,8 +26,8 @@ bool ParseVariableDeclarationOrFunction(syntaxItems &items) {
 }
 
 // TODO improve error handling
-std::optional<syntaxItems> ParseCompilationUnit(Lexer &lexer) {
-  syntaxItems items(lexer);
+std::optional<ParserItems> ParseCompilationUnit(Lexer &lexer) {
+  ParserItems items(lexer);
 
   int loopCounter = 0;
   do {
@@ -65,4 +65,4 @@ std::optional<syntaxItems> ParseCompilationUnit(Lexer &lexer) {
   return items;
 }
 
-} // namespace Parser::Syntax
+} // namespace Parser

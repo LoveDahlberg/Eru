@@ -1,12 +1,12 @@
 
-#include <Parser/Syntax/Expression.h>
-#include <Parser/Syntax/Function.h>
-#include <Parser/Syntax/Identifier.h>
-#include <Parser/Syntax/Literal.h>
+#include <Parser/Expression.h>
+#include <Parser/Function.h>
+#include <Parser/Identifier.h>
+#include <Parser/Literal.h>
 
-namespace Parser::Syntax::Expression {
+namespace Parser::Expression {
 
-std::optional<Operand> ParseOperand(syntaxItems &items) {
+std::optional<Operand> ParseOperand(ParserItems &items) {
   switch (items.lexer.getCurrentToken().type) {
 
   // Identifier or function call
@@ -56,7 +56,7 @@ std::optional<Operand> ParseOperand(syntaxItems &items) {
   return std::nullopt;
 }
 
-std::optional<ExpressionUnit *> ParseExpressionUnit(syntaxItems &items,
+std::optional<ExpressionUnit *> ParseExpressionUnit(ParserItems &items,
                                                     bool firstUnit) {
 
   auto unit = new ExpressionUnit();
@@ -98,7 +98,7 @@ std::optional<ExpressionUnit *> ParseExpressionUnit(syntaxItems &items,
   return unit;
 }
 
-std::optional<expressionAST *> ParseExpression(syntaxItems &items) {
+std::optional<expressionAST *> ParseExpression(ParserItems &items) {
 
   auto expression = new expressionAST();
 
@@ -127,4 +127,4 @@ std::optional<expressionAST *> ParseExpression(syntaxItems &items) {
   return expression;
 }
 
-} // namespace Parser::Syntax::Expression
+} // namespace Parser::Expression

@@ -4,7 +4,7 @@
 
 #include <Lexer/Lexer.h>
 #include <Lexer/Tokens.h>
-#include <Parser/Syntax/CompilationUnit.h>
+#include <Parser/CompilationUnit.h>
 
 using namespace Parser;
 
@@ -20,7 +20,7 @@ TEST(Parser, TestDeclarations) {
   stream += EOF;
 
   Lexer lexer(stream);
-  auto parserItems = Syntax::ParseCompilationUnit(lexer);
+  auto parserItems = ParseCompilationUnit(lexer);
 
   ASSERT_TRUE(parserItems);
 
@@ -54,7 +54,7 @@ TEST(Parser, TestFunctions) {
   stream += EOF;
 
   Lexer lexer(stream);
-  auto parserItems = Syntax::ParseCompilationUnit(lexer);
+  auto parserItems = ParseCompilationUnit(lexer);
 
   ASSERT_TRUE(parserItems);
 }

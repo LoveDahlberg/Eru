@@ -1,12 +1,14 @@
 
-#include <Parser/Syntax/Type.h>
+#include <Parser/Type.h>
 
-namespace Parser::Syntax::Type {
+namespace Parser::Type {
 
-std::optional<llvm::Type *> ParseType(syntaxItems &items) {
+std::optional<llvm::Type *> ParseType(ParserItems &items) {
 
     llvm::Type *type;
   
+    // TODO should avoid having to use the LLVM context here, as we don't
+    // pass it on to the IR generator later. Should maybe just store the token here.
     switch (items.lexer.getCurrentToken().type) {
     case TokenType::INT:
       type = llvm::Type::getInt32Ty(items.module->getContext());

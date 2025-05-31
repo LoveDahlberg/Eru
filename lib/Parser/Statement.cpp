@@ -1,14 +1,14 @@
-#include <Parser/Syntax/Statement.h>
+#include <Parser/Statement.h>
 
-#include <Parser/Syntax/Assignment.h>
-#include <Parser/Syntax/ControlFlow.h>
-#include <Parser/Syntax/Function.h>
-#include <Parser/Syntax/Identifier.h>
-#include <Parser/Syntax/VariableDeclaration.h>
+#include <Parser/Assignment.h>
+#include <Parser/ControlFlow.h>
+#include <Parser/Function.h>
+#include <Parser/Identifier.h>
+#include <Parser/VariableDeclaration.h>
 
-namespace Parser::Syntax::Statement {
+namespace Parser::Statement {
 
-std::optional<statementAST *> ParseStatement(syntaxItems &items) {
+std::optional<statementAST *> ParseStatement(ParserItems &items) {
   auto statement = new statementAST;
 
   if (items.lexer.getCurrentToken().type == TokenType::RETURN ||
@@ -133,4 +133,4 @@ std::optional<statementAST *> ParseStatement(syntaxItems &items) {
   return statement;
 }
 
-} // namespace Parser::Syntax::Statement
+} // namespace Parser::Statement

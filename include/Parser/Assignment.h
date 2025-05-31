@@ -1,14 +1,14 @@
 #pragma once
 
-#include <Parser/Syntax/Syntax.h>
-#include <Parser/Syntax/VariableDeclaration.h>
+#include <Parser/Parser.h>
+#include <Parser/VariableDeclaration.h>
 
 #include <AST/Assignment.h>
 
 using assignmentAST = ::AST::Assignment::Assignment;
 
-namespace Parser::Syntax::Assignment {
+namespace Parser::Assignment {
 std::optional<assignmentAST *>
-ParseAssignment(syntaxItems &items,
+ParseAssignment(ParserItems &items,
   Variable *variable = nullptr);
 }

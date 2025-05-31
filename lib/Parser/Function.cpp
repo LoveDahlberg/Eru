@@ -1,14 +1,14 @@
 
-#include <Parser/Syntax/Directive.h>
-#include <Parser/Syntax/Expression.h>
-#include <Parser/Syntax/Function.h>
-#include <Parser/Syntax/Identifier.h>
-#include <Parser/Syntax/Statement.h>
-#include <Parser/Syntax/VariableDeclaration.h>
+#include <Parser/Directive.h>
+#include <Parser/Expression.h>
+#include <Parser/Function.h>
+#include <Parser/Identifier.h>
+#include <Parser/Statement.h>
+#include <Parser/VariableDeclaration.h>
 
-namespace Parser::Syntax::Function {
+namespace Parser::Function {
 
-std::optional<FunctionCall *> ParseFunctionCall(syntaxItems &items,
+std::optional<FunctionCall *> ParseFunctionCall(ParserItems &items,
                                                 std::string name) {
 
   // If name is empty, parse the identifier. Otherwise assume that it was parsed
@@ -50,7 +50,7 @@ std::optional<FunctionCall *> ParseFunctionCall(syntaxItems &items,
   return new FunctionCall(name, *parameters);
 }
 
-std::optional<Block *> ParseBlock(syntaxItems &items) {
+std::optional<Block *> ParseBlock(ParserItems &items) {
   skipUntilNotNewline(items);
 
   if (items.lexer.getCurrentToken().type != TokenType::LEFT_CURLY_BRACE) {
@@ -94,7 +94,7 @@ std::optional<Block *> ParseBlock(syntaxItems &items) {
   return block;
 }
 
-std::optional<FunctionBody *> ParseFunctionBody(syntaxItems &items) {
+std::optional<FunctionBody *> ParseFunctionBody(ParserItems &items) {
   auto directive = Directive::ParseDirective(items);
 
   auto block = ParseBlock(items);
@@ -106,7 +106,7 @@ std::optional<FunctionBody *> ParseFunctionBody(syntaxItems &items) {
   return new FunctionBody(*block);
 }
 
-bool ParseFunction(syntaxItems &items, Variable *variable) {
+bool ParseFunction(ParserItems &items, Variable *variable) {
   // eat the (
   items.lexer.generateNextToken();
 
@@ -143,4 +143,4 @@ bool ParseFunction(syntaxItems &items, Variable *variable) {
   return true;
 }
 
-} // namespace Parser::Syntax::Function
+} // namespace Parser::Function

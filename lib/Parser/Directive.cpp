@@ -1,10 +1,10 @@
 
 
-#include <Parser/Syntax/Directive.h>
+#include <Parser/Directive.h>
 
-namespace Parser::Syntax::Directive {
+namespace Parser::Directive {
 
-bool ParseDirective(syntaxItems &items) {
+bool ParseDirective(ParserItems &items) {
   if (items.lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
     // err
     return false;
@@ -24,4 +24,4 @@ bool ParseDirective(syntaxItems &items) {
   return true;
 }
 
-} // namespace Parser::Syntax::Directive
+} // namespace Parser::Directive
