@@ -2,7 +2,7 @@
 
 namespace Parser::Identifier {
 
-std::optional<std::string> ParseIdentifier(ParserItems &items) {
+std::optional<std::string> ParseIdentifier(Parser &items) {
   if (items.lexer.getCurrentToken().type != TokenType::IDENTIFER) {
     // err
     return std::nullopt;

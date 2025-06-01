@@ -48,3 +48,18 @@ add_library(Parser STATIC
 )
 target_include_directories(Parser PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(Parser PRIVATE ${llvm_libs} Lexer IR)
+
+# Create a library target for Analyzer
+add_library(Analyzer STATIC
+    Analyzer/Analyzer.cpp
+)
+target_include_directories(Analyzer PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(Analyzer PRIVATE ${llvm_libs})
+
+# Create a library target for Frontend
+add_library(Frontend STATIC
+    Frontend/Actions.cpp
+    Frontend/Compiler.cpp
+)
+target_include_directories(Frontend PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(Frontend PRIVATE ${llvm_libs} Lexer Parser AST)

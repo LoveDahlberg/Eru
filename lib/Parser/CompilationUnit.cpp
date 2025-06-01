@@ -9,60 +9,58 @@
 
 namespace Parser {
 
-bool ParseVariableDeclarationOrFunction(ParserItems &items) {
+bool ParseVariableDeclarationOrFunction(Parser &ctx) {
   auto variable =
-      VariableDeclaration::ParseVariable(items);
+      VariableDeclaration::ParseVariable(ctx);
   if (!variable) {
     // err
     return false;
   }
 
-  if (items.lexer.getCurrentToken().type == TokenType::LEFT_PARENTHESIS) {
-    return Function::ParseFunction(items, *variable);
+  if (ctx.lexer.getCurrentToken().type == TokenType::LEFT_PARENTHESIS) {
+    return Function::ParseFunction(ctx, *variable);
   }
 
-  items.compilationUnit.AddCompilationUnitItems(new variableDeclarationAST(*variable));
+  ctx.compilationUnit.AddCompilationUnitItems(new variableDeclarationAST(*variable));
   return true;
 }
 
 // TODO improve error handling
-std::optional<ParserItems> ParseCompilationUnit(Lexer &lexer) {
-  ParserItems items(lexer);
-
+bool ParseCompilationUnit(Parser &ctx) {
   int loopCounter = 0;
   do {
     // TODO should just be able to skip all newlines here.
     auto tokenCategory =
-        tokenTypeToCategory.at(items.lexer.generateNextToken().type);
+        tokenTypeToCategory.at(ctx.lexer.generateNextToken().type);
     switch (tokenCategory) {
     case TokenCategory::SEPARATOR:
-      if (items.lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
+      if (ctx.lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
         continue;
       }
 
-      if (Directive::ParseDirective(items)) {
+      if (Directive::ParseDirective(ctx)) {
         continue;
       }
-      return std::nullopt;
+      return false;
     case TokenCategory::DATA_TYPE:
-      if (ParseVariableDeclarationOrFunction(items)) {
+      if (ParseVariableDeclarationOrFunction(ctx)) {
         continue;
       }
-      return std::nullopt;
+      return false;
     default:
-      if (items.lexer.getCurrentToken().type == TokenType::END_OF_FILE) {
+      if (ctx.lexer.getCurrentToken().type == TokenType::END_OF_FILE) {
         break;
       }
       // err
       // printParsing(CompilationUnitParsingName, tokenCategory,
       //              items.lexer.getCurrentToken());
-      return std::nullopt;
+      return false;
     }
     // Break the main loop
     break;
   } while (loopCounter++ < loopLimit);
 
-  return items;
+  return true;
 }
 
 } // namespace Parser

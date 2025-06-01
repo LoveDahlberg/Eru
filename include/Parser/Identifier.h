@@ -4,5 +4,5 @@
 
 namespace Parser::Identifier {
 
-std::optional<std::string> ParseIdentifier(ParserItems &items);
+std::optional<std::string> ParseIdentifier(Parser &items);
 }

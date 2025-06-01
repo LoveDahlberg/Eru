@@ -3,7 +3,7 @@
 
 namespace Parser::Literal {
 
-std::optional<std::string> ParseLiteral(ParserItems &items) {
+std::optional<std::string> ParseLiteral(Parser &items) {
   if (items.lexer.getCurrentToken().type != TokenType::INTEGER_LITERAL &&
       items.lexer.getCurrentToken().type != TokenType::STRING_LITERAL) {
     // err

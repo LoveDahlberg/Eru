@@ -48,7 +48,7 @@ Simplified version I could use:
 
 - GetAction defines what actions we can have and it returns which one we should use here.
  - We could have:
-  - EmitObjc: normal mode, creates obj files that we then link together.
+  - EmitObj: normal mode, creates obj files that we then link together.
   - ASTDump/ASTPrint: parses AST and prints/dumps it
   - EmitLLVM. emits ll file.
   - EmitBC: emits a bc file.
@@ -67,6 +67,7 @@ Simplified version I could use:
 
 - Linker. Calls the linker on the object files files.
 
-
+I also like having an opt binary, which takes ll or bc files and applies passes to them and then outputs ll or bc files.
+This passes file could be used by the main and the opt binary.s
 
 

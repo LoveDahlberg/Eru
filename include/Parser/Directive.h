@@ -4,6 +4,6 @@
 
 namespace Parser::Directive {
 
-bool ParseDirective(ParserItems &items);
+bool ParseDirective(Parser &items);
 
 }

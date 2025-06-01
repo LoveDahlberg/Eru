@@ -6,7 +6,7 @@
 
 namespace Parser::Expression {
 
-std::optional<Operand> ParseOperand(ParserItems &items) {
+std::optional<Operand> ParseOperand(Parser &items) {
   switch (items.lexer.getCurrentToken().type) {
 
   // Identifier or function call
@@ -56,7 +56,7 @@ std::optional<Operand> ParseOperand(ParserItems &items) {
   return std::nullopt;
 }
 
-std::optional<ExpressionUnit *> ParseExpressionUnit(ParserItems &items,
+std::optional<ExpressionUnit *> ParseExpressionUnit(Parser &items,
                                                     bool firstUnit) {
 
   auto unit = new ExpressionUnit();
@@ -98,7 +98,7 @@ std::optional<ExpressionUnit *> ParseExpressionUnit(ParserItems &items,
   return unit;
 }
 
-std::optional<expressionAST *> ParseExpression(ParserItems &items) {
+std::optional<expressionAST *> ParseExpression(Parser &items) {
 
   auto expression = new expressionAST();
 

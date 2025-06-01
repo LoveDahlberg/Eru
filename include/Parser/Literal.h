@@ -3,5 +3,5 @@
 #include <Parser/Parser.h>
 
 namespace Parser::Literal {
-  std::optional<std::string> ParseLiteral(ParserItems &items);
+  std::optional<std::string> ParseLiteral(Parser &items);
 }

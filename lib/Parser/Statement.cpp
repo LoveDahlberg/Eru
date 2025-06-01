@@ -8,7 +8,7 @@
 
 namespace Parser::Statement {
 
-std::optional<statementAST *> ParseStatement(ParserItems &items) {
+std::optional<statementAST *> ParseStatement(Parser &items) {
   auto statement = new statementAST;
 
   if (items.lexer.getCurrentToken().type == TokenType::RETURN ||

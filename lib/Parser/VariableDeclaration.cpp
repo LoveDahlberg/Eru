@@ -6,7 +6,7 @@
 namespace Parser::VariableDeclaration {
 
 std::optional<Variable *>
-ParseVariable(ParserItems &items) {
+ParseVariable(Parser &items) {
   auto type = Type::ParseType(items);
   if (!type) {
     // err

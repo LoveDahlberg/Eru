@@ -9,6 +9,6 @@ using assignmentAST = ::AST::Assignment::Assignment;
 
 namespace Parser::Assignment {
 std::optional<assignmentAST *>
-ParseAssignment(ParserItems &items,
+ParseAssignment(Parser &items,
   Variable *variable = nullptr);
 }

@@ -7,8 +7,11 @@
 #include <Lexer/Lexer.h>
 #include <Lexer/Tokens.h>
 
+#include <AST/ASTContext.h>
 #include <AST/CompilationUnit.h>
 #include <AST/Types.h>
+
+#include <Analyzer/Analyzer.h>
 
 #include <Support/Constants.h>
 
@@ -16,27 +19,33 @@ using namespace Lexing;
 
 namespace Parser {
 
-struct ParserItems {
-  ParserItems(Lexer &lexer)
-      : context(new llvm::LLVMContext()), module(new llvm::Module("", *context)),
+struct Parser {
+  Parser(AST::Context::ASTContext &astContext, Analyzer::Analyzer &analyzer,
+         Lexer &lexer)
+      : context(new llvm::LLVMContext()), astContext(astContext),
+        analyzer(analyzer), module(new llvm::Module("", *context)),
         lexer(lexer) {}
+
+  bool Parse();
+
 private:
-  llvm::LLVMContext* context;
+  llvm::LLVMContext *context;
+
 public:
-  llvm::Module* module;
+  AST::Context::ASTContext &astContext;
+  Analyzer::Analyzer &analyzer;
+  llvm::Module *module;
   Lexer lexer;
-  AST::CompilationUnit compilationUnit;
 };
 
-
-inline void skipUntilNotNewline(ParserItems &items) {
-  if (items.lexer.getCurrentToken().type != Lexing::TokenType::NEWLINE) {
+inline void skipUntilNotNewline(Parser &items) {
+  if (items.lexer.getCurrentToken().type != TokenType::NEWLINE) {
     return;
   }
 
   int loopCounter = 0;
-  while (items.lexer.generateNextToken().type == Lexing::TokenType::NEWLINE) {
-    if (items.lexer.getCurrentToken().type == Lexing::TokenType::END_OF_FILE) {
+  while (items.lexer.generateNextToken().type == TokenType::NEWLINE) {
+    if (items.lexer.getCurrentToken().type == TokenType::END_OF_FILE) {
       return;
     }
     if (loopCounter++ > loopLimit) {

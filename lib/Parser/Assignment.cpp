@@ -5,7 +5,7 @@
 
 namespace Parser::Assignment {
 
-std::optional<assignmentAST *> ParseAssignment(ParserItems &items,
+std::optional<assignmentAST *> ParseAssignment(Parser &items,
                                                Variable *variable) {
 
   // If not null, variable information already parsed.

@@ -8,6 +8,6 @@ using statementAST = ::AST::Statement::Statement;
 
 namespace Parser::Statement {
 
-  std::optional<statementAST *> ParseStatement(ParserItems &items);
+  std::optional<statementAST *> ParseStatement(Parser &items);
 
 }
