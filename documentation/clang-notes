@@ -8,7 +8,7 @@ when we want to create an .o file.
 - (clang/lib/FrontendTool/ExecuteCompilerInvocation.cpp) ExecuteCompilerInvocation eventually calls CreateFrontendAction with the CompilerInstance
 - (clang/lib/FrontendTool/ExecuteCompilerInvocation.cpp) CreateFrontendAction calls CreateFrontendBaseAction
 - (clang/lib/FrontendTool/ExecuteCompilerInvocation.cpp) CreateFrontendBaseAction switch cases what ProgramAction we want.
-  - For example in clang/include/clang/frontend/FrontendOptions.h we have enum ActionKind and EmitObj, which emits an object file.
+  - For example in clang/include/clang/Frontend/FrontendOptions.h we have enum ActionKind and EmitObj, which emits an object file.
   - Here the switch case would create a EmitObjAction.
   - The EmitObjcAction is defined in clang/include/clang/CodeGen/CodeGenAction.h
     - It inherits from CodeGenAction, which in turn inherits from ASTFrontendAction.
@@ -34,6 +34,38 @@ when we want to create an .o file.
 - (clang/lib/CodeGen/CodeGenAction.cpp) The HandleTranslationUnit is what then processes the ASTContext, generates IR and performs passes on it. It also produces the final o file (I think).
 - EndSourceFile cleans up
 
+
+-------------
+
+Simplified version I could use:
+
+- main.cpp:
+  - Handles parsing of arguments
+  - It also calls getAction based on the arguments.
+  - Then it calls compiler with the action.
+  - The compiler will compile and perform the action.
+  - Then, depending on the commandline arguments, it will call the Linker.cpp.
+
+- GetAction defines what actions we can have and it returns which one we should use here.
+ - We could have:
+  - EmitObjc: normal mode, creates obj files that we then link together.
+  - ASTDump/ASTPrint: parses AST and prints/dumps it
+  - EmitLLVM. emits ll file.
+  - EmitBC: emits a bc file.
+  - ParseOnly: parses and applies analyzis and outputs any error/warnings. For testing.  
+  // Could have one that doesn't perform IR passes.
+ - Those that generates IR and applies passes on the AST are CodeGenActions, they have some common code.
+  - The things that act on the AST could be the consumers (?) But this abstraction might be overkill.
+
+- Compiler.cpp: Gets called by the main with the action that should run.
+ - It creats the ASTContext, the Analyzer and the parser objects.
+ - It then passes a pointer ASTContext to the Analyzer and the parser.
+ - It then tells the parser to start parsing, passing the Analyzer to the parser.
+ - Once finished, the ASTContext contains the AST. 
+ - Then the action is called with the ASTContext.
+- The action will act on the AST and perform the action it defines.
+
+- Linker. Calls the linker on the object files files.
 
 
 
