@@ -13,14 +13,14 @@ target_link_libraries(FileReader PRIVATE ${llvm_libs})
 
 # Create a library target for AST
 add_library(AST STATIC
-    AST/VariableDeclaration.cpp
-    AST/CompilationUnit.cpp
-    AST/Types.cpp
-    AST/Function.cpp
-    AST/Statement.cpp
-    AST/Assignment.cpp
-    AST/Controlflow.cpp
-    AST/Expression.cpp
+    IR/VariableDeclaration.cpp
+    IR/CompilationUnit.cpp
+    IR/Types.cpp
+    IR/Function.cpp
+    IR/Statement.cpp
+    IR/Assignment.cpp
+    IR/Controlflow.cpp
+    IR/Expression.cpp
 )
 target_include_directories(AST PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(AST PRIVATE ${llvm_libs})
