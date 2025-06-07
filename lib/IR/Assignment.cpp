@@ -19,7 +19,7 @@ llvm::Value *IRGenerator::handle(Assignment::Assignment &AST) {
         std::get<VariableDeclaration::VariableDeclaration *>(AST.target);
     assignmentTarget = handle(*variableDeclaration);
 
-  } else if (std::holds_alternative<Types::NamedIdentifier>(AST.target)) {
+  } else if (std::holds_alternative<Types::NamedIdentifier*>(AST.target)) {
     // Find alloc and set it as the assignment target.
   }
 

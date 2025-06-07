@@ -16,7 +16,7 @@ namespace AST::Assignment {
 
 using AssignmentVariant =
     std::variant<VariableDeclaration::VariableDeclaration *,
-                 Types::NamedIdentifier>;
+                 Types::NamedIdentifier*>;
 
 /// Concept that the given AssignmentType is:
 /// 1. A pointer.

@@ -1,4 +1,5 @@
 
+#include "Parser/Parser.h"
 #include <Parser/Directive.h>
 #include <Parser/Expression.h>
 #include <Parser/Function.h>
@@ -139,7 +140,7 @@ bool ParseFunction(Parser &items, Variable *variable) {
     function->addFunctionBody(*functionBody);
   }
 
-  items.compilationUnit.AddCompilationUnitItems(function);
+  items.astContext.compilationUnit->AddCompilationUnitItems(function);
   return true;
 }
 
