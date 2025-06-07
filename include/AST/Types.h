@@ -1,6 +1,7 @@
 #pragma once
 
-#include <AST/AST.h>
+// stl
+#include <string>
 
 namespace AST::Types {
 

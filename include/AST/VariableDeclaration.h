@@ -1,7 +1,9 @@
 #pragma once
 
-#include <AST/AST.h>
 #include <AST/Types.h>
+
+// TODO remove llvm dependecy here.
+#include <llvm/IR/Value.h>
 
 namespace AST::VariableDeclaration {
 
@@ -10,13 +12,11 @@ struct Variable {
   std::string name;
 };
 
-struct VariableDeclaration : public AST {
+struct VariableDeclaration {
   VariableDeclaration(llvm::Type *type, std::string name)
       : variable(new Variable{type, name}) {}
 
   VariableDeclaration(Variable* variable) : variable(variable) {}
-
-  llvm::Value *codegen(codeGenItems& items) override;
 
   Variable* variable;
 

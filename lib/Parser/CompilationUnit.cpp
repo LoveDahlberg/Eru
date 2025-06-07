@@ -10,8 +10,7 @@
 namespace Parser {
 
 bool ParseVariableDeclarationOrFunction(Parser &ctx) {
-  auto variable =
-      VariableDeclaration::ParseVariable(ctx);
+  auto variable = VariableDeclaration::ParseVariable(ctx);
   if (!variable) {
     // err
     return false;
@@ -21,7 +20,8 @@ bool ParseVariableDeclarationOrFunction(Parser &ctx) {
     return Function::ParseFunction(ctx, *variable);
   }
 
-  ctx.compilationUnit.AddCompilationUnitItems(new variableDeclarationAST(*variable));
+  ctx.astContext.compilationUnit->AddCompilationUnitItems(
+      new variableDeclarationAST(*variable));
   return true;
 }
 

@@ -24,7 +24,8 @@ std::optional<assignmentAST *> ParseAssignment(Parser &items,
 
   assignmentAST *assignment;
   if (variable->type == nullptr) {
-    assignment = new assignmentAST({variable->name});
+    assignment =
+        new assignmentAST(AST::Types::NamedIdentifier{.value = variable->name});
   } else {
     assignment = new assignmentAST(new variableDeclarationAST(variable));
   }

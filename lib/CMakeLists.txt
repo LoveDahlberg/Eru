@@ -11,26 +11,16 @@ add_library(FileReader STATIC
 target_include_directories(FileReader PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(FileReader PRIVATE ${llvm_libs})
 
-# Create a library target for AST
-add_library(AST STATIC
-    IR/VariableDeclaration.cpp
-    IR/CompilationUnit.cpp
-    IR/Types.cpp
-    IR/Function.cpp
-    IR/Statement.cpp
+# Create a library target for IR
+add_library(IR STATIC
     IR/Assignment.cpp
     IR/Controlflow.cpp
     IR/Expression.cpp
-)
-target_include_directories(AST PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(AST PRIVATE ${llvm_libs})
-
-# Create a library target for IR
-add_library(IR STATIC
-    IR/IRGenerator.cpp
+    IR/Function.cpp
+    IR/VariableDeclaration.cpp
 )
 target_include_directories(IR PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(IR PRIVATE ${llvm_libs} AST)
+target_link_libraries(IR PRIVATE ${llvm_libs})
 
 # Create a library target for Parser
 add_library(Parser STATIC
@@ -60,6 +50,7 @@ target_link_libraries(Analyzer PRIVATE ${llvm_libs})
 add_library(Frontend STATIC
     Frontend/Actions.cpp
     Frontend/Compiler.cpp
+    Frontend/Linker.cpp
 )
 target_include_directories(Frontend PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(Frontend PRIVATE ${llvm_libs} Lexer Parser AST)
+target_link_libraries(Frontend PRIVATE ${llvm_libs} Lexer Parser)

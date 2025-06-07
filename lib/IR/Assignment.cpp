@@ -1,32 +1,31 @@
-#include <AST/Assignment.h>
+#include <IR/IRGenerator.h>
+
+// llvm
 #include <llvm/IR/Instructions.h>
 
-// stl
-#include <variant>
+namespace IR {
 
-namespace AST::Assignment {
+llvm::Value *IRGenerator::handle(Assignment::Assignment &AST) {
 
-llvm::Value *Assignment::codegen(codeGenItems &items) {
-
-  if (items.builder == nullptr) {
+  if (builder == nullptr) {
     return nullptr;
   }
 
   llvm::Value *assignmentTarget = nullptr;
   if (std::holds_alternative<VariableDeclaration::VariableDeclaration *>(
-          target)) {
+          AST.target)) {
 
     auto *variableDeclaration =
-        std::get<VariableDeclaration::VariableDeclaration *>(target);
-    assignmentTarget = variableDeclaration->codegen(items);
+        std::get<VariableDeclaration::VariableDeclaration *>(AST.target);
+    assignmentTarget = handle(*variableDeclaration);
 
-  } else if (std::holds_alternative<Types::NamedIdentifier>(target)) {
+  } else if (std::holds_alternative<Types::NamedIdentifier>(AST.target)) {
     // Find alloc and set it as the assignment target.
   }
 
-  auto exp = expression->codegen(items);
+  auto exp = handle(*AST.expression);
 
-  return items.builder->CreateStore(exp, assignmentTarget);
+  return builder->CreateStore(exp, assignmentTarget);
 }
 
-} // namespace AST::Assignment
+} // namespace IR

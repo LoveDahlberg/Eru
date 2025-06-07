@@ -1,86 +1,87 @@
-#include <AST/Function.h>
-#include <AST/Statement.h>
+#include <IR/IRGenerator.h>
+
+// llvm
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/Support/Casting.h>
 
-namespace AST::Function {
+namespace IR {
 
-llvm::Value *FunctionCall::codegen(codeGenItems &items) {
-  if (items.builder == nullptr) {
+llvm::Value *IRGenerator::handle(Function::FunctionCall &AST) {
+  if (builder == nullptr) {
     return nullptr;
   }
 
   // TODO make use of symbol table here?
-  auto callingFunction = items.module.getFunction(name);
+  auto callingFunction = module.getFunction(AST.name);
   if (callingFunction == nullptr) {
     return nullptr;
   }
 
   std::vector<llvm::Value *> evaluatedParameters;
-  for (auto paramter : parameters) {
-    evaluatedParameters.push_back(paramter->codegen(items));
+  for (auto paramter : AST.parameters) {
+    evaluatedParameters.push_back(handle(*paramter));
   }
 
-  return items.builder->CreateCall(callingFunction, evaluatedParameters);
+  return builder->CreateCall(callingFunction, evaluatedParameters);
 }
 
-llvm::Value *Block::codegen(codeGenItems &items) {
-  auto statementResult = statement->codegen(items);
+llvm::Value *IRGenerator::handle(Function::Block &AST) {
+  auto statementResult = ASTTraversal::handle(*AST.statement);
 
   // If the returnValue is nullptr, then it means this block has no return (this
   // is ok). Note that this block is not an IR basic block, it is the grammar
   // block.
-  if (returnValue == nullptr || statementResult == nullptr) {
-    return statementResult;
+  if (AST.returnValue == nullptr || statementResult.empty()) {
+    return nullptr;
   }
 
-  auto value = returnValue->codegen(items);
+  auto value = handle(*AST.returnValue);
   if (value == nullptr) {
     return nullptr;
   }
 
-  return items.builder->CreateRet(value);
+  return builder->CreateRet(value);
 }
 
-llvm::Value *FunctionBody::codegen(codeGenItems &items) {
+llvm::Value *IRGenerator::handle(Function::FunctionBody &AST) {
 
   // Generate directive
 
-  return block == nullptr ? nullptr : block->codegen(items);
+  return AST.block == nullptr ? nullptr : handle(*AST.block);
 }
 
-llvm::Value *Function::codegen(codeGenItems &items) {
+llvm::Value *IRGenerator::handle(Function::Function &AST) {
 
   std::vector<llvm::Type *> parameterTypes;
-  for (auto parameter : parameters) {
+  for (auto parameter : AST.parameters) {
     parameterTypes.emplace_back(parameter->type);
   }
 
-  auto *functionType = llvm::FunctionType::get(type, parameterTypes, false);
+  auto *functionType = llvm::FunctionType::get(AST.type, parameterTypes, false);
 
   auto function = llvm::Function::Create(
-      functionType, llvm::GlobalValue::ExternalLinkage, name, &items.module);
+      functionType, llvm::GlobalValue::ExternalLinkage, AST.name, &module);
 
   unsigned Idx = 0;
   for (auto &parameter : function->args()) {
-    parameter.setName(parameters.at(Idx++)->name);
+    parameter.setName(AST.parameters.at(Idx++)->name);
   }
 
-  if (body != nullptr) {
-    auto &context = items.module.getContext();
+  if (AST.body != nullptr) {
+    auto &context = module.getContext();
     auto *basicBlock = llvm::BasicBlock::Create(context, "block", function);
-    if (items.builder == nullptr) {
-      items.builder = new llvm::IRBuilder<llvm::NoFolder>(context);
+    if (builder == nullptr) {
+      builder = new llvm::IRBuilder<llvm::NoFolder>(context);
     }
-    items.builder->SetInsertPoint(basicBlock);
+    builder->SetInsertPoint(basicBlock);
 
-    items.currentFunction = function;
-    if (body->codegen(items) == nullptr) {
+    currentFunction = function;
+    if (handle(*AST.body) == nullptr) {
       return nullptr;
     }
   }
 
-  items.currentFunction = nullptr;
+  currentFunction = nullptr;
   return function;
 }
-} // namespace AST::Function
+} // namespace IR

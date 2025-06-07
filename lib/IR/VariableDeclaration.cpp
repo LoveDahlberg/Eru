@@ -1,4 +1,4 @@
-#include <AST/VariableDeclaration.h>
+#include <IR/IRGenerator.h>
 
 // llvm
 #include <llvm/IR/Function.h>
@@ -7,20 +7,23 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Type.h>
 
-using namespace AST::VariableDeclaration;
+namespace IR {
 
-llvm::Value *VariableDeclaration::codegen(codeGenItems &items) {
-  if (global) {
+llvm::Value *
+IRGenerator::handle(VariableDeclaration::VariableDeclaration &AST) {
+  if (AST.global) {
     return new llvm::GlobalVariable(
-        items.module, variable->type, false, llvm::GlobalValue::ExternalLinkage,
-        nullptr, variable->name, nullptr,
+        module, AST.variable->type, false, llvm::GlobalValue::ExternalLinkage,
+        nullptr, AST.variable->name, nullptr,
         llvm::GlobalValue::ThreadLocalMode::NotThreadLocal, std::nullopt,
         false);
   }
 
-  if (items.builder == nullptr) {
+  if (builder == nullptr) {
     return nullptr;
   }
 
-  return items.builder->CreateAlloca(variable->type, nullptr, variable->name);
+  return builder->CreateAlloca(AST.variable->type, nullptr, AST.variable->name);
 }
+
+} // namespace IR

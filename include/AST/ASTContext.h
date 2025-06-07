@@ -4,8 +4,15 @@
 
 namespace AST::Context {
 
-class ASTContext {
-  CompilationUnit compilationUnit;
+struct ASTContext {
+  CompilationUnit *compilationUnit;
+
+  ASTContext(CompilationUnit *compilationUnit)
+      : compilationUnit(compilationUnit) {}
+
+  ASTContext() : compilationUnit(new CompilationUnit()) {}
+
+  CompilationUnit *getAST() { return compilationUnit; }
 };
 
-} // namespace AST::ASTContext
+} // namespace AST::Context
