@@ -27,12 +27,21 @@ llvm::Value *IRGenerator::handle(Function::FunctionCall &AST) {
 
 llvm::Value *IRGenerator::handle(Function::Block &AST) {
   auto statementResult = ASTTraversal::handle(*AST.statement);
-
+  
+  // Expect all generated statements to be non null. If statementResult is empty, it either means that 
+  // the block only contains a return or its empty (valid case for function declaration).
+  for(auto statement : statementResult)
+  {
+    if(statement == nullptr)
+    {
+      return nullptr;
+    }
+  }
+  
   // If the returnValue is nullptr, then it means this block has no return (this
-  // is ok). Note that this block is not an IR basic block, it is the grammar
-  // block.
-  if (AST.returnValue == nullptr || statementResult.empty()) {
-    return nullptr;
+  // is ok). Return the latest statement pointer.
+  if (AST.returnValue == nullptr) {
+    return statementResult.back();
   }
 
   auto value = handle(*AST.returnValue);
@@ -67,6 +76,7 @@ llvm::Value *IRGenerator::handle(Function::Function &AST) {
     parameter.setName(AST.parameters.at(Idx++)->name);
   }
 
+  // If the function has no body, it is a declaration.
   if (AST.body != nullptr) {
     auto &context = module.getContext();
     auto *basicBlock = llvm::BasicBlock::Create(context, "block", function);
