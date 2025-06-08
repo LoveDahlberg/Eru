@@ -4,7 +4,7 @@
 
 namespace Parser::Directive {
 
-bool ParseDirective(ParserItems &items) {
+bool ParseDirective(Parser &items) {
   if (items.lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
     // err
     return false;

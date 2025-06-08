@@ -8,6 +8,6 @@ using namespace ::AST::Controlflow;
 
 namespace Parser::Controlflow {
 std::optional<ConditionalBranchingGroup *>
-ParseConditionalBranchingGroup(ParserItems &items);
+ParseConditionalBranchingGroup(Parser &items);
 
 }

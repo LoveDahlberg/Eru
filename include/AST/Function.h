@@ -1,6 +1,5 @@
 #pragma once
 
-#include <AST/AST.h>
 #include <AST/VariableDeclaration.h>
 
 // TODO make sure #include <AST/Expression.h> is included before the this header
@@ -18,37 +17,29 @@ class Statement;
 namespace AST::Function {
 
 /// TODO this might be better to keep in another file/namespace.
-class Block : public AST {
-public:
+struct Block {
   Block(Statement::Statement *statement) : statement(statement) {}
 
   Block(Statement::Statement *statement, Expression::Expression *returnValue)
       : statement(statement), returnValue(returnValue) {}
 
-  llvm::Value *codegen(codeGenItems &items) override;
-
   void addReturn(Expression::Expression *returnValue) {
     this->returnValue = returnValue;
   }
 
-private:
   Statement::Statement *statement;
   Expression::Expression *returnValue;
 };
 
-class FunctionBody : public AST {
-public:
+struct FunctionBody {
   FunctionBody(Block *block) : block(block) {}
 
-  llvm::Value *codegen(codeGenItems &items) override;
-
-private:
   // TODO add directive
   Block *block;
 };
 
-class Function : public AST {
-public:
+struct Function {
+
   // TODO type and name can be passed as a variableDeclaration, if it make sense
   // for IR generation.
   Function(llvm::Type *type, std::string name,
@@ -57,11 +48,9 @@ public:
 
   Function(llvm::Type *type, std::string name) : type(type), name(name) {}
 
-  llvm::Value *codegen(codeGenItems &items) override;
 
   void addFunctionBody(FunctionBody *body) { this->body = body; }
 
-private:
   std::vector<VariableDeclaration::Variable *> parameters;
 
   // TODO might not need this type during codegen, only need to check it during
@@ -72,16 +61,13 @@ private:
   FunctionBody *body;
 };
 
-class FunctionCall : public AST {
-public:
+struct FunctionCall {
   FunctionCall(std::string name,
                std::vector<Expression::Expression *> parameters)
       : name(name), parameters(parameters) {}
 
-  llvm::Value *codegen(codeGenItems &items) override;
-
-private:
   std::string name;
+  // TODO: Does this need to be a pointer still? No polymorphism..
   std::vector<Expression::Expression *> parameters;
 };
 

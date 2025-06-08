@@ -1,38 +1,44 @@
 #pragma once
 
-#include <AST/AST.h>
-#include <AST/VariableDeclaration.h>
+#include <AST/Expression.h>
 #include <AST/Function.h>
 #include <AST/Types.h>
-#include <AST/Expression.h>
+#include <AST/VariableDeclaration.h>
 
 #include <Lexer/Tokens.h>
+
+#include <Support/Templates.h>
 
 // stl
 #include <variant>
 
 namespace AST::Assignment {
 
-class Assignment : public AST {
-public:
-  // When assignment is done with declaration.
-  Assignment(VariableDeclaration::VariableDeclaration *target)
-      : target(target) {}
+using AssignmentVariant =
+    std::variant<VariableDeclaration::VariableDeclaration *,
+                 Types::NamedIdentifier*>;
 
-  // When assignment is done on a previously declared variable.
-  Assignment(Types::NamedIdentifier target)
-      : target(target) {}
+/// Concept that the given AssignmentType is:
+/// 1. A pointer.
+/// 2. One of the variants in AssignmentVariant.
+template <typename T>
+concept ValidAssignmentType =
+    std::is_pointer_v<T> && is_one_of_variant<T, AssignmentVariant>::value;
 
-  void setExpression(Expression::Expression** expression){
+struct Assignment {
+
+  /// Create as a VariableDeclaration when assignment is done with declaration.
+  /// Create as a NamedIdentifier when assignment is done on a previously
+  /// declared variable.
+  template <ValidAssignmentType assignmentType>
+  Assignment(assignmentType target) : target(target) {}
+
+  void setExpression(Expression::Expression **expression) {
     this->expression = *expression;
   }
 
-  llvm::Value *codegen(codeGenItems& items) override;
-
-private:
-  std::variant<VariableDeclaration::VariableDeclaration *, Types::NamedIdentifier>
-      target;
-  Expression::Expression* expression;
+  AssignmentVariant target;
+  Expression::Expression *expression;
 };
 
 } // namespace AST::Assignment

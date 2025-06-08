@@ -6,7 +6,7 @@
 
 namespace Parser::Controlflow {
 
-std::optional<ConditionalBranch *> ParseConditionalBranch(ParserItems &items,
+std::optional<ConditionalBranch *> ParseConditionalBranch(Parser &items,
                                                           bool start = false) {
 
   // TODO could refactor this to be more readable.
@@ -67,7 +67,7 @@ std::optional<ConditionalBranch *> ParseConditionalBranch(ParserItems &items,
 }
 
 std::optional<ConditionalBranchingGroup *>
-ParseConditionalBranchingGroup(ParserItems &items) {
+ParseConditionalBranchingGroup(Parser &items) {
   std::vector<ConditionalBranch *> conditionalChain;
 
   bool start = true;

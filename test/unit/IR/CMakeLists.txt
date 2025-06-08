@@ -9,7 +9,6 @@ target_link_libraries(testIR PRIVATE
 
     # Add linking agains the specific lib.
     IR
-    AST
 )
 
 # Register the test with CTest

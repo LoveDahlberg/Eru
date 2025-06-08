@@ -1,6 +1,5 @@
 #pragma once
 
-#include <AST/AST.h>
 #include <AST/Function.h>
 #include <AST/Types.h>
 
@@ -39,15 +38,11 @@ struct ExpressionUnit {
   Operand operand;
 };
 
-class Expression : public AST {
-public:
-  llvm::Value *codegen(codeGenItems& items) override;
-
+struct Expression {
   void addExpressionUnit(ExpressionUnit *expressionUnit) {
     ExpressionUnits.push_back(expressionUnit);
   }
 
-private:
   std::vector<ExpressionUnit *> ExpressionUnits;
 };
 

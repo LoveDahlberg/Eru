@@ -6,8 +6,6 @@
 #include <Lexer/Tokens.h>
 #include <Parser/CompilationUnit.h>
 
-using namespace Parser;
-
 TEST(Parser, TestDeclarations) {
   std::string stream = R"(
     int first
@@ -20,12 +18,17 @@ TEST(Parser, TestDeclarations) {
   stream += EOF;
 
   Lexer lexer(stream);
-  auto parserItems = ParseCompilationUnit(lexer);
+
+  AST::Context::ASTContext astContext;
+  Analyzer::Analyzer analyzer(astContext);
+
+  Parser::Parser parser(astContext, analyzer, lexer);
+
+  auto parserItems = ParseCompilationUnit(parser);
 
   ASSERT_TRUE(parserItems);
 
-  EXPECT_EQ((*parserItems).compilationUnit.GetAddCompilationUnitItems().size(),
-            5);
+  EXPECT_EQ(astContext.compilationUnit->compilationUnitItems.size(), 5);
 }
 
 TEST(Parser, TestFunctions) {
@@ -54,7 +57,14 @@ TEST(Parser, TestFunctions) {
   stream += EOF;
 
   Lexer lexer(stream);
-  auto parserItems = ParseCompilationUnit(lexer);
+
+
+  AST::Context::ASTContext astContext;
+  Analyzer::Analyzer analyzer(astContext);
+
+  Parser::Parser parser(astContext, analyzer, lexer);
+  
+  auto parserItems = ParseCompilationUnit(parser);
 
   ASSERT_TRUE(parserItems);
 }

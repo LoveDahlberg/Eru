@@ -33,8 +33,10 @@ TEST(IR, testGlobalVarialbe) {
   variable->global = true;
   compilationUnit.AddCompilationUnitItems(variable);
 
-  auto cuItems = GenerateIR(compilationUnit, module);
-  EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
+  auto generator = IRGenerator(module);
+  auto context = Context::ASTContext(&compilationUnit);
+
+  EXPECT_THAT(generator.Walk(context), testing::Each(testing::NotNull()));
 
   auto generatedVariable = module.getGlobalVariable(variableName, true);
   EXPECT_NE(generatedVariable, nullptr);
@@ -81,8 +83,10 @@ TEST(IR, testFunction) {
 
   auto statement = CreateTestFunctionAndGetInsideStmnt(module, compilationUnit);
 
-  auto cuItems = GenerateIR(compilationUnit, module);
-  EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
+  auto generator = IRGenerator(module);
+  auto context = Context::ASTContext(&compilationUnit);
+
+  EXPECT_THAT(generator.Walk(context), testing::Each(testing::NotNull()));
 
   EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
@@ -99,8 +103,10 @@ TEST(IR, testFunctionVariable) {
       (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), variableName);
   statement->AddStatement(variable);
 
-  auto cuItems = GenerateIR(compilationUnit, module);
-  EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
+  auto generator = IRGenerator(module);
+  auto context = Context::ASTContext(&compilationUnit);
+
+  EXPECT_THAT(generator.Walk(context), testing::Each(testing::NotNull()));
 
   EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
@@ -139,8 +145,10 @@ TEST(IR, testDeclarationAssignment) {
 
   statement->AddStatement(assignment);
 
-  auto cuItems = GenerateIR(compilationUnit, module);
-  EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
+  auto generator = IRGenerator(module);
+  auto context = Context::ASTContext(&compilationUnit);
+
+  EXPECT_THAT(generator.Walk(context), testing::Each(testing::NotNull()));
   EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
 
@@ -167,12 +175,14 @@ TEST(IR, testFunctionCall) {
 
   statement->AddStatement(call);
 
-  auto cuItems = GenerateIR(compilationUnit, module);
-  EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
+  auto generator = IRGenerator(module);
+  auto context = Context::ASTContext(&compilationUnit);
+
+  EXPECT_THAT(generator.Walk(context), testing::Each(testing::NotNull()));
   EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
 
-Controlflow::Controlflow *
+Controlflow::ConditionalBranchingGroup *
 CreateSingleTestConditionalBranch(llvm::Module &module,
                                   bool hasReturnValue = true) {
   std::vector<Controlflow::ConditionalBranch *> conditionalChain;
@@ -258,7 +268,9 @@ TEST(IR, testConditionalBranch) {
 
   statement->AddStatement(branch);
 
-  auto cuItems = GenerateIR(compilationUnit, module);
-  EXPECT_THAT(cuItems, testing::Each(testing::NotNull()));
+  auto generator = IRGenerator(module);
+  auto context = Context::ASTContext(&compilationUnit);
+
+  EXPECT_THAT(generator.Walk(context), testing::Each(testing::NotNull()));
   EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }

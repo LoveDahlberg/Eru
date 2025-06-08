@@ -1,4 +1,5 @@
 
+#include "Parser/Parser.h"
 #include <Parser/Directive.h>
 #include <Parser/Expression.h>
 #include <Parser/Function.h>
@@ -8,7 +9,7 @@
 
 namespace Parser::Function {
 
-std::optional<FunctionCall *> ParseFunctionCall(ParserItems &items,
+std::optional<FunctionCall *> ParseFunctionCall(Parser &items,
                                                 std::string name) {
 
   // If name is empty, parse the identifier. Otherwise assume that it was parsed
@@ -50,7 +51,7 @@ std::optional<FunctionCall *> ParseFunctionCall(ParserItems &items,
   return new FunctionCall(name, *parameters);
 }
 
-std::optional<Block *> ParseBlock(ParserItems &items) {
+std::optional<Block *> ParseBlock(Parser &items) {
   skipUntilNotNewline(items);
 
   if (items.lexer.getCurrentToken().type != TokenType::LEFT_CURLY_BRACE) {
@@ -94,7 +95,7 @@ std::optional<Block *> ParseBlock(ParserItems &items) {
   return block;
 }
 
-std::optional<FunctionBody *> ParseFunctionBody(ParserItems &items) {
+std::optional<FunctionBody *> ParseFunctionBody(Parser &items) {
   auto directive = Directive::ParseDirective(items);
 
   auto block = ParseBlock(items);
@@ -106,7 +107,7 @@ std::optional<FunctionBody *> ParseFunctionBody(ParserItems &items) {
   return new FunctionBody(*block);
 }
 
-bool ParseFunction(ParserItems &items, Variable *variable) {
+bool ParseFunction(Parser &items, Variable *variable) {
   // eat the (
   items.lexer.generateNextToken();
 
@@ -139,7 +140,7 @@ bool ParseFunction(ParserItems &items, Variable *variable) {
     function->addFunctionBody(*functionBody);
   }
 
-  items.compilationUnit.AddCompilationUnitItems(function);
+  items.astContext.compilationUnit->AddCompilationUnitItems(function);
   return true;
 }
 

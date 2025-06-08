@@ -3,7 +3,7 @@
 
 namespace Parser::Type {
 
-std::optional<llvm::Type *> ParseType(ParserItems &items) {
+std::optional<llvm::Type *> ParseType(Parser &items) {
 
     llvm::Type *type;
   

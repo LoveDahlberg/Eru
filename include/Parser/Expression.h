@@ -8,8 +8,8 @@ using namespace ::AST::Expression;
 using expressionAST = ::AST::Expression::Expression;
 
 namespace Parser::Expression {
-std::optional<expressionAST *> ParseExpression(ParserItems &items);
+std::optional<expressionAST *> ParseExpression(Parser &items);
 
-std::optional<ExpressionUnit *> ParseExpressionUnit(ParserItems &items);
+std::optional<ExpressionUnit *> ParseExpressionUnit(Parser &items);
 
 } // namespace Parser::Expression

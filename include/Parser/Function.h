@@ -7,11 +7,11 @@ using namespace ::AST::Function;
 using functionAST = ::AST::Function::Function;
 
 namespace Parser::Function {
-std::optional<Block *> ParseBlock(ParserItems &items);
+std::optional<Block *> ParseBlock(Parser &items);
 
-bool ParseFunction(ParserItems &items, Variable *declaration);
+bool ParseFunction(Parser &items, Variable *declaration);
 
-std::optional<FunctionCall *> ParseFunctionCall(ParserItems &items,
+std::optional<FunctionCall *> ParseFunctionCall(Parser &items,
                                                 std::string name);
 
 template <typename T>
@@ -37,8 +37,8 @@ concept ValidParameterType =
 template <typename ParameterType>
   requires ValidParameterType<ParameterType>
 std::optional<std::vector<ParameterType>>
-ParseParameters(ParserItems &items,
-                std::function<std::optional<ParameterType>(ParserItems &)>
+ParseParameters(Parser &items,
+                std::function<std::optional<ParameterType>(Parser &)>
                     ParseVariableType) {
 
   std::vector<ParameterType> parameters;

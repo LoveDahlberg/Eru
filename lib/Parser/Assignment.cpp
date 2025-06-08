@@ -5,7 +5,7 @@
 
 namespace Parser::Assignment {
 
-std::optional<assignmentAST *> ParseAssignment(ParserItems &items,
+std::optional<assignmentAST *> ParseAssignment(Parser &items,
                                                Variable *variable) {
 
   // If not null, variable information already parsed.
@@ -24,9 +24,11 @@ std::optional<assignmentAST *> ParseAssignment(ParserItems &items,
 
   assignmentAST *assignment;
   if (variable->type == nullptr) {
-    assignment = new assignmentAST({variable->name});
+    assignment = new AST::Assignment::Assignment(
+        new AST::Types::NamedIdentifier{.value = variable->name});
   } else {
-    assignment = new assignmentAST(new variableDeclarationAST(variable));
+    assignment =
+        new AST::Assignment::Assignment(new variableDeclarationAST(variable));
   }
 
   auto expression = Expression::ParseExpression(items);

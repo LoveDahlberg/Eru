@@ -1,1 +1,0 @@
-// Takes ASTContext and Analyzer. Calls the ParseCompilationUnit. Some logic in it should be moved here.

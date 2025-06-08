@@ -8,6 +8,6 @@ using variableDeclarationAST = ::AST::VariableDeclaration::VariableDeclaration;
 
 namespace Parser::VariableDeclaration {
 
-std::optional<Variable *> ParseVariable(ParserItems &items);
+std::optional<Variable *> ParseVariable(Parser &items);
 
 }

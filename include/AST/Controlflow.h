@@ -6,10 +6,6 @@
 
 namespace AST::Controlflow {
 
-// Common type for all controlflow, to make it easier to group them.
-// TODO this could be useful for other AST types as well.
-struct Controlflow : public AST {};
-
 struct ConditionalBranch {
   ConditionalBranch(Expression::Expression **expression,
                     Function::Block **block)
@@ -27,14 +23,10 @@ struct ConditionalBranch {
   Function::Block *block;
 };
 
-class ConditionalBranchingGroup : public Controlflow {
-public:
+struct ConditionalBranchingGroup {
   ConditionalBranchingGroup(std::vector<ConditionalBranch *> conditionalChain)
       : conditionalChain(conditionalChain) {}
 
-  llvm::Value *codegen(codeGenItems &items) override;
-
-private:
   std::vector<ConditionalBranch *> conditionalChain;
 };
 
