@@ -1,5 +1,6 @@
 #include <AST/ASTTraversal.h>
 #include <AST/CompilationUnit.h>
+#include <AST/Expression.h>
 
 // llvm
 #include <llvm/IR/IRBuilder.h>
@@ -14,6 +15,7 @@ class IRGenerator : public ASTTraversal<llvm::Value *> {
   llvm::IRBuilder<llvm::NoFolder> *builder = nullptr;
   llvm::Function *currentFunction = nullptr;
 
+  // Handle functions
   llvm::Value *handle(Assignment::Assignment &AST) override;
   llvm::Value *handle(VariableDeclaration::VariableDeclaration &AST) override;
   llvm::Value *handle(Function::FunctionCall &AST) override;
@@ -27,6 +29,9 @@ class IRGenerator : public ASTTraversal<llvm::Value *> {
 
   llvm::Value *handle(Expression::Expression &AST) override;
   llvm::Value *getOperand(Expression::ExpressionUnit *expressionUnit);
+
+  // Support
+  llvm::Type *GetType(Types::Types type);
 
 public:
   IRGenerator(llvm::Module &module) : module(module) {}

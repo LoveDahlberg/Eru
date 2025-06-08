@@ -1,59 +1,50 @@
-
-// include
-#include <Parser/CompilationUnit.h>
-#include <Parser/Directive.h>
-#include <Parser/Function.h>
-#include <Parser/Identifier.h>
-#include <Parser/Type.h>
-#include <Parser/VariableDeclaration.h>
+#include <Parser/Parser.h>
 
 namespace Parser {
 
-bool ParseVariableDeclarationOrFunction(Parser &ctx) {
-  auto variable = VariableDeclaration::ParseVariable(ctx);
+bool Parser::ParseVariableDeclarationOrFunction() {
+  auto variable = ParseVariable();
   if (!variable) {
     // err
     return false;
   }
 
-  if (ctx.lexer.getCurrentToken().type == TokenType::LEFT_PARENTHESIS) {
-    return Function::ParseFunction(ctx, *variable);
+  if (lexer.getCurrentToken().type == TokenType::LEFT_PARENTHESIS) {
+    return ParseFunction(*variable);
   }
 
-  ctx.astContext.compilationUnit->AddCompilationUnitItems(
-      new variableDeclarationAST(*variable));
+  astContext.compilationUnit->AddCompilationUnitItems(
+      new AST::VariableDeclaration::VariableDeclaration(*variable));
   return true;
 }
 
 // TODO improve error handling
-bool ParseCompilationUnit(Parser &ctx) {
+bool Parser::ParseCompilationUnit() {
   int loopCounter = 0;
   do {
     // TODO should just be able to skip all newlines here.
     auto tokenCategory =
-        tokenTypeToCategory.at(ctx.lexer.generateNextToken().type);
+        tokenTypeToCategory.at(lexer.generateNextToken().type);
     switch (tokenCategory) {
     case TokenCategory::SEPARATOR:
-      if (ctx.lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
+      if (lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
         continue;
       }
 
-      if (Directive::ParseDirective(ctx)) {
+      if (ParseDirective()) {
         continue;
       }
       return false;
     case TokenCategory::DATA_TYPE:
-      if (ParseVariableDeclarationOrFunction(ctx)) {
+      if (ParseVariableDeclarationOrFunction()) {
         continue;
       }
       return false;
     default:
-      if (ctx.lexer.getCurrentToken().type == TokenType::END_OF_FILE) {
+      if (lexer.getCurrentToken().type == TokenType::END_OF_FILE) {
         break;
       }
       // err
-      // printParsing(CompilationUnitParsingName, tokenCategory,
-      //              items.lexer.getCurrentToken());
       return false;
     }
     // Break the main loop

@@ -4,7 +4,8 @@
 
 #include <Lexer/Lexer.h>
 #include <Lexer/Tokens.h>
-#include <Parser/CompilationUnit.h>
+
+#include <Parser/Parser.h>
 
 TEST(Parser, TestDeclarations) {
   std::string stream = R"(
@@ -17,14 +18,14 @@ TEST(Parser, TestDeclarations) {
     )";
   stream += EOF;
 
-  Lexer lexer(stream);
+  Lexing::Lexer lexer(stream);
 
   AST::Context::ASTContext astContext;
   Analyzer::Analyzer analyzer(astContext);
 
   Parser::Parser parser(astContext, analyzer, lexer);
 
-  auto parserItems = ParseCompilationUnit(parser);
+  auto parserItems = parser.Parse();
 
   ASSERT_TRUE(parserItems);
 
@@ -58,13 +59,12 @@ TEST(Parser, TestFunctions) {
 
   Lexer lexer(stream);
 
-
   AST::Context::ASTContext astContext;
   Analyzer::Analyzer analyzer(astContext);
 
   Parser::Parser parser(astContext, analyzer, lexer);
-  
-  auto parserItems = ParseCompilationUnit(parser);
+
+  auto parserItems = parser.Parse();
 
   ASSERT_TRUE(parserItems);
 }

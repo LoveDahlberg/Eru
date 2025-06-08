@@ -1,12 +1,12 @@
+#include <Parser/Parser.h>
 
-#include "Parser/VariableDeclaration.h"
-#include <Parser/Assignment.h>
-#include <Parser/Expression.h>
+// stl
+#include <optional>
 
-namespace Parser::Assignment {
+namespace Parser {
 
-std::optional<assignmentAST *> ParseAssignment(Parser &items,
-                                               Variable *variable) {
+std::optional<AST::Assignment::Assignment *>
+Parser::ParseAssignment(AST::VariableDeclaration::Variable *variable) {
 
   // If not null, variable information already parsed.
   if (variable == nullptr) {
@@ -14,24 +14,24 @@ std::optional<assignmentAST *> ParseAssignment(Parser &items,
     return std::nullopt;
   }
 
-  if (items.lexer.getCurrentToken().type != TokenType::EQUAL) {
+  if (lexer.getCurrentToken().type != TokenType::EQUAL) {
     // err
     return std::nullopt;
   }
 
   // Eat the =
-  items.lexer.generateNextToken();
+  lexer.generateNextToken();
 
-  assignmentAST *assignment;
-  if (variable->type == nullptr) {
+  AST::Assignment::Assignment *assignment;
+  if (variable->type == AST::Types::Types::NONE) {
     assignment = new AST::Assignment::Assignment(
         new AST::Types::NamedIdentifier{.value = variable->name});
   } else {
     assignment =
-        new AST::Assignment::Assignment(new variableDeclarationAST(variable));
+        new AST::Assignment::Assignment(new AST::VariableDeclaration::VariableDeclaration(variable));
   }
 
-  auto expression = Expression::ParseExpression(items);
+  auto expression = ParseExpression();
   if (!expression) {
     // err
     return std::nullopt;
@@ -39,7 +39,7 @@ std::optional<assignmentAST *> ParseAssignment(Parser &items,
 
   assignment->setExpression(&*expression);
 
-  if (items.lexer.getCurrentToken().type != TokenType::NEWLINE) {
+  if (lexer.getCurrentToken().type != TokenType::NEWLINE) {
     // err
     return std::nullopt;
   }
@@ -47,4 +47,4 @@ std::optional<assignmentAST *> ParseAssignment(Parser &items,
   return assignment;
 }
 
-} // namespace Parser::Assignment
+} // namespace Parser

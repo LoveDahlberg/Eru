@@ -1,6 +1,5 @@
 #pragma once
 
-#include <AST/Expression.h>
 #include <AST/Function.h>
 #include <AST/Types.h>
 #include <AST/VariableDeclaration.h>

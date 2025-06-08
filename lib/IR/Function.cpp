@@ -1,6 +1,7 @@
 #include <IR/IRGenerator.h>
 
 // llvm
+#include <llvm-20/llvm/IR/LLVMContext.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/Support/Casting.h>
 
@@ -27,17 +28,16 @@ llvm::Value *IRGenerator::handle(Function::FunctionCall &AST) {
 
 llvm::Value *IRGenerator::handle(Function::Block &AST) {
   auto statementResult = ASTTraversal::handle(*AST.statement);
-  
-  // Expect all generated statements to be non null. If statementResult is empty, it either means that 
-  // the block only contains a return or its empty (valid case for function declaration).
-  for(auto statement : statementResult)
-  {
-    if(statement == nullptr)
-    {
+
+  // Expect all generated statements to be non null. If statementResult is
+  // empty, it either means that the block only contains a return or its empty
+  // (valid case for function declaration).
+  for (auto statement : statementResult) {
+    if (statement == nullptr) {
       return nullptr;
     }
   }
-  
+
   // If the returnValue is nullptr, then it means this block has no return (this
   // is ok). Return the latest statement pointer.
   if (AST.returnValue == nullptr) {
@@ -63,10 +63,19 @@ llvm::Value *IRGenerator::handle(Function::Function &AST) {
 
   std::vector<llvm::Type *> parameterTypes;
   for (auto parameter : AST.parameters) {
-    parameterTypes.emplace_back(parameter->type);
+    auto type = GetType(parameter->type);
+    if (type == nullptr) {
+      return nullptr;
+    }
+    parameterTypes.emplace_back(type);
   }
 
-  auto *functionType = llvm::FunctionType::get(AST.type, parameterTypes, false);
+  auto type = GetType(AST.type);
+  if (type == nullptr) {
+    return nullptr;
+  }
+
+  auto *functionType = llvm::FunctionType::get(type, parameterTypes, false);
 
   auto function = llvm::Function::Create(
       functionType, llvm::GlobalValue::ExternalLinkage, AST.name, &module);

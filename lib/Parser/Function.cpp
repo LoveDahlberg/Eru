@@ -1,21 +1,13 @@
+#include <Parser/Parser.h>
 
-#include "Parser/Parser.h"
-#include <Parser/Directive.h>
-#include <Parser/Expression.h>
-#include <Parser/Function.h>
-#include <Parser/Identifier.h>
-#include <Parser/Statement.h>
-#include <Parser/VariableDeclaration.h>
+namespace Parser {
 
-namespace Parser::Function {
-
-std::optional<FunctionCall *> ParseFunctionCall(Parser &items,
-                                                std::string name) {
+std::optional<AST::Function::FunctionCall *> Parser::ParseFunctionCall(std::string name) {
 
   // If name is empty, parse the identifier. Otherwise assume that it was parsed
   // before calling this function.
   if (name.empty()) {
-    auto identifier = Identifier::ParseIdentifier(items);
+    auto identifier = ParseIdentifier();
     if (!identifier) {
       // err
       return std::nullopt;
@@ -23,58 +15,57 @@ std::optional<FunctionCall *> ParseFunctionCall(Parser &items,
     name = *identifier;
   }
 
-  if (items.lexer.getCurrentToken().type != TokenType::LEFT_PARENTHESIS) {
+  if (lexer.getCurrentToken().type != TokenType::LEFT_PARENTHESIS) {
     // err
     return std::nullopt;
   }
 
   // eat the (
-  items.lexer.generateNextToken();
+  lexer.generateNextToken();
 
-  auto parameters =
-      ParseParameters<expressionAST *>(items, &Expression::ParseExpression);
+  auto parameters = ParseParameters<AST::Expression::Expression *>();
   if (!parameters) {
     // err
     return std::nullopt;
   }
 
-  if (items.lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
+  if (lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
     // err
     return std::nullopt;
   }
 
   // eat the )
-  items.lexer.generateNextToken();
+  lexer.generateNextToken();
 
   // TODO newline here?
 
-  return new FunctionCall(name, *parameters);
+  return new AST::Function::FunctionCall(name, *parameters);
 }
 
-std::optional<Block *> ParseBlock(Parser &items) {
-  skipUntilNotNewline(items);
+std::optional<AST::Function::Block *> Parser::ParseBlock() {
+  skipUntilNotNewline();
 
-  if (items.lexer.getCurrentToken().type != TokenType::LEFT_CURLY_BRACE) {
+  if (lexer.getCurrentToken().type != TokenType::LEFT_CURLY_BRACE) {
     // err
     return std::nullopt;
   }
 
   // eat the {
-  items.lexer.generateNextToken();
+  lexer.generateNextToken();
 
-  auto statement = Statement::ParseStatement(items);
+  auto statement = ParseStatement();
   if (!statement) {
     // err
     return std::nullopt;
   }
 
-  auto block = new Block(*statement);
+  auto block = new AST::Function::Block(*statement);
 
-  if (items.lexer.getCurrentToken().type == TokenType::RETURN) {
+  if (lexer.getCurrentToken().type == TokenType::RETURN) {
     // eat the return
-    items.lexer.generateNextToken();
+    lexer.generateNextToken();
 
-    auto expression = Expression::ParseExpression(items);
+    auto expression = ParseExpression();
     if (!expression) {
       // err
       return std::nullopt;
@@ -82,57 +73,56 @@ std::optional<Block *> ParseBlock(Parser &items) {
     block->addReturn(*expression);
   }
 
-  skipUntilNotNewline(items);
+  skipUntilNotNewline();
 
-  if (items.lexer.getCurrentToken().type != TokenType::RIGHT_CURLY_BRACE) {
+  if (lexer.getCurrentToken().type != TokenType::RIGHT_CURLY_BRACE) {
     // err
     return std::nullopt;
   }
 
   // eat the }
-  items.lexer.generateNextToken();
+  lexer.generateNextToken();
 
   return block;
 }
 
-std::optional<FunctionBody *> ParseFunctionBody(Parser &items) {
-  auto directive = Directive::ParseDirective(items);
+std::optional<AST::Function::FunctionBody *> Parser::ParseFunctionBody() {
+  auto directive = ParseDirective();
 
-  auto block = ParseBlock(items);
+  auto block = ParseBlock();
   if (!block) {
     // err
     return std::nullopt;
   }
 
-  return new FunctionBody(*block);
+  return new AST::Function::FunctionBody(*block);
 }
 
-bool ParseFunction(Parser &items, Variable *variable) {
+bool Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
   // eat the (
-  items.lexer.generateNextToken();
+  lexer.generateNextToken();
 
-  auto paramaters =
-      ParseParameters<Variable *>(items, &VariableDeclaration::ParseVariable);
+  auto paramaters = ParseParameters<AST::VariableDeclaration::Variable *>();
   if (!paramaters) {
     // err
     return false;
   }
 
-  if (items.lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
+  if (lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
     // err
     return false;
   }
 
   // Lookahead and get the next non newline token.
-  auto lookaheadToken = items.lexer.lookaheadTokenNotNewline();
+  auto lookaheadToken = lexer.lookaheadTokenNotNewline();
 
   // eat the ), needed before leaving this function.
-  items.lexer.generateNextToken();
+  lexer.generateNextToken();
 
-  auto function = new functionAST(variable->type, variable->name, *paramaters);
+  auto function = new AST::Function::Function(variable->type, variable->name, *paramaters);
 
   if (lookaheadToken.type == TokenType::LEFT_BRACKET) {
-    auto functionBody = ParseFunctionBody(items);
+    auto functionBody = ParseFunctionBody();
     if (!functionBody) {
       // err
       return false;
@@ -140,8 +130,8 @@ bool ParseFunction(Parser &items, Variable *variable) {
     function->addFunctionBody(*functionBody);
   }
 
-  items.astContext.compilationUnit->AddCompilationUnitItems(function);
+  astContext.compilationUnit->AddCompilationUnitItems(function);
   return true;
 }
 
-} // namespace Parser::Function
+} // namespace Parser

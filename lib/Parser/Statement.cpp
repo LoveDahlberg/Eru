@@ -1,18 +1,14 @@
-#include <Parser/Statement.h>
+#include "AST/VariableDeclaration.h"
+#include <AST/Statement.h>
+#include <Parser/Parser.h>
 
-#include <Parser/Assignment.h>
-#include <Parser/ControlFlow.h>
-#include <Parser/Function.h>
-#include <Parser/Identifier.h>
-#include <Parser/VariableDeclaration.h>
+namespace Parser {
 
-namespace Parser::Statement {
+std::optional<AST::Statement::Statement *> Parser::ParseStatement() {
+  auto statement = new AST::Statement::Statement();
 
-std::optional<statementAST *> ParseStatement(Parser &items) {
-  auto statement = new statementAST;
-
-  if (items.lexer.getCurrentToken().type == TokenType::RETURN ||
-      items.lexer.getCurrentToken().type == TokenType::RIGHT_CURLY_BRACE) {
+  if (lexer.getCurrentToken().type == TokenType::RETURN ||
+      lexer.getCurrentToken().type == TokenType::RIGHT_CURLY_BRACE) {
     return statement;
   }
 
@@ -20,25 +16,23 @@ std::optional<statementAST *> ParseStatement(Parser &items) {
   bool generateNewToken;
   do {
     generateNewToken = true;
-    skipUntilNotNewline(items);
-    auto tokenCategory =
-        tokenTypeToCategory.at(items.lexer.getCurrentToken().type);
+    skipUntilNotNewline();
+    auto tokenCategory = tokenTypeToCategory.at(lexer.getCurrentToken().type);
     switch (tokenCategory) {
 
     // Variable declaration or assignment.
     case TokenCategory::DATA_TYPE: {
 
       // Both start with a variable declaration.
-      auto parameterDeclaration = VariableDeclaration::ParseVariable(items);
+      auto parameterDeclaration = ParseVariable();
       if (!parameterDeclaration) {
         // err
         return std::nullopt;
       }
 
       // Assignment
-      if (items.lexer.getCurrentToken().type == TokenType::EQUAL) {
-        auto assignment =
-            Assignment::ParseAssignment(items, *parameterDeclaration);
+      if (lexer.getCurrentToken().type == TokenType::EQUAL) {
+        auto assignment = ParseAssignment(*parameterDeclaration);
         if (!assignment) {
           // err
           return std::nullopt;
@@ -48,7 +42,8 @@ std::optional<statementAST *> ParseStatement(Parser &items) {
       // Only a declaration without assignment.
       else {
         statement->AddStatement(
-            new variableDeclarationAST(*parameterDeclaration));
+            new AST::VariableDeclaration::VariableDeclaration(
+                *parameterDeclaration));
       }
 
       break;
@@ -58,12 +53,12 @@ std::optional<statementAST *> ParseStatement(Parser &items) {
     case TokenCategory::KEYWORD: {
       // Conditional branch.
       // Always starts with an IF for now.
-      if (items.lexer.getCurrentToken().type != TokenType::IF) {
+      if (lexer.getCurrentToken().type != TokenType::IF) {
         // err
         return std::nullopt;
       }
 
-      auto controlFlow = Controlflow::ParseConditionalBranchingGroup(items);
+      auto controlFlow = ParseConditionalBranchingGroup();
       if (!controlFlow) {
         // err
         return std::nullopt;
@@ -77,19 +72,19 @@ std::optional<statementAST *> ParseStatement(Parser &items) {
     case TokenCategory::IDENTIFER: {
 
       // Both start with an identifier.
-      auto identifier = Identifier::ParseIdentifier(items);
+      auto identifier = ParseIdentifier();
       if (!identifier) {
         // err
         return std::nullopt;
       }
 
       // TODO move this switch case to getter function.
-      switch (items.lexer.getCurrentToken().type) {
+      switch (lexer.getCurrentToken().type) {
 
       // Assignment
       case TokenType::EQUAL: {
-        auto assignment = Assignment::ParseAssignment(
-            items, new Variable(nullptr, *identifier));
+        auto assignment =
+            ParseAssignment(new AST::VariableDeclaration::Variable(AST::Types::Types::NONE, *identifier));
         if (!assignment) {
           // err
           return std::nullopt;
@@ -100,7 +95,7 @@ std::optional<statementAST *> ParseStatement(Parser &items) {
 
       // Function call
       case TokenType::LEFT_PARENTHESIS: {
-        auto assignment = Function::ParseFunctionCall(items, *identifier);
+        auto assignment = ParseFunctionCall(*identifier);
         if (!assignment) {
           // err
           return std::nullopt;
@@ -123,9 +118,9 @@ std::optional<statementAST *> ParseStatement(Parser &items) {
     }
 
     // Check if we should stop.
-    items.lexer.generateNextToken();
-    if (items.lexer.getCurrentToken().type == TokenType::RETURN ||
-        items.lexer.getCurrentToken().type == TokenType::RIGHT_CURLY_BRACE) {
+    lexer.generateNextToken();
+    if (lexer.getCurrentToken().type == TokenType::RETURN ||
+        lexer.getCurrentToken().type == TokenType::RIGHT_CURLY_BRACE) {
       break;
     }
 
@@ -133,4 +128,4 @@ std::optional<statementAST *> ParseStatement(Parser &items) {
   return statement;
 }
 
-} // namespace Parser::Statement
+} // namespace Parser

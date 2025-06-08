@@ -1,51 +1,48 @@
+#include "AST/Expression.h"
+#include <Parser/Parser.h>
 
-#include <Parser/Expression.h>
-#include <Parser/Function.h>
-#include <Parser/Identifier.h>
-#include <Parser/Literal.h>
+namespace Parser {
 
-namespace Parser::Expression {
-
-std::optional<Operand> ParseOperand(Parser &items) {
-  switch (items.lexer.getCurrentToken().type) {
+std::optional<AST::Expression::Operand> Parser::ParseOperand() {
+  switch (lexer.getCurrentToken().type) {
 
   // Identifier or function call
   case TokenType::IDENTIFER: {
-    auto identifier = Identifier::ParseIdentifier(items);
+    auto identifier = ParseIdentifier();
     if (!identifier) {
       // err
       return std::nullopt;
     }
 
     // Function call
-    if (items.lexer.getCurrentToken().type == TokenType::LEFT_PARENTHESIS) {
-      auto functionCall = Function::ParseFunctionCall(items, *identifier);
+    if (lexer.getCurrentToken().type == TokenType::LEFT_PARENTHESIS) {
+      auto functionCall = ParseFunctionCall(*identifier);
       if (!functionCall) {
         // err
         return std::nullopt;
       }
-      return Operand(*functionCall);
+      return AST::Expression::Operand(*functionCall);
     }
     // Identifier
-    return Operand(AST::Types::NamedIdentifier(*identifier));
+    return AST::Expression::Operand(AST::Types::NamedIdentifier(*identifier));
   }
 
   case TokenType::STRING_LITERAL: {
-    auto literal = Literal::ParseLiteral(items);
+    auto literal = ParseLiteral();
     if (!literal) {
       // err
       return std::nullopt;
     }
-    return Operand(AST::Types::StringLiteral(*literal));
+    return AST::Expression::Operand(AST::Types::StringLiteral(*literal));
   }
 
   case TokenType::INTEGER_LITERAL: {
-    auto literal = Literal::ParseLiteral(items);
+    auto literal = ParseLiteral();
     if (!literal) {
       // err
       return std::nullopt;
     }
-    return Operand(AST::Types::IntegerLiteral(*literal));
+    return AST::Expression::Operand(AST::Types::IntegerLiteral(*literal));
   }
 
   default: {
@@ -56,27 +53,27 @@ std::optional<Operand> ParseOperand(Parser &items) {
   return std::nullopt;
 }
 
-std::optional<ExpressionUnit *> ParseExpressionUnit(Parser &items,
-                                                    bool firstUnit) {
+std::optional<AST::Expression::ExpressionUnit *>
+Parser::ParseExpressionUnit(bool firstUnit) {
 
-  auto unit = new ExpressionUnit();
+  auto unit = new AST::Expression::ExpressionUnit();
 
   if (!firstUnit) {
     // TODO create proper operator map and category.
-    switch (items.lexer.getCurrentToken().type) {
+    switch (lexer.getCurrentToken().type) {
     case TokenType::AND:
     case TokenType::OR: {
-      unit->operation =
-          TokenToBooleanOperator.at(items.lexer.getCurrentToken().type);
-      items.lexer.generateNextToken();
+      unit->operation = AST::Expression::TokenToBooleanOperator.at(
+          lexer.getCurrentToken().type);
+      lexer.generateNextToken();
       break;
     }
 
     case TokenType::PLUS:
     case TokenType::MINUS: {
-      unit->operation =
-          TokenToArithmeticOperator.at(items.lexer.getCurrentToken().type);
-      items.lexer.generateNextToken();
+      unit->operation = AST::Expression::TokenToArithmeticOperator.at(
+          lexer.getCurrentToken().type);
+      lexer.generateNextToken();
       break;
     }
 
@@ -87,7 +84,7 @@ std::optional<ExpressionUnit *> ParseExpressionUnit(Parser &items,
     }
   }
 
-  auto operand = ParseOperand(items);
+  auto operand = ParseOperand();
   if (!operand) {
     // err
     return std::nullopt;
@@ -98,14 +95,14 @@ std::optional<ExpressionUnit *> ParseExpressionUnit(Parser &items,
   return unit;
 }
 
-std::optional<expressionAST *> ParseExpression(Parser &items) {
+std::optional<AST::Expression::Expression *> Parser::ParseExpression() {
 
-  auto expression = new expressionAST();
+  auto expression = new AST::Expression::Expression();
 
   bool firstIteration = true;
   int loopCounter = 0;
   do {
-    auto target = ParseExpressionUnit(items, firstIteration);
+    auto target = ParseExpressionUnit(firstIteration);
     if (!target) {
       // err
       return std::nullopt;
@@ -116,7 +113,7 @@ std::optional<expressionAST *> ParseExpression(Parser &items) {
     expression->addExpressionUnit(*target);
 
     // TODO create proper operator map and category.
-    auto nextTokenType = items.lexer.getCurrentToken().type;
+    auto nextTokenType = lexer.getCurrentToken().type;
     // Expression is over if next token isn't a operator
     if (nextTokenType != TokenType::PLUS && nextTokenType != TokenType::MINUS &&
         nextTokenType != TokenType::OR && nextTokenType != TokenType::AND) {
@@ -127,4 +124,4 @@ std::optional<expressionAST *> ParseExpression(Parser &items) {
   return expression;
 }
 
-} // namespace Parser::Expression
+} // namespace Parser

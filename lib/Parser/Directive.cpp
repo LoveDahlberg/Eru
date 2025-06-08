@@ -1,25 +1,23 @@
+#include <Parser/Parser.h>
 
+namespace Parser {
 
-#include <Parser/Directive.h>
-
-namespace Parser::Directive {
-
-bool ParseDirective(Parser &items) {
-  if (items.lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
+bool Parser::ParseDirective() {
+  if (lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
     // err
     return false;
   }
 
   // Eat [
-  items.lexer.generateNextToken();
+  lexer.generateNextToken();
 
-  if (items.lexer.getCurrentToken().type != TokenType::RIGHT_BRACKET) {
+  if (lexer.getCurrentToken().type != TokenType::RIGHT_BRACKET) {
     // err
     return false;
   }
 
   // Eat ]
-  items.lexer.generateNextToken();
+  lexer.generateNextToken();
 
   return true;
 }

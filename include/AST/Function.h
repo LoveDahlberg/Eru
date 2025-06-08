@@ -2,6 +2,9 @@
 
 #include <AST/VariableDeclaration.h>
 
+// stl
+#include <vector>
+
 // TODO make sure #include <AST/Expression.h> is included before the this header
 // in cpp file.
 namespace AST::Expression {
@@ -42,20 +45,18 @@ struct Function {
 
   // TODO type and name can be passed as a variableDeclaration, if it make sense
   // for IR generation.
-  Function(llvm::Type *type, std::string name,
+  Function(Types::Types type, std::string name,
            std::vector<VariableDeclaration::Variable *> parameters)
       : type(type), name(name), parameters(parameters) {}
 
-  Function(llvm::Type *type, std::string name) : type(type), name(name) {}
+  Function(Types::Types type, std::string name) : type(type), name(name) {}
 
 
   void addFunctionBody(FunctionBody *body) { this->body = body; }
 
   std::vector<VariableDeclaration::Variable *> parameters;
 
-  // TODO might not need this type during codegen, only need to check it during
-  // semantic passes.
-  llvm::Type *type;
+  Types::Types type;
 
   std::string name;
   FunctionBody *body;

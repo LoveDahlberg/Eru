@@ -1,21 +1,21 @@
 
-#include <Parser/Literal.h>
+#include <Parser/Parser.h>
 
-namespace Parser::Literal {
+namespace Parser {
 
-std::optional<std::string> ParseLiteral(Parser &items) {
-  if (items.lexer.getCurrentToken().type != TokenType::INTEGER_LITERAL &&
-      items.lexer.getCurrentToken().type != TokenType::STRING_LITERAL) {
+std::optional<std::string> Parser::ParseLiteral() {
+  if (lexer.getCurrentToken().type != TokenType::INTEGER_LITERAL &&
+      lexer.getCurrentToken().type != TokenType::STRING_LITERAL) {
     // err
     return std::nullopt;
   }
 
   // TODO might be issues to treat ints as strings here.
-  auto literal = items.lexer.getCurrentToken().value;
+  auto literal = lexer.getCurrentToken().value;
 
   // Get next, current type saved.
-  items.lexer.generateNextToken();
+  lexer.generateNextToken();
   return literal;
 }
 
-} // namespace Parser::Literal
+} // namespace Parser

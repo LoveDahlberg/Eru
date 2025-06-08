@@ -29,7 +29,7 @@ TEST(IR, testGlobalVarialbe) {
 
   constexpr const char *variableName = "firstVariable";
   auto variable = new VariableDeclaration::VariableDeclaration(
-      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), variableName);
+      AST::Types::Types::INT, variableName);
   variable->global = true;
   compilationUnit.AddCompilationUnitItems(variable);
 
@@ -66,8 +66,7 @@ Statement::Statement *CreateTestFunctionAndGetInsideStmnt(llvm::Module &module,
       CreateTestExpression(std::nullopt, Types::IntegerLiteral("1")));
 
   // Create function and add a block into it.
-  auto function = new Function::Function(
-      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), name);
+  auto function = new Function::Function(Types::Types::INT, name);
   auto body = new Function::FunctionBody(block);
   function->addFunctionBody(body);
 
@@ -100,7 +99,7 @@ TEST(IR, testFunctionVariable) {
 
   constexpr const char *variableName = "firstVariable";
   auto variable = new VariableDeclaration::VariableDeclaration(
-      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), variableName);
+      AST::Types::Types::INT, variableName);
   statement->AddStatement(variable);
 
   auto generator = IRGenerator(module);
@@ -120,7 +119,7 @@ TEST(IR, testDeclarationAssignment) {
 
   constexpr const char *variableName = "firstVariable";
   auto variable = new VariableDeclaration::VariableDeclaration(
-      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), variableName);
+      AST::Types::Types::INT, variableName);
 
   auto assignment = new Assignment::Assignment(variable);
 
@@ -160,11 +159,10 @@ TEST(IR, testFunctionCall) {
   constexpr const auto functionToCall = "functionToCall";
   constexpr const auto parameterName = "firstParameter";
 
-  auto parametersDeclaration = new VariableDeclaration::Variable(
-      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), parameterName);
+  auto parametersDeclaration =
+      new VariableDeclaration::Variable(AST::Types::Types::INT, parameterName);
   auto functionDeclaration = new Function::Function(
-      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), functionToCall,
-      {parametersDeclaration});
+      AST::Types::Types::INT, functionToCall, {parametersDeclaration});
   compilationUnit.AddCompilationUnitItems(functionDeclaration);
 
   auto statement = CreateTestFunctionAndGetInsideStmnt(module, compilationUnit);
@@ -193,8 +191,7 @@ CreateSingleTestConditionalBranch(llvm::Module &module,
   // The body of the first if statement
   auto statementIf = new Statement::Statement();
   auto variableIf = new VariableDeclaration::VariableDeclaration(
-      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()),
-      "testIfVariable");
+      AST::Types::Types::INT, "testIfVariable");
   statementIf->AddStatement(variableIf);
 
   auto blockIf = new Function::Block(
@@ -224,7 +221,7 @@ TEST(IR, testConditionalBranch) {
   // The body of the first if statement
   auto statementIf = new Statement::Statement();
   auto variableIf = new VariableDeclaration::VariableDeclaration(
-      (llvm::Type *)llvm::Type::getInt32Ty(module.getContext()), "ifVariable");
+      AST::Types::Types::INT, "ifVariable");
   statementIf->AddStatement(variableIf);
 
   auto blockIf = new Function::Block(
@@ -243,9 +240,7 @@ TEST(IR, testConditionalBranch) {
   statementElif->AddStatement(variableIf);
   statementElif->AddStatement(CreateSingleTestConditionalBranch(module));
 
-  auto blockElIf = new Function::Block(
-      statementElif,
-      nullptr);
+  auto blockElIf = new Function::Block(statementElif, nullptr);
 
   auto branchElif =
       new Controlflow::ConditionalBranch(&expressionElif, &blockElIf);

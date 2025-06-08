@@ -8,7 +8,10 @@
 #include <Lexer/Tokens.h>
 
 #include <AST/ASTContext.h>
+#include <AST/Assignment.h>
 #include <AST/CompilationUnit.h>
+#include <AST/Controlflow.h>
+#include <AST/Expression.h>
 #include <AST/Types.h>
 
 #include <Analyzer/Analyzer.h>
@@ -19,39 +22,133 @@ using namespace Lexing;
 
 namespace Parser {
 
-struct Parser {
+template <typename T>
+concept ValidParameterType =
+    std::is_pointer_v<T> &&
+    (std::is_same_v<AST::VariableDeclaration::Variable,
+                    std::remove_pointer_t<T>> ||
+     std::is_same_v<AST::Expression::Expression, std::remove_pointer_t<T>>);
+
+class Parser {
+
+public:
   Parser(AST::Context::ASTContext &astContext, Analyzer::Analyzer &analyzer,
          Lexer &lexer)
-      : context(new llvm::LLVMContext()), astContext(astContext),
-        analyzer(analyzer), module(new llvm::Module("", *context)),
-        lexer(lexer) {}
+      : astContext(astContext), analyzer(analyzer), lexer(lexer) {}
 
   bool Parse();
 
 private:
-  llvm::LLVMContext *context;
+  // Support functions
+  void skipUntilNotNewline();
 
-public:
+  // Parser functions
+
+  // Compilation unit
+  bool ParseCompilationUnit();
+  bool ParseVariableDeclarationOrFunction();
+
+  // Directive
+  bool ParseDirective();
+
+  // Variable Declaration
+  std::optional<AST::VariableDeclaration::Variable *> ParseVariable();
+
+  // Type
+  std::optional<AST::Types::Types> ParseType();
+
+  // Identifier
+  std::optional<std::string> ParseIdentifier();
+
+  // Expression
+  std::optional<AST::Expression::Expression *> ParseExpression();
+  std::optional<AST::Expression::ExpressionUnit *>
+  ParseExpressionUnit(bool firstUnit);
+
+  // Assignment
+  std::optional<AST::Assignment::Assignment *>
+  ParseAssignment(AST::VariableDeclaration::Variable *variable = nullptr);
+  std::optional<AST::Expression::Operand> ParseOperand();
+
+  // Literal
+  std::optional<std::string> ParseLiteral();
+
+  // Statement
+  std::optional<AST::Statement::Statement *> ParseStatement();
+
+  // Controlflow
+  std::optional<AST::Controlflow::ConditionalBranchingGroup *>
+  ParseConditionalBranchingGroup();
+  std::optional<AST::Controlflow::ConditionalBranch *>
+  ParseConditionalBranch(bool start = false);
+
+  // Function
+  bool ParseFunction(AST::VariableDeclaration::Variable *variable);
+  std::optional<AST::Function::Block *> ParseBlock();
+  std::optional<AST::Function::FunctionCall *>
+  ParseFunctionCall(std::string name);
+  std::optional<AST::Function::FunctionBody *> ParseFunctionBody();
+
+  /// This function is supposed to be used for parameter parsing for:
+  /// - Function declarations and definitions -> type is
+  ///   AST::VariableDeclaration::Variable*
+  /// - Function calls -> type is Expression::Expression*
+  ///
+  ///  The \a ValidParameterType concept restricts the usage outside of these
+  ///  types.
+  template <typename ParameterType>
+    requires ValidParameterType<ParameterType>
+  std::optional<std::vector<ParameterType>> ParseParameters() {
+
+    std::vector<ParameterType> parameters;
+    if (lexer.getCurrentToken().type == TokenType::RIGHT_PARENTHESIS) {
+      return parameters;
+    }
+
+    int loopCounter = 0;
+    do {
+
+      // TODO refactor this, it is not pretty.
+      std::optional<ParameterType> parameterDeclaration;
+
+      if constexpr (std::is_same_v<AST::VariableDeclaration::Variable,
+                                   std::remove_pointer_t<ParameterType>>) {
+        parameterDeclaration = this->ParseVariable();
+      } else if constexpr (std::is_same_v<
+                               AST::Expression::Expression,
+                               std::remove_pointer_t<ParameterType>>) {
+        parameterDeclaration = this->ParseExpression();
+      } else {
+        static_assert(
+            always_false<ParameterType>,
+            "ParameterType is not a variable nor an expression pointer");
+      }
+
+      if (!parameterDeclaration) {
+        // err
+        return std::nullopt;
+      }
+      parameters.push_back(*parameterDeclaration);
+
+      if (lexer.getCurrentToken().type == TokenType::RIGHT_PARENTHESIS) {
+        break;
+      }
+
+      if (lexer.getCurrentToken().type != TokenType::COMMA) {
+        // err
+        return std::nullopt;
+      }
+
+      // Eat the ,
+      lexer.generateNextToken();
+    } while (loopCounter++ < loopLimit);
+
+    return parameters;
+  }
+
   AST::Context::ASTContext &astContext;
   Analyzer::Analyzer &analyzer;
-  llvm::Module *module;
-  Lexer lexer;
+  Lexer &lexer;
 };
-
-inline void skipUntilNotNewline(Parser &items) {
-  if (items.lexer.getCurrentToken().type != TokenType::NEWLINE) {
-    return;
-  }
-
-  int loopCounter = 0;
-  while (items.lexer.generateNextToken().type == TokenType::NEWLINE) {
-    if (items.lexer.getCurrentToken().type == TokenType::END_OF_FILE) {
-      return;
-    }
-    if (loopCounter++ > loopLimit) {
-      return;
-    }
-  }
-}
 
 } // namespace Parser

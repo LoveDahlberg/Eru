@@ -1,62 +1,58 @@
+#include <Parser/Parser.h>
 
-#include <Parser/ControlFlow.h>
-#include <Parser/Expression.h>
-#include <Parser/Function.h>
-#include <Parser/Statement.h>
+namespace Parser {
 
-namespace Parser::Controlflow {
-
-std::optional<ConditionalBranch *> ParseConditionalBranch(Parser &items,
-                                                          bool start = false) {
+std::optional<AST::Controlflow::ConditionalBranch *>
+Parser::ParseConditionalBranch(bool start) {
 
   // TODO could refactor this to be more readable.
   if (start) {
-    if (items.lexer.getCurrentToken().type != TokenType::IF) {
+    if (lexer.getCurrentToken().type != TokenType::IF) {
       // err
       return std::nullopt;
     }
   } else {
-    if (items.lexer.getCurrentToken().type != TokenType::ELIF &&
-        items.lexer.getCurrentToken().type != TokenType::ELSE) {
+    if (lexer.getCurrentToken().type != TokenType::ELIF &&
+        lexer.getCurrentToken().type != TokenType::ELSE) {
       // err
       return std::nullopt;
     }
   }
 
-  bool isNotElse = items.lexer.getCurrentToken().type != TokenType::ELSE;
+  bool isNotElse = lexer.getCurrentToken().type != TokenType::ELSE;
 
   // Eat the if, elif or else
-  items.lexer.generateNextToken();
+  lexer.generateNextToken();
 
-  auto branch = new ConditionalBranch();
+  auto branch = new AST::Controlflow::ConditionalBranch();
 
   if (isNotElse) {
 
-    if (items.lexer.getCurrentToken().type != TokenType::LEFT_PARENTHESIS) {
+    if (lexer.getCurrentToken().type != TokenType::LEFT_PARENTHESIS) {
       // err
       return std::nullopt;
     }
 
     // Eat the (
-    items.lexer.generateNextToken();
+    lexer.generateNextToken();
 
-    auto expression = Expression::ParseExpression(items);
+    auto expression = ParseExpression();
     if (!expression) {
       // err
       return std::nullopt;
     }
 
-    if (items.lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
+    if (lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
       // err
       return std::nullopt;
     }
     // Eat the )
-    items.lexer.generateNextToken();
+    lexer.generateNextToken();
 
     branch->addExpression(&*expression);
   }
 
-  auto block = Function::ParseBlock(items);
+  auto block = ParseBlock();
   if (!block) {
     // err
     return std::nullopt;
@@ -66,15 +62,15 @@ std::optional<ConditionalBranch *> ParseConditionalBranch(Parser &items,
   return branch;
 }
 
-std::optional<ConditionalBranchingGroup *>
-ParseConditionalBranchingGroup(Parser &items) {
-  std::vector<ConditionalBranch *> conditionalChain;
+std::optional<AST::Controlflow::ConditionalBranchingGroup *>
+Parser::ParseConditionalBranchingGroup() {
+  std::vector<AST::Controlflow::ConditionalBranch *> conditionalChain;
 
   bool start = true;
   Token lookaheadToken;
   do {
-    skipUntilNotNewline(items);
-    auto ConditionalBranch = ParseConditionalBranch(items, start);
+    skipUntilNotNewline();
+    auto ConditionalBranch = ParseConditionalBranch(start);
     if (!ConditionalBranch) {
       // err
       return std::nullopt;
@@ -82,10 +78,10 @@ ParseConditionalBranchingGroup(Parser &items) {
     start = false;
     conditionalChain.push_back(*ConditionalBranch);
 
-    lookaheadToken = items.lexer.lookaheadTokenNotNewline();
+    lookaheadToken = lexer.lookaheadTokenNotNewline();
   } while (lookaheadToken.type == TokenType::ELIF ||
            lookaheadToken.type == TokenType::ELSE);
 
-  return new ConditionalBranchingGroup(conditionalChain);
+  return new AST::Controlflow::ConditionalBranchingGroup(conditionalChain);
 }
-} // namespace Parser::Controlflow
+} // namespace Parser

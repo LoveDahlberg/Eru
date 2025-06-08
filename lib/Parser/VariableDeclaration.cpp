@@ -1,25 +1,20 @@
-// Include
-#include <Parser/VariableDeclaration.h>
-#include <Parser/Identifier.h>
-#include <Parser/Type.h>
+#include <Parser/Parser.h>
 
-namespace Parser::VariableDeclaration {
+namespace Parser {
 
-std::optional<Variable *>
-ParseVariable(Parser &items) {
-  auto type = Type::ParseType(items);
+std::optional<AST::VariableDeclaration::Variable *> Parser::ParseVariable() {
+  auto type = ParseType();
   if (!type) {
     // err
     return std::nullopt;
   }
 
-  auto identifier = Identifier::ParseIdentifier(items);
+  auto identifier = ParseIdentifier();
   if (!identifier) {
     // err
     return std::nullopt;
   }
 
-  return new Variable(*type, *identifier);
+  return new AST::VariableDeclaration::Variable(*type, *identifier);
 }
-} // namespace Parser::Declaration
-
+} // namespace Parser

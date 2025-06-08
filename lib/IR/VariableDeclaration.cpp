@@ -11,10 +11,16 @@ namespace IR {
 
 llvm::Value *
 IRGenerator::handle(VariableDeclaration::VariableDeclaration &AST) {
+
+  auto type = GetType(AST.variable->type);
+  if (type == nullptr) {
+    return nullptr;
+  }
+
   if (AST.global) {
     return new llvm::GlobalVariable(
-        module, AST.variable->type, false, llvm::GlobalValue::ExternalLinkage,
-        nullptr, AST.variable->name, nullptr,
+        module, type, false, llvm::GlobalValue::ExternalLinkage, nullptr,
+        AST.variable->name, nullptr,
         llvm::GlobalValue::ThreadLocalMode::NotThreadLocal, std::nullopt,
         false);
   }
@@ -23,7 +29,7 @@ IRGenerator::handle(VariableDeclaration::VariableDeclaration &AST) {
     return nullptr;
   }
 
-  return builder->CreateAlloca(AST.variable->type, nullptr, AST.variable->name);
+  return builder->CreateAlloca(type, nullptr, AST.variable->name);
 }
 
 } // namespace IR

@@ -2,6 +2,11 @@
 
 #include <variant>
 
+/// Compile time type predicate that always evaluates to false.
+/// Can be used to statically assert. 
+template <typename> 
+inline constexpr bool always_false = false;
+
 /// Compile time type predicate for checking if a template is a std::variant.
 /// This default predicate applies to any T doesn't have a partial specialization.
 /// In other words, all types except for std::variant will be false.

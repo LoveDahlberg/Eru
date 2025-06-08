@@ -7,6 +7,7 @@
 
 // stl
 #include <variant>
+#include <optional>
 
 namespace AST::Expression {
 

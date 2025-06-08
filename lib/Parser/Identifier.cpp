@@ -1,17 +1,17 @@
-#include <Parser/Identifier.h>
+#include <Parser/Parser.h>
 
-namespace Parser::Identifier {
+namespace Parser {
 
-std::optional<std::string> ParseIdentifier(Parser &items) {
-  if (items.lexer.getCurrentToken().type != TokenType::IDENTIFER) {
+std::optional<std::string> Parser::ParseIdentifier() {
+  if (lexer.getCurrentToken().type != TokenType::IDENTIFER) {
     // err
     return std::nullopt;
   }
 
-  auto identifier = items.lexer.getCurrentToken().value;
+  auto identifier = lexer.getCurrentToken().value;
 
   // Get next, current type saved.
-  items.lexer.generateNextToken();
+  lexer.generateNextToken();
   return identifier;
 }
 

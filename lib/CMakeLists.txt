@@ -18,6 +18,7 @@ add_library(IR STATIC
     IR/Expression.cpp
     IR/Function.cpp
     IR/VariableDeclaration.cpp
+    IR/IRGenerator.cpp
 )
 target_include_directories(IR PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(IR PRIVATE ${llvm_libs})
@@ -35,7 +36,8 @@ add_library(Parser STATIC
     Parser/Literal.cpp
     Parser/Statement.cpp
     Parser/Type.cpp
-)
+    Parser/Parser.cpp
+    )
 target_include_directories(Parser PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(Parser PRIVATE ${llvm_libs} Lexer IR)
 
