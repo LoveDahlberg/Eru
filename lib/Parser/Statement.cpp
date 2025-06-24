@@ -24,7 +24,7 @@ std::optional<AST::Statement::Statement *> Parser::ParseStatement() {
     case TokenCategory::DATA_TYPE: {
 
       // Both start with a variable declaration.
-      auto parameterDeclaration = ParseVariable();
+      auto parameterDeclaration = *ParseVariable();
       if (!parameterDeclaration) {
         // err
         return std::nullopt;
@@ -32,7 +32,7 @@ std::optional<AST::Statement::Statement *> Parser::ParseStatement() {
 
       // Assignment
       if (lexer.getCurrentToken().type == TokenType::EQUAL) {
-        auto assignment = ParseAssignment(*parameterDeclaration);
+        auto assignment = ParseAssignment(parameterDeclaration);
         if (!assignment) {
           // err
           return std::nullopt;
@@ -43,7 +43,7 @@ std::optional<AST::Statement::Statement *> Parser::ParseStatement() {
       else {
         statement->AddStatement(
             new AST::VariableDeclaration::VariableDeclaration(
-                *parameterDeclaration));
+                parameterDeclaration));
       }
 
       break;
@@ -73,7 +73,7 @@ std::optional<AST::Statement::Statement *> Parser::ParseStatement() {
 
       // Both start with an identifier.
       auto identifier = ParseIdentifier();
-      if (!identifier) {
+      if (identifier.hasFailed) {
         // err
         return std::nullopt;
       }

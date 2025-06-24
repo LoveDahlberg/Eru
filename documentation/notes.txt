@@ -37,6 +37,7 @@ The 'maybe' boolean value. A cute way to get a randomized 1 or 0 at runtime.
 
 a built in loop stop counter in the language (opt in)
 
+A retif keyword would be nice. it could be used to return if and only if the condition is true. no need to do a comparison, then if its true return something.
 -------------------
 
 Data types:

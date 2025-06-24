@@ -2,13 +2,14 @@
 
 namespace Parser {
 
-std::optional<AST::Function::FunctionCall *> Parser::ParseFunctionCall(std::string name) {
+std::optional<AST::Function::FunctionCall *>
+Parser::ParseFunctionCall(std::string name) {
 
   // If name is empty, parse the identifier. Otherwise assume that it was parsed
   // before calling this function.
   if (name.empty()) {
     auto identifier = ParseIdentifier();
-    if (!identifier) {
+    if (identifier.hasFailed) {
       // err
       return std::nullopt;
     }
@@ -119,18 +120,27 @@ bool Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
   // eat the ), needed before leaving this function.
   lexer.generateNextToken();
 
-  auto function = new AST::Function::Function(variable->type, variable->name, *paramaters);
+  auto function =
+      new AST::Function::Function(variable->type, variable->name, *paramaters);
 
   if (lookaheadToken.type == TokenType::LEFT_BRACKET) {
+
+    analyzer.PushScope();
     auto functionBody = ParseFunctionBody();
+    analyzer.PopScope();
+
     if (!functionBody) {
       // err
       return false;
     }
     function->addFunctionBody(*functionBody);
+
+    analyzer.ActOnFunctionImplementation(function);
+  } else {
+    analyzer.ActOnFunctionDeclaration(function);
   }
 
-  astContext.compilationUnit->AddCompilationUnitItems(function);
+  // astContext.compilationUnit->AddCompilationUnitItems(function);
   return true;
 }
 

@@ -4,9 +4,10 @@ namespace Parser {
 
 using Type = AST::Types::Types;
 
-std::optional<Type> Parser::ParseType() {
+Result<Type> Parser::ParseType() {
   Type type;
 
+  // TODO utilize Analyzer when types can be custom.
   switch (lexer.getCurrentToken().type) {
   case TokenType::INT:
     type = Type::INT;
@@ -29,7 +30,8 @@ std::optional<Type> Parser::ParseType() {
     break;
   default:
     // err
-    return std::nullopt;
+    return {"ParseType: ParseType does received invalid type %s",
+            lexer.getCurrentToken().type};
   }
 
   // Get next, current type saved.

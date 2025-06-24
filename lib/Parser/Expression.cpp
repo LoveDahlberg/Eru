@@ -9,7 +9,7 @@ std::optional<AST::Expression::Operand> Parser::ParseOperand() {
   // Identifier or function call
   case TokenType::IDENTIFER: {
     auto identifier = ParseIdentifier();
-    if (!identifier) {
+    if (identifier.hasFailed) {
       // err
       return std::nullopt;
     }

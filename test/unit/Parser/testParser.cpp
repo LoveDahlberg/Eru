@@ -9,7 +9,7 @@
 
 TEST(Parser, TestDeclarations) {
   std::string stream = R"(
-    int first
+    int (first
     string second
 
     int fourth()

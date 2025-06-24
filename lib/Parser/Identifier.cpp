@@ -1,11 +1,12 @@
 #include <Parser/Parser.h>
+#include <optional>
 
 namespace Parser {
 
-std::optional<std::string> Parser::ParseIdentifier() {
+  Result<std::string> Parser::ParseIdentifier() {
   if (lexer.getCurrentToken().type != TokenType::IDENTIFER) {
     // err
-    return std::nullopt;
+    return {"ParseIdentifier: wrong token. Expected Identifier got ..."};
   }
 
   auto identifier = lexer.getCurrentToken().value;

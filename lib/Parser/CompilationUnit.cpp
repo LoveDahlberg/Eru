@@ -2,19 +2,23 @@
 
 namespace Parser {
 
-bool Parser::ParseVariableDeclarationOrFunction() {
+Result<bool> Parser::ParseVariableDeclarationOrFunction() {
   auto variable = ParseVariable();
-  if (!variable) {
-    // err
-    return false;
-  }
+  RET_ON_FAILURE(
+      variable,
+      "ParseVariableDeclarationOrFunction: Failed to parse variable");
+
+  // if (!variable) {
+  //   // err
+  //   return false;
+  // }
 
   if (lexer.getCurrentToken().type == TokenType::LEFT_PARENTHESIS) {
     return ParseFunction(*variable);
   }
 
-  astContext.compilationUnit->AddCompilationUnitItems(
-      new AST::VariableDeclaration::VariableDeclaration(*variable));
+  analyzer.ActOnVariableDeclaration(*variable);
+
   return true;
 }
 
@@ -23,9 +27,8 @@ bool Parser::ParseCompilationUnit() {
   int loopCounter = 0;
   do {
     // TODO should just be able to skip all newlines here.
-    auto tokenCategory =
-        tokenTypeToCategory.at(lexer.generateNextToken().type);
-    switch (tokenCategory) {
+    auto tokenCategory = tokenTypeToCategory.at(lexer.generateNextToken().type);
+  switch (tokenCategory) {
     case TokenCategory::SEPARATOR:
       if (lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
         continue;
@@ -36,7 +39,10 @@ bool Parser::ParseCompilationUnit() {
       }
       return false;
     case TokenCategory::DATA_TYPE:
-      if (ParseVariableDeclarationOrFunction()) {
+        // RET_ON_FAILURE(
+      //     bool, ParseVariableDeclarationOrFunction(),
+      //     "ParseCompilationUnit: Call to ParseVariableDeclarationOrFunction failed");
+      if (*ParseVariableDeclarationOrFunction()) {
         continue;
       }
       return false;

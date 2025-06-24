@@ -17,14 +17,14 @@
 #include <Analyzer/Analyzer.h>
 
 #include <Support/Constants.h>
+#include <Support/Result.h>
 
 using namespace Lexing;
 
 namespace Parser {
 
 template <typename T>
-concept ValidParameterType =
-    std::is_pointer_v<T> &&
+concept ValidParameterType = std::is_pointer_v<T> &&
     (std::is_same_v<AST::VariableDeclaration::Variable,
                     std::remove_pointer_t<T>> ||
      std::is_same_v<AST::Expression::Expression, std::remove_pointer_t<T>>);
@@ -46,19 +46,19 @@ private:
 
   // Compilation unit
   bool ParseCompilationUnit();
-  bool ParseVariableDeclarationOrFunction();
+  Result<bool> ParseVariableDeclarationOrFunction();
 
   // Directive
   bool ParseDirective();
 
   // Variable Declaration
-  std::optional<AST::VariableDeclaration::Variable *> ParseVariable();
+  Result<AST::VariableDeclaration::Variable *> ParseVariable();
 
   // Type
-  std::optional<AST::Types::Types> ParseType();
+  Result<AST::Types::Types> ParseType();
 
   // Identifier
-  std::optional<std::string> ParseIdentifier();
+  Result<std::string> ParseIdentifier();
 
   // Expression
   std::optional<AST::Expression::Expression *> ParseExpression();
@@ -97,8 +97,8 @@ private:
   ///  The \a ValidParameterType concept restricts the usage outside of these
   ///  types.
   template <typename ParameterType>
-    requires ValidParameterType<ParameterType>
-  std::optional<std::vector<ParameterType>> ParseParameters() {
+  requires ValidParameterType<ParameterType>
+      std::optional<std::vector<ParameterType>> ParseParameters() {
 
     std::vector<ParameterType> parameters;
     if (lexer.getCurrentToken().type == TokenType::RIGHT_PARENTHESIS) {
@@ -111,9 +111,10 @@ private:
       // TODO refactor this, it is not pretty.
       std::optional<ParameterType> parameterDeclaration;
 
+      // If parameters are in a function declaration or implementation.
       if constexpr (std::is_same_v<AST::VariableDeclaration::Variable,
                                    std::remove_pointer_t<ParameterType>>) {
-        parameterDeclaration = this->ParseVariable();
+        parameterDeclaration = *this->ParseVariable();
       } else if constexpr (std::is_same_v<
                                AST::Expression::Expression,
                                std::remove_pointer_t<ParameterType>>) {

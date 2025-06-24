@@ -17,7 +17,7 @@ IRGenerator::handle(VariableDeclaration::VariableDeclaration &AST) {
     return nullptr;
   }
 
-  if (AST.global) {
+  if (AST.isGlobal) {
     return new llvm::GlobalVariable(
         module, type, false, llvm::GlobalValue::ExternalLinkage, nullptr,
         AST.variable->name, nullptr,

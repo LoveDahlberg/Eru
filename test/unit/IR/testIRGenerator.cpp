@@ -30,7 +30,7 @@ TEST(IR, testGlobalVarialbe) {
   constexpr const char *variableName = "firstVariable";
   auto variable = new VariableDeclaration::VariableDeclaration(
       AST::Types::Types::INT, variableName);
-  variable->global = true;
+  variable->isGlobal = true;
   compilationUnit.AddCompilationUnitItems(variable);
 
   auto generator = IRGenerator(module);
