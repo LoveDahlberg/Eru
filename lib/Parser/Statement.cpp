@@ -1,10 +1,9 @@
-#include "AST/VariableDeclaration.h"
 #include <AST/Statement.h>
 #include <Parser/Parser.h>
 
 namespace Parser {
 
-std::optional<AST::Statement::Statement *> Parser::ParseStatement() {
+Result<AST::Statement::Statement *> Parser::ParseStatement() {
   auto statement = new AST::Statement::Statement();
 
   if (lexer.getCurrentToken().type == TokenType::RETURN ||
@@ -24,26 +23,24 @@ std::optional<AST::Statement::Statement *> Parser::ParseStatement() {
     case TokenCategory::DATA_TYPE: {
 
       // Both start with a variable declaration.
-      auto parameterDeclaration = *ParseVariable();
-      if (!parameterDeclaration) {
-        // err
-        return std::nullopt;
-      }
+      auto parameterDeclaration = ParseVariable();
+      RET_ON_FAILURE(parameterDeclaration,
+                     "ParseStatement: data type: failed parameter declaration");
 
       // Assignment
       if (lexer.getCurrentToken().type == TokenType::EQUAL) {
-        auto assignment = ParseAssignment(parameterDeclaration);
-        if (!assignment) {
-          // err
-          return std::nullopt;
-        }
+        auto assignment = ParseAssignment(*parameterDeclaration);
+
+        RET_ON_FAILURE(assignment,
+                       "ParseStatement: data type: failed assignment");
+
         statement->AddStatement(*assignment);
       }
       // Only a declaration without assignment.
       else {
         statement->AddStatement(
             new AST::VariableDeclaration::VariableDeclaration(
-                parameterDeclaration));
+                *parameterDeclaration));
       }
 
       break;
@@ -53,16 +50,11 @@ std::optional<AST::Statement::Statement *> Parser::ParseStatement() {
     case TokenCategory::KEYWORD: {
       // Conditional branch.
       // Always starts with an IF for now.
-      if (lexer.getCurrentToken().type != TokenType::IF) {
-        // err
-        return std::nullopt;
-      }
+      RET_ON_WRONG_TOKEN(TokenType::IF, "ParseStatement: keyword: expected if");
 
       auto controlFlow = ParseConditionalBranchingGroup();
-      if (!controlFlow) {
-        // err
-        return std::nullopt;
-      }
+      RET_ON_FAILURE(controlFlow,
+                     "ParseStatement: keyword: failed controlFlow");
 
       statement->AddStatement(*controlFlow);
       break;
@@ -73,10 +65,8 @@ std::optional<AST::Statement::Statement *> Parser::ParseStatement() {
 
       // Both start with an identifier.
       auto identifier = ParseIdentifier();
-      if (identifier.hasFailed) {
-        // err
-        return std::nullopt;
-      }
+      RET_ON_FAILURE(identifier,
+                     "ParseStatement: identifier: failed identifier");
 
       // TODO move this switch case to getter function.
       switch (lexer.getCurrentToken().type) {
@@ -84,11 +74,11 @@ std::optional<AST::Statement::Statement *> Parser::ParseStatement() {
       // Assignment
       case TokenType::EQUAL: {
         auto assignment =
-            ParseAssignment(new AST::VariableDeclaration::Variable(AST::Types::Types::NONE, *identifier));
-        if (!assignment) {
-          // err
-          return std::nullopt;
-        }
+            ParseAssignment(new AST::VariableDeclaration::Variable(
+                AST::Types::Types::NONE, *identifier));
+        RET_ON_FAILURE(identifier,
+                       "ParseStatement: identifier: equal: failed assignment");
+
         statement->AddStatement(*assignment);
         break;
       }
@@ -96,24 +86,22 @@ std::optional<AST::Statement::Statement *> Parser::ParseStatement() {
       // Function call
       case TokenType::LEFT_PARENTHESIS: {
         auto assignment = ParseFunctionCall(*identifier);
-        if (!assignment) {
-          // err
-          return std::nullopt;
-        }
+        RET_ON_FAILURE(
+            assignment,
+            "ParseStatement: identifier: left paran: failed assignment");
+
         statement->AddStatement(*assignment);
         break;
       }
 
       default: {
-        // err
-        return std::nullopt;
+        return {"ParseStatement: identifier: unexpected token"};
       }
       }
       break;
     }
     default: {
-      // err
-      return std::nullopt;
+      return {"ParseStatement: unexpected token"};
     }
     }
 

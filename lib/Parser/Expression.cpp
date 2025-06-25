@@ -3,24 +3,20 @@
 
 namespace Parser {
 
-std::optional<AST::Expression::Operand> Parser::ParseOperand() {
+Result<AST::Expression::Operand> Parser::ParseOperand() {
   switch (lexer.getCurrentToken().type) {
 
   // Identifier or function call
   case TokenType::IDENTIFER: {
     auto identifier = ParseIdentifier();
-    if (identifier.hasFailed) {
-      // err
-      return std::nullopt;
-    }
+    RET_ON_FAILURE(identifier, "ParseOperand: failed identifier");
 
     // Function call
     if (lexer.getCurrentToken().type == TokenType::LEFT_PARENTHESIS) {
       auto functionCall = ParseFunctionCall(*identifier);
-      if (!functionCall) {
-        // err
-        return std::nullopt;
-      }
+
+      RET_ON_FAILURE(functionCall, "ParseOperand: failed function call");
+
       return AST::Expression::Operand(*functionCall);
     }
     // Identifier
@@ -29,31 +25,27 @@ std::optional<AST::Expression::Operand> Parser::ParseOperand() {
 
   case TokenType::STRING_LITERAL: {
     auto literal = ParseLiteral();
-    if (!literal) {
-      // err
-      return std::nullopt;
-    }
+
+    RET_ON_FAILURE(literal, "ParseOperand: failed string literal");
+
     return AST::Expression::Operand(AST::Types::StringLiteral(*literal));
   }
 
   case TokenType::INTEGER_LITERAL: {
     auto literal = ParseLiteral();
-    if (!literal) {
-      // err
-      return std::nullopt;
-    }
+
+    RET_ON_FAILURE(literal, "ParseOperand: failed integer literal");
+
     return AST::Expression::Operand(AST::Types::IntegerLiteral(*literal));
   }
 
   default: {
-    break;
+    return {"ParseOperand: unexpected token"};
   }
   }
-  // err
-  return std::nullopt;
 }
 
-std::optional<AST::Expression::ExpressionUnit *>
+Result<AST::Expression::ExpressionUnit *>
 Parser::ParseExpressionUnit(bool firstUnit) {
 
   auto unit = new AST::Expression::ExpressionUnit();
@@ -78,24 +70,20 @@ Parser::ParseExpressionUnit(bool firstUnit) {
     }
 
     default: {
-      // err
-      return std::nullopt;
+      return {"ParseExpressionUnit: unexpected operation"};
     }
     }
   }
 
   auto operand = ParseOperand();
-  if (!operand) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_FAILURE(operand, "ParseExpressionUnit: failed operand");
 
   unit->operand = *operand;
 
   return unit;
 }
 
-std::optional<AST::Expression::Expression *> Parser::ParseExpression() {
+Result<AST::Expression::Expression *> Parser::ParseExpression() {
 
   auto expression = new AST::Expression::Expression();
 
@@ -103,10 +91,7 @@ std::optional<AST::Expression::Expression *> Parser::ParseExpression() {
   int loopCounter = 0;
   do {
     auto target = ParseExpressionUnit(firstIteration);
-    if (!target) {
-      // err
-      return std::nullopt;
-    }
+    RET_ON_FAILURE(target, "ParseExpression: failed target");
 
     firstIteration = false;
 

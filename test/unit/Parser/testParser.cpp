@@ -9,7 +9,7 @@
 
 TEST(Parser, TestDeclarations) {
   std::string stream = R"(
-    int (first
+    int first
     string second
 
     int fourth()
@@ -27,7 +27,12 @@ TEST(Parser, TestDeclarations) {
 
   auto parserItems = parser.Parse();
 
-  ASSERT_TRUE(parserItems);
+  if (parserItems.hasFailed) {
+    for (auto reason : parserItems.failureReasons) {
+      std::cout << reason;
+    }
+  }
+  ASSERT_FALSE(parserItems.hasFailed);
 
   EXPECT_EQ(astContext.compilationUnit->compilationUnitItems.size(), 5);
 }
@@ -66,7 +71,15 @@ TEST(Parser, TestFunctions) {
 
   auto parserItems = parser.Parse();
 
-  ASSERT_TRUE(parserItems);
+  if (parserItems.hasFailed) {
+    std::cout << "\nTestFunctions failed:\n";
+    for (auto reason : parserItems.failureReasons) {
+      std::cout << reason << "\n";
+    }
+    std::cout << "\n\n";
+  }
+
+  ASSERT_FALSE(parserItems.hasFailed);
 }
 
 // TODO add more tests for each sub category.

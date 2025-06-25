@@ -23,6 +23,10 @@ using namespace Lexing;
 
 namespace Parser {
 
+#define RET_ON_WRONG_TOKEN(expectedTokenType, fmt, ...)                        \
+  RET_ON_NOT_EQUAL(lexer.getCurrentToken().type, expectedTokenType,            \
+                   fmt __VA_OPT__(, ) __VA_ARGS__)
+
 template <typename T>
 concept ValidParameterType = std::is_pointer_v<T> &&
     (std::is_same_v<AST::VariableDeclaration::Variable,
@@ -36,7 +40,7 @@ public:
          Lexer &lexer)
       : astContext(astContext), analyzer(analyzer), lexer(lexer) {}
 
-  bool Parse();
+  Result<bool> Parse();
 
 private:
   // Support functions
@@ -45,11 +49,11 @@ private:
   // Parser functions
 
   // Compilation unit
-  bool ParseCompilationUnit();
+  Result<bool> ParseCompilationUnit();
   Result<bool> ParseVariableDeclarationOrFunction();
 
   // Directive
-  bool ParseDirective();
+  Result<bool> ParseDirective();
 
   // Variable Declaration
   Result<AST::VariableDeclaration::Variable *> ParseVariable();
@@ -61,33 +65,31 @@ private:
   Result<std::string> ParseIdentifier();
 
   // Expression
-  std::optional<AST::Expression::Expression *> ParseExpression();
-  std::optional<AST::Expression::ExpressionUnit *>
-  ParseExpressionUnit(bool firstUnit);
+  Result<AST::Expression::Expression *> ParseExpression();
+  Result<AST::Expression::ExpressionUnit *> ParseExpressionUnit(bool firstUnit);
 
   // Assignment
-  std::optional<AST::Assignment::Assignment *>
+  Result<AST::Assignment::Assignment *>
   ParseAssignment(AST::VariableDeclaration::Variable *variable = nullptr);
-  std::optional<AST::Expression::Operand> ParseOperand();
+  Result<AST::Expression::Operand> ParseOperand();
 
   // Literal
-  std::optional<std::string> ParseLiteral();
+  Result<std::string> ParseLiteral();
 
   // Statement
-  std::optional<AST::Statement::Statement *> ParseStatement();
+  Result<AST::Statement::Statement *> ParseStatement();
 
   // Controlflow
-  std::optional<AST::Controlflow::ConditionalBranchingGroup *>
+  Result<AST::Controlflow::ConditionalBranchingGroup *>
   ParseConditionalBranchingGroup();
-  std::optional<AST::Controlflow::ConditionalBranch *>
+  Result<AST::Controlflow::ConditionalBranch *>
   ParseConditionalBranch(bool start = false);
 
   // Function
-  bool ParseFunction(AST::VariableDeclaration::Variable *variable);
-  std::optional<AST::Function::Block *> ParseBlock();
-  std::optional<AST::Function::FunctionCall *>
-  ParseFunctionCall(std::string name);
-  std::optional<AST::Function::FunctionBody *> ParseFunctionBody();
+  Result<bool> ParseFunction(AST::VariableDeclaration::Variable *variable);
+  Result<AST::Function::Block *> ParseBlock();
+  Result<AST::Function::FunctionCall *> ParseFunctionCall(std::string name);
+  Result<AST::Function::FunctionBody *> ParseFunctionBody();
 
   /// This function is supposed to be used for parameter parsing for:
   /// - Function declarations and definitions -> type is
@@ -97,8 +99,8 @@ private:
   ///  The \a ValidParameterType concept restricts the usage outside of these
   ///  types.
   template <typename ParameterType>
-  requires ValidParameterType<ParameterType>
-      std::optional<std::vector<ParameterType>> ParseParameters() {
+  requires ValidParameterType<ParameterType> Result<std::vector<ParameterType>>
+  ParseParameters() {
 
     std::vector<ParameterType> parameters;
     if (lexer.getCurrentToken().type == TokenType::RIGHT_PARENTHESIS) {
@@ -109,36 +111,35 @@ private:
     do {
 
       // TODO refactor this, it is not pretty.
-      std::optional<ParameterType> parameterDeclaration;
 
       // If parameters are in a function declaration or implementation.
       if constexpr (std::is_same_v<AST::VariableDeclaration::Variable,
                                    std::remove_pointer_t<ParameterType>>) {
-        parameterDeclaration = *this->ParseVariable();
+        auto variable = this->ParseVariable();
+
+        RET_ON_FAILURE(variable, "ParseParameters: Failed variable.");
+
+        parameters.push_back(*variable);
       } else if constexpr (std::is_same_v<
                                AST::Expression::Expression,
                                std::remove_pointer_t<ParameterType>>) {
-        parameterDeclaration = this->ParseExpression();
+        auto expression = this->ParseExpression();
+
+        RET_ON_FAILURE(expression, "ParseParameters: Failed expression.");
+
+        parameters.push_back(*expression);
       } else {
         static_assert(
             always_false<ParameterType>,
             "ParameterType is not a variable nor an expression pointer");
       }
 
-      if (!parameterDeclaration) {
-        // err
-        return std::nullopt;
-      }
-      parameters.push_back(*parameterDeclaration);
-
       if (lexer.getCurrentToken().type == TokenType::RIGHT_PARENTHESIS) {
         break;
       }
 
-      if (lexer.getCurrentToken().type != TokenType::COMMA) {
-        // err
-        return std::nullopt;
-      }
+      RET_ON_WRONG_TOKEN(TokenType::COMMA,
+                         "ParseParameters: Failed, missing comma.");
 
       // Eat the ,
       lexer.generateNextToken();

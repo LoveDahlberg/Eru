@@ -34,14 +34,22 @@ void Analyzer::ActOnVariableDeclaration(
   astContext.compilationUnit->AddCompilationUnitItems(declaration);
 }
 
+bool Analyzer::declareFunction(AST::Function::Function *function) {
+  return true;
+}
+
 void Analyzer::ActOnFunctionDeclaration(AST::Function::Function *function) {
   // Must be in global scope to declare a new function
   if (!CurrentScope->isGlobal) {
     // err
     return;
   }
+
+  astContext.compilationUnit->AddCompilationUnitItems(function);
 }
 
-void Analyzer::ActOnFunctionImplementation(AST::Function::Function *function) {}
+void Analyzer::ActOnFunctionImplementation(AST::Function::Function *function) {
+  astContext.compilationUnit->AddCompilationUnitItems(function);
+}
 
 } // namespace Analyzer

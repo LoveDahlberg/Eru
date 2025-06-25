@@ -2,19 +2,13 @@
 
 namespace Parser {
 
-bool Parser::ParseDirective() {
-  if (lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
-    // err
-    return false;
-  }
-
+Result<bool> Parser::ParseDirective() {
+  RET_ON_WRONG_TOKEN(TokenType::LEFT_BRACKET, "ParseDirective: expected [");
+  
   // Eat [
   lexer.generateNextToken();
 
-  if (lexer.getCurrentToken().type != TokenType::RIGHT_BRACKET) {
-    // err
-    return false;
-  }
+  RET_ON_WRONG_TOKEN(TokenType::RIGHT_BRACKET, "ParseDirective: expected ]");
 
   // Eat ]
   lexer.generateNextToken();

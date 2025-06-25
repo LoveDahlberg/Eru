@@ -2,38 +2,28 @@
 
 namespace Parser {
 
-std::optional<AST::Function::FunctionCall *>
+Result<AST::Function::FunctionCall *>
 Parser::ParseFunctionCall(std::string name) {
 
   // If name is empty, parse the identifier. Otherwise assume that it was parsed
   // before calling this function.
   if (name.empty()) {
     auto identifier = ParseIdentifier();
-    if (identifier.hasFailed) {
-      // err
-      return std::nullopt;
-    }
+    RET_ON_FAILURE(identifier, "ParseFunctionCall: Failed to parse identifier");
     name = *identifier;
   }
 
-  if (lexer.getCurrentToken().type != TokenType::LEFT_PARENTHESIS) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_WRONG_TOKEN(TokenType::LEFT_PARENTHESIS,
+                     "ParseFunctionCall: Expected (");
 
   // eat the (
   lexer.generateNextToken();
 
   auto parameters = ParseParameters<AST::Expression::Expression *>();
-  if (!parameters) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_FAILURE(parameters, "ParseFunctionCall: Failed to parse parameters");
 
-  if (lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_WRONG_TOKEN(TokenType::RIGHT_PARENTHESIS,
+                     "ParseFunctionCall: Expected )");
 
   // eat the )
   lexer.generateNextToken();
@@ -43,22 +33,16 @@ Parser::ParseFunctionCall(std::string name) {
   return new AST::Function::FunctionCall(name, *parameters);
 }
 
-std::optional<AST::Function::Block *> Parser::ParseBlock() {
+Result<AST::Function::Block *> Parser::ParseBlock() {
   skipUntilNotNewline();
 
-  if (lexer.getCurrentToken().type != TokenType::LEFT_CURLY_BRACE) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_WRONG_TOKEN(TokenType::LEFT_CURLY_BRACE, "ParseBlock: Expected {");
 
   // eat the {
   lexer.generateNextToken();
 
   auto statement = ParseStatement();
-  if (!statement) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_FAILURE(statement, "ParseBlock: Failed to parse statement");
 
   auto block = new AST::Function::Block(*statement);
 
@@ -67,19 +51,14 @@ std::optional<AST::Function::Block *> Parser::ParseBlock() {
     lexer.generateNextToken();
 
     auto expression = ParseExpression();
-    if (!expression) {
-      // err
-      return std::nullopt;
-    }
+    RET_ON_FAILURE(expression, "ParseBlock: Failed to parse expression");
+
     block->addReturn(*expression);
   }
 
   skipUntilNotNewline();
 
-  if (lexer.getCurrentToken().type != TokenType::RIGHT_CURLY_BRACE) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_WRONG_TOKEN(TokenType::RIGHT_CURLY_BRACE, "ParseBlock: Expected }");
 
   // eat the }
   lexer.generateNextToken();
@@ -87,32 +66,26 @@ std::optional<AST::Function::Block *> Parser::ParseBlock() {
   return block;
 }
 
-std::optional<AST::Function::FunctionBody *> Parser::ParseFunctionBody() {
+Result<AST::Function::FunctionBody *> Parser::ParseFunctionBody() {
   auto directive = ParseDirective();
 
   auto block = ParseBlock();
-  if (!block) {
-    // err
-    return std::nullopt;
-  }
+
+  RET_ON_FAILURE(block, "ParseFunctionBody: Failed to parse block");
 
   return new AST::Function::FunctionBody(*block);
 }
 
-bool Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
+Result<bool>
+Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
   // eat the (
   lexer.generateNextToken();
 
   auto paramaters = ParseParameters<AST::VariableDeclaration::Variable *>();
-  if (!paramaters) {
-    // err
-    return false;
-  }
 
-  if (lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
-    // err
-    return false;
-  }
+  RET_ON_FAILURE(paramaters, "ParseFunction: Failed to parse parameters");
+
+  RET_ON_WRONG_TOKEN(TokenType::RIGHT_PARENTHESIS, "ParseFunction: Expected )");
 
   // Lookahead and get the next non newline token.
   auto lookaheadToken = lexer.lookaheadTokenNotNewline();
@@ -129,10 +102,8 @@ bool Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
     auto functionBody = ParseFunctionBody();
     analyzer.PopScope();
 
-    if (!functionBody) {
-      // err
-      return false;
-    }
+    RET_ON_FAILURE(functionBody, "ParseFunction: Failed to parse functionBody");
+
     function->addFunctionBody(*functionBody);
 
     analyzer.ActOnFunctionImplementation(function);
@@ -140,7 +111,6 @@ bool Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
     analyzer.ActOnFunctionDeclaration(function);
   }
 
-  // astContext.compilationUnit->AddCompilationUnitItems(function);
   return true;
 }
 

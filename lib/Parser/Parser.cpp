@@ -18,7 +18,7 @@ void Parser::skipUntilNotNewline() {
   }
 }
 
-bool Parser::Parse() { 
+Result<bool> Parser::Parse() { 
   return ParseCompilationUnit();
 }
 

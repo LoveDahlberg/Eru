@@ -40,11 +40,11 @@ static std::string format(const char *fmt, ...) {
   return s;
 }
 
-template <typename underLyingType> class Result {
+template <typename underLyingType> struct Result {
   std::optional<underLyingType> value;
-  std::vector<std::string> failureReasons;
 
 public:
+  std::vector<std::string> failureReasons;
   bool hasFailed;
 
   /// Constructor to use when the operation was successful.
@@ -73,7 +73,8 @@ public:
     return Result<newType>(hasFailed, failureReasons);
   }
 
-  // Constructor called from the implicit converation operator, to create a new object 
+  // Constructor called from the implicit converation operator, to create a new
+  // object
   Result(bool hasFailed, std::vector<std::string> failureReasons)
       : hasFailed(hasFailed), failureReasons(failureReasons) {}
 
@@ -87,6 +88,20 @@ public:
     if (obj.hasFailed) {                                                       \
       obj.storeNewErrorMessage(fmt __VA_OPT__(, ) __VA_ARGS__);                \
       return std::move(obj);                                                   \
+    }                                                                          \
+  } while (0)
+
+#define RET_ON_NOT_EQUAL(left, right, fmt, ...)                                \
+  do {                                                                         \
+    if (left != right) {                                                       \
+      return {fmt __VA_OPT__(, ) __VA_ARGS__};                                 \
+    }                                                                          \
+  } while (0)
+
+#define RET_ON_EQUAL(left, right, fmt, ...)                                    \
+  do {                                                                         \
+    if (left == right) {                                                       \
+      return {fmt __VA_OPT__(, ) __VA_ARGS__};                                 \
     }                                                                          \
   } while (0)
 

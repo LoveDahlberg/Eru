@@ -3,11 +3,10 @@
 
 namespace Parser {
 
-std::optional<std::string> Parser::ParseLiteral() {
+Result<std::string> Parser::ParseLiteral() {
   if (lexer.getCurrentToken().type != TokenType::INTEGER_LITERAL &&
       lexer.getCurrentToken().type != TokenType::STRING_LITERAL) {
-    // err
-    return std::nullopt;
+    return {"ParseLiteral: expecetd integer or string literal"};
   }
 
   // TODO might be issues to treat ints as strings here.

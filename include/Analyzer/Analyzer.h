@@ -25,6 +25,7 @@ class Analyzer {
   isDeclaredVariableParentScope(AST::VariableDeclaration::Variable *variable);
   bool
   declareVariableCurrentScope(AST::VariableDeclaration::Variable *variable);
+  bool declareFunction(AST::Function::Function *function);
 
 public:
   Analyzer(AST::Context::ASTContext &astContext)
@@ -48,9 +49,9 @@ public:
 
   // Act on methods
   void ActOnVariableDeclaration(AST::VariableDeclaration::Variable *variable);
-  
-  void ActOnFunctionDeclaration(AST::Function::Function* function);
-  void ActOnFunctionImplementation(AST::Function::Function* function);
+
+  void ActOnFunctionDeclaration(AST::Function::Function *function);
+  void ActOnFunctionImplementation(AST::Function::Function *function);
 };
 
 } // namespace Analyzer
