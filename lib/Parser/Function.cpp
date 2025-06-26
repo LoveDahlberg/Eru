@@ -106,12 +106,9 @@ Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
 
     function->addFunctionBody(*functionBody);
 
-    analyzer.ActOnFunctionImplementation(function);
-  } else {
-    analyzer.ActOnFunctionDeclaration(function);
+    return analyzer.ActOnFunctionDefinition(function);
   }
-
-  return true;
+  return analyzer.ActOnFunctionDeclaration(function);
 }
 
 } // namespace Parser

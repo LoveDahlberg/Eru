@@ -11,9 +11,7 @@ Result<bool> Parser::ParseVariableDeclarationOrFunction() {
     return ParseFunction(*variable);
   }
 
-  analyzer.ActOnVariableDeclaration(*variable);
-
-  return true;
+  return analyzer.ActOnVariableDeclaration(*variable);
 }
 
 Result<bool> Parser::ParseCompilationUnit() {

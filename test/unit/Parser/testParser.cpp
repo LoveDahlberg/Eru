@@ -10,7 +10,7 @@
 TEST(Parser, TestDeclarations) {
   std::string stream = R"(
     int first
-    string second
+    char second
 
     int fourth()
     int bruh(char one)
@@ -28,9 +28,11 @@ TEST(Parser, TestDeclarations) {
   auto parserItems = parser.Parse();
 
   if (parserItems.hasFailed) {
+    std::cout << "\nTestFunctions failed:\n";
     for (auto reason : parserItems.failureReasons) {
-      std::cout << reason;
+      std::cout << reason << "\n";
     }
+    std::cout << "\n\n";
   }
   ASSERT_FALSE(parserItems.hasFailed);
 

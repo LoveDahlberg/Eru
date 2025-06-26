@@ -29,7 +29,7 @@ Result<Type> Parser::ParseType() {
     type = Type::STRING;
     break;
   default:
-    return {"ParseType: ParseType does received invalid type .."};
+    return {"ParseType: invalid type .."};
   }
 
   // Get next, current type saved.

@@ -38,6 +38,11 @@ The 'maybe' boolean value. A cute way to get a randomized 1 or 0 at runtime.
 a built in loop stop counter in the language (opt in)
 
 A retif keyword would be nice. it could be used to return if and only if the condition is true. no need to do a comparison, then if its true return something.
+
+In addition to having the posibility of obfuscating the code in the directive, it would be cool if I could have directives for making it easier to read, understand and reverse engieer. So that its easier to study and learn what is going on underneath.
+
+I can also make it so that the directive allows control what kind of mangling a function should have. If I go with function overloading, but I want C code to be able to call it, then this could be specified in the directive.
+
 -------------------
 
 Data types:

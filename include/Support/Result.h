@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include <cstdarg>
 #include <cstdio>
 #include <optional>
@@ -7,7 +9,7 @@
 
 // TODO This does not work!
 
-static std::string vformat(const char *fmt, va_list args) {
+inline std::string vformat(const char *fmt, va_list args) {
   // 1) Make a true copy of the va_list
   va_list args_copy;
   va_copy(args_copy, args);
@@ -32,7 +34,7 @@ static std::string vformat(const char *fmt, va_list args) {
   return buf;
 }
 
-static std::string format(const char *fmt, ...) {
+inline std::string format(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   std::string s = vformat(fmt, args);
@@ -40,7 +42,7 @@ static std::string format(const char *fmt, ...) {
   return s;
 }
 
-template <typename underLyingType> struct Result {
+template <typename underLyingType> struct [[nodiscard]] Result {
   std::optional<underLyingType> value;
 
 public:
@@ -101,6 +103,13 @@ public:
 #define RET_ON_EQUAL(left, right, fmt, ...)                                    \
   do {                                                                         \
     if (left == right) {                                                       \
+      return {fmt __VA_OPT__(, ) __VA_ARGS__};                                 \
+    }                                                                          \
+  } while (0)
+
+#define RET_ON_FALSE(boolean, fmt, ...)                                        \
+  do {                                                                         \
+    if (boolean == false) {                                                    \
       return {fmt __VA_OPT__(, ) __VA_ARGS__};                                 \
     }                                                                          \
   } while (0)

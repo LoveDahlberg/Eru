@@ -41,6 +41,13 @@ struct FunctionBody {
   Block *block;
 };
 
+enum FunctionStatus {
+  NONE,
+  CALL,
+  DECLARATION,
+  DEFINITION,
+};
+
 struct Function {
 
   // TODO type and name can be passed as a variableDeclaration, if it make sense
@@ -59,6 +66,8 @@ struct Function {
   Types::Types type;
 
   std::string name;
+  
+  FunctionStatus definitionStatus = NONE;
   FunctionBody *body;
 };
 
