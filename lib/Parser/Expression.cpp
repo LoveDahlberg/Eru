@@ -12,7 +12,7 @@ Result<AST::Expression::Operand> Parser::ParseOperand() {
     RET_ON_FAILURE(identifier, "ParseOperand: failed identifier");
 
     // Function call
-    if (lexer.getCurrentToken().type == TokenType::LEFT_PARENTHESIS) {
+    if (lexer.getCurrentToken() == TokenType::LEFT_PARENTHESIS) {
       auto functionCall = ParseFunctionCall(*identifier);
 
       RET_ON_FAILURE(functionCall, "ParseOperand: failed function call");

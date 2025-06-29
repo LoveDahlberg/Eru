@@ -6,8 +6,8 @@ namespace Parser {
 Result<AST::Statement::Statement *> Parser::ParseStatement() {
   auto statement = new AST::Statement::Statement();
 
-  if (lexer.getCurrentToken().type == TokenType::RETURN ||
-      lexer.getCurrentToken().type == TokenType::RIGHT_CURLY_BRACE) {
+  if (lexer.getCurrentToken() == TokenType::RETURN ||
+      lexer.getCurrentToken() == TokenType::RIGHT_CURLY_BRACE) {
     return statement;
   }
 
@@ -27,8 +27,10 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
       RET_ON_FAILURE(parameterDeclaration,
                      "ParseStatement: data type: failed parameter declaration");
 
+        // RET_ON_EQUAL(lexer.getCurrentToken(), TokenType::EQUAL)
+
       // Assignment
-      if (lexer.getCurrentToken().type == TokenType::EQUAL) {
+      if (lexer.getCurrentToken() == TokenType::EQUAL) {
         auto assignment = ParseAssignment(*parameterDeclaration);
 
         RET_ON_FAILURE(assignment,
@@ -37,10 +39,13 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
         statement->AddStatement(*assignment);
       }
       // Only a declaration without assignment.
-      else {
+      else if(lexer.getCurrentToken() == TokenType::NEWLINE) {
         statement->AddStatement(
             new AST::VariableDeclaration::VariableDeclaration(
                 *parameterDeclaration));
+      }
+      else {
+        return {"ParseStatement: data type: expected assignment or variable declaration."};
       }
 
       break;
@@ -107,8 +112,8 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
 
     // Check if we should stop.
     lexer.generateNextToken();
-    if (lexer.getCurrentToken().type == TokenType::RETURN ||
-        lexer.getCurrentToken().type == TokenType::RIGHT_CURLY_BRACE) {
+    if (lexer.getCurrentToken() == TokenType::RETURN ||
+        lexer.getCurrentToken() == TokenType::RIGHT_CURLY_BRACE) {
       break;
     }
 

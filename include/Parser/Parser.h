@@ -24,7 +24,7 @@ using namespace Lexing;
 namespace Parser {
 
 #define RET_ON_WRONG_TOKEN(expectedTokenType, fmt, ...)                        \
-  RET_ON_NOT_EQUAL(lexer.getCurrentToken().type, expectedTokenType,            \
+  RET_ON_NOT_EQUAL(lexer.getCurrentToken(), expectedTokenType,            \
                    fmt __VA_OPT__(, ) __VA_ARGS__)
 
 template <typename T>
@@ -33,6 +33,10 @@ concept ValidParameterType = std::is_pointer_v<T> &&
                     std::remove_pointer_t<T>> ||
      std::is_same_v<AST::Expression::Expression, std::remove_pointer_t<T>>);
 
+struct FunctionBodyToParse {
+  indexType startIndex;
+  AST::Function::Function* function;
+};
 class Parser {
 
 public:
@@ -49,7 +53,8 @@ private:
   // Parser functions
 
   // Compilation unit
-  Result<bool> ParseCompilationUnit();
+  Result<bool> ParseTopLevelItems();
+  Result<bool> ParseFunctionBodies();
   Result<bool> ParseVariableDeclarationOrFunction();
 
   // Directive
@@ -90,6 +95,7 @@ private:
   Result<AST::Function::Block *> ParseBlock();
   Result<AST::Function::FunctionCall *> ParseFunctionCall(std::string name);
   Result<AST::Function::FunctionBody *> ParseFunctionBody();
+  Result<bool> SkipFunctionBody();
 
   /// This function is supposed to be used for parameter parsing for:
   /// - Function declarations and definitions -> type is
@@ -103,7 +109,7 @@ private:
   ParseParameters() {
 
     std::vector<ParameterType> parameters;
-    if (lexer.getCurrentToken().type == TokenType::RIGHT_PARENTHESIS) {
+    if (lexer.getCurrentToken() == TokenType::RIGHT_PARENTHESIS) {
       return parameters;
     }
 
@@ -134,7 +140,7 @@ private:
             "ParameterType is not a variable nor an expression pointer");
       }
 
-      if (lexer.getCurrentToken().type == TokenType::RIGHT_PARENTHESIS) {
+      if (lexer.getCurrentToken() == TokenType::RIGHT_PARENTHESIS) {
         break;
       }
 
@@ -151,6 +157,8 @@ private:
   AST::Context::ASTContext &astContext;
   Analyzer::Analyzer &analyzer;
   Lexer &lexer;
+
+  std::vector<FunctionBodyToParse> functionBodiesToParse;
 };
 
 } // namespace Parser

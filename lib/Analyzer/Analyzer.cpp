@@ -1,6 +1,8 @@
-#include "AST/Function.h"
 #include <Analyzer/Analyzer.h>
+
+// stl
 #include <algorithm>
+#include <cassert>
 
 namespace Analyzer {
 
@@ -70,6 +72,11 @@ Result<bool> Analyzer::ActOnVariableDeclaration(
 Result<bool> Analyzer::addFunction(AST::Function::Function *function,
                                    AST::Function::FunctionStatus variant) {
 
+  // TODO make this a concept/template check, so that its not callable with
+  // NONE.
+  RET_ON_EQUAL(variant, AST::Function::FunctionStatus::NONE,
+               "addFunction: variant has with definitionStatus NONE");
+
   for (auto *existingFunction : functions) {
 
     // For now, no function overloading to keep symbols easy to handle and look
@@ -78,11 +85,37 @@ Result<bool> Analyzer::addFunction(AST::Function::Function *function,
     // Check if the name matches what we have stored.
     if (existingFunction->name == function->name) {
 
-      // TODO add asserts instead of runtime checks.
       RET_ON_EQUAL(
           existingFunction->definitionStatus,
           AST::Function::FunctionStatus::NONE,
-          "addFunction: matching function has NONE set in FunctionStatus.");
+          "addFunction: existingFunction has with definitionStatus NONE");
+
+      RET_ON_TRUE(existingFunction->definitionStatus ==
+                          AST::Function::FunctionStatus::DEFINITION &&
+                          variant ==
+                          AST::Function::FunctionStatus::DEFINITION,
+                  "addFunction: Function defined multiple times in the same "
+                  "compilation unit.");
+
+      // Could also just emit a warning and continue, the definition will take
+      // prio.
+      RET_ON_TRUE(existingFunction->definitionStatus ==
+                          AST::Function::FunctionStatus::DECLARATION &&
+                          variant ==
+                          AST::Function::FunctionStatus::DEFINITION,
+                  "addFunction: function was previously declared as an "
+                  "external, but is now also defined.");
+
+      // Could also just emit a warning and continue, the definition will take
+      // prio.
+      RET_ON_TRUE(existingFunction->definitionStatus ==
+                          AST::Function::FunctionStatus::DEFINITION &&
+                          variant ==
+                          AST::Function::FunctionStatus::DECLARATION,
+                  "addFunction: function was previously defined, but is now "
+                  "declared as an external.");
+
+      // Both are declarations. This is ok as long as they match.
 
       // Compare the arguments of the two, if they don't match exactly its an
       // error (no overloading), return false.
@@ -97,79 +130,11 @@ Result<bool> Analyzer::addFunction(AST::Function::Function *function,
               : false;
 
       RET_ON_EQUAL(result, false,
-                   "addFunction: Function with the same name but with "
-                   "different parameters already declared or defined.");
+                   "addFunction: external function declaration with the same "
+                   "name but with different parameters already declared.");
 
-      // Check what kind of FunctionStatus variant we are trying to add.
-      switch (variant) {
-
-      // Adding a function from its call.
-      case AST::Function::CALL: {
-        // Do nothing and retrn true. Here we are trying to add a call to
-        // something that is either already marked as called or its declared or
-        // defined (in which case we don't want to 'downgrade' it so to say)
-        // already.
-
-        // Note that we should not break here, as we cannot check the return
-        // type from a call only.
-        return true;
-      }
-
-      // Adding a function from its declaration.
-      case AST::Function::DECLARATION: {
-
-        // If the function is stored as a call.
-        if (existingFunction->definitionStatus ==
-            AST::Function::FunctionStatus::CALL) {
-
-          // This means that the function to declare was previously called
-          // without any known targets. We've now found its declaration, so it
-          // can be promoted and we can store the return type (this is not known
-          // from the call only).
-          existingFunction->definitionStatus =
-              AST::Function::FunctionStatus::DECLARATION;
-          existingFunction->type = function->type;
-          return true;
-        }
-
-        // Do nothing if the function is stored as a previous declaration or
-        // definition.
-        break;
-      }
-
-      // Adding a function from its definition.
-      case AST::Function::DEFINITION: {
-
-        // If the function is stored as a definition, error.
-        RET_ON_EQUAL(existingFunction->definitionStatus,
-                     AST::Function::FunctionStatus::DEFINITION,
-                     "addFunction: Function defined multiple times in the same "
-                     "compilation unit.");
-
-        // Promote the status to to definition for when it previously was stored
-        // as a call or a declaration.
-        existingFunction->definitionStatus =
-            AST::Function::FunctionStatus::DEFINITION;
-
-        // Else if the function is stored as a call.
-        if (existingFunction->definitionStatus ==
-            AST::Function::FunctionStatus::CALL) {
-
-          // This means that the function to define was previously called
-          // without any known targets. We've now found its definition, so we
-          // can store the return type (this is not known from the call only).
-          existingFunction->type = function->type;
-          return true;
-        }
-
-        break;
-      }
-      default:
-        return {"addFunction: called with NONE FunctionStatus."};
-      }
-
-      // Check if the return type matches when we expect there to be a type set
-      // in the stored function. if it doesn't its an error.
+      // Check if the return type matches when we expect there to be a type
+      // set in the stored function. if it doesn't its an error.
       RET_ON_NOT_EQUAL(existingFunction->type, function->type,
                        "addFunction: Function with the same name but with "
                        "a different type already declared.");
@@ -178,8 +143,7 @@ Result<bool> Analyzer::addFunction(AST::Function::Function *function,
     }
   }
 
-  // Function is not declared, defined or called previously. Add it.
-  function->definitionStatus = AST::Function::FunctionStatus::DECLARATION;
+  function->definitionStatus = variant;
   functions.push_back(function);
 
   return true;
@@ -212,6 +176,13 @@ Analyzer::ActOnFunctionDefinition(AST::Function::Function *function) {
                  "ActOnFunctionDeclaration: Failed to add function");
 
   astContext.compilationUnit->AddCompilationUnitItems(function);
+  return true;
+}
+
+Result<bool> Analyzer::ActOnFunctionCall(AST::Function::FunctionCall *call) {
+
+  // RET_ON_FAILURE(addFunction(call, AST::Function::CALL),
+  // "ActOnFunctionDeclaration: Failed to add function");
   return true;
 }
 

@@ -87,9 +87,10 @@ public:
 /// the stack trace error message.
 #define RET_ON_FAILURE(obj, fmt, ...)                                          \
   do {                                                                         \
-    if (obj.hasFailed) {                                                       \
-      obj.storeNewErrorMessage(fmt __VA_OPT__(, ) __VA_ARGS__);                \
-      return std::move(obj);                                                   \
+    auto evaluatedObj = obj;                                                   \
+    if (evaluatedObj.hasFailed) {                                              \
+      evaluatedObj.storeNewErrorMessage(fmt __VA_OPT__(, ) __VA_ARGS__);       \
+      return std::move(evaluatedObj);                                          \
     }                                                                          \
   } while (0)
 
@@ -107,38 +108,12 @@ public:
     }                                                                          \
   } while (0)
 
-#define RET_ON_FALSE(boolean, fmt, ...)                                        \
+#define RET_ON_TRUE(boolean, fmt, ...)                                         \
   do {                                                                         \
-    if (boolean == false) {                                                    \
+    if (boolean) {                                                             \
       return {fmt __VA_OPT__(, ) __VA_ARGS__};                                 \
     }                                                                          \
   } while (0)
 
-// This code is some black magic. We call RET_ON_FAILURE with obj<firstType>
-// then it returns a obj<newType> with the error message concatenated (in the
-// vector).
-//
-// It works like this:
-// 1. std::move(obj) : marks obj as an rvalue reference on the original type
-//                     obj<firstType>. We do this so that only rvalue-qualified
-//                     methods on Result are valid.
-//
-// 2. .with_context : Calls the with_context rvalue version (see the &&) on the
-//                    original type obj<firstType>. This then returns the rvalue
-//                    of itself std::move(*this).
-//
-// 3. We now are trying to return rvalue reference of type obj<firstType>, but
-//    the return type is obj<newType>. Here is where the implicit conversion
-//    operator 'operator Result<newType>() &&' comes in.
-//
-// 4. operator Result<newType>() && : The compiler now calls this implicit
-//                                    conversion operator on the original type
-//                                    obj<firstType>. This now creates the
-//                                    Result<newType> copies over the stuff and
-//                                    returns the obj<newType>.
-//
-
-// Questions: Why do we do the first std::move? Cant se just call a .convert
-// function on it and then return std::move(*this)?
-
-// TODO I simplified it, rewrite the above explaination.
+#define RET_ON_FALSE(boolean, fmt, ...)                                        \
+  RET_ON_TRUE(!boolean, fmt __VA_OPT__(, ) __VA_ARGS__)

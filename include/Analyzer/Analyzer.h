@@ -61,6 +61,8 @@ public:
 
   Result<bool> ActOnFunctionDeclaration(AST::Function::Function *function);
   Result<bool> ActOnFunctionDefinition(AST::Function::Function *function);
+  
+  Result<bool> ActOnFunctionCall(AST::Function::FunctionCall* call);
 };
 
 } // namespace Analyzer

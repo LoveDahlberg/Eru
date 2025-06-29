@@ -43,21 +43,28 @@ struct FunctionBody {
 
 enum FunctionStatus {
   NONE,
-  CALL,
   DECLARATION,
   DEFINITION,
 };
 
+
+struct FunctionCall {
+  FunctionCall(std::string name,
+               std::vector<Expression::Expression *> parameters)
+      : name(name), parameters(parameters) {}
+
+  std::string name;
+  // TODO: Does this need to be a pointer still? No polymorphism..
+  std::vector<Expression::Expression *> parameters;
+};
+
 struct Function {
 
-  // TODO type and name can be passed as a variableDeclaration, if it make sense
-  // for IR generation.
   Function(Types::Types type, std::string name,
            std::vector<VariableDeclaration::Variable *> parameters)
       : type(type), name(name), parameters(parameters) {}
 
   Function(Types::Types type, std::string name) : type(type), name(name) {}
-
 
   void addFunctionBody(FunctionBody *body) { this->body = body; }
 
@@ -69,16 +76,6 @@ struct Function {
   
   FunctionStatus definitionStatus = NONE;
   FunctionBody *body;
-};
-
-struct FunctionCall {
-  FunctionCall(std::string name,
-               std::vector<Expression::Expression *> parameters)
-      : name(name), parameters(parameters) {}
-
-  std::string name;
-  // TODO: Does this need to be a pointer still? No polymorphism..
-  std::vector<Expression::Expression *> parameters;
 };
 
 } // namespace AST::Function

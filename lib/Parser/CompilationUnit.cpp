@@ -7,14 +7,21 @@ Result<bool> Parser::ParseVariableDeclarationOrFunction() {
   RET_ON_FAILURE(
       variable, "ParseVariableDeclarationOrFunction: Failed to parse variable");
 
-  if (lexer.getCurrentToken().type == TokenType::LEFT_PARENTHESIS) {
+  if (lexer.getCurrentToken() == TokenType::LEFT_PARENTHESIS) {
     return ParseFunction(*variable);
+  } else {
+    
+    // TODO should we parse expressions here? If so, only constants should be able to be used.
+    
+    RET_ON_WRONG_TOKEN(TokenType::NEWLINE,
+                       "ParseVariableDeclarationOrFunction: Expected newline "
+                       "after variable declaration");
   }
 
   return analyzer.ActOnVariableDeclaration(*variable);
 }
 
-Result<bool> Parser::ParseCompilationUnit() {
+Result<bool> Parser::ParseTopLevelItems() {
   int loopCounter = 0;
   do {
     // TODO should just be able to skip all newlines here.
@@ -37,7 +44,7 @@ Result<bool> Parser::ParseCompilationUnit() {
       continue;
     }
     default:
-      if (lexer.getCurrentToken().type == TokenType::END_OF_FILE) {
+      if (lexer.getCurrentToken() == TokenType::END_OF_FILE) {
         break;
       }
       return {"ParseCompilationUnit: Unexpected token."};
@@ -46,6 +53,20 @@ Result<bool> Parser::ParseCompilationUnit() {
     break;
   } while (loopCounter++ < loopLimit);
 
+  return true;
+}
+
+Result<bool> Parser::ParseFunctionBodies() {
+  for (auto functionBodyToParse : functionBodiesToParse) {
+    lexer.restartFromIndex(functionBodyToParse.startIndex);
+
+    auto functionBody = ParseFunctionBody();
+
+    RET_ON_FAILURE(functionBody,
+                   "ParseFunctionBodies: Failed to parse functionBody");
+
+    functionBodyToParse.function->addFunctionBody(*functionBody);
+  }
   return true;
 }
 

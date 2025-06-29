@@ -1,5 +1,8 @@
+
+include_directories(${CMAKE_CURRENT_LIST_DIR})
+
 # Create the test executable
-add_executable(testParser testParser.cpp)
+add_executable(testParser testParser.cpp testFunctionAnalysis.cpp)
 
 # Link against local GTest installation
 target_link_libraries(testParser PRIVATE 
