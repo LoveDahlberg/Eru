@@ -25,7 +25,8 @@ target_link_libraries(IR PRIVATE ${llvm_libs})
 
 # Create a library target for Analyzer
 add_library(Analyzer STATIC
-    Analyzer/Analyzer.cpp
+    Analyzer/Function.cpp
+    Analyzer/Variable.cpp
 )
 target_include_directories(Analyzer PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(Analyzer PRIVATE ${llvm_libs})

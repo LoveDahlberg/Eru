@@ -1,3 +1,5 @@
+#include "Lexer/Tokens.h"
+#include "Support/Result.h"
 #include <AST/Statement.h>
 #include <Parser/Parser.h>
 
@@ -23,31 +25,34 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
     case TokenCategory::DATA_TYPE: {
 
       // Both start with a variable declaration.
-      auto parameterDeclaration = ParseVariable();
-      RET_ON_FAILURE(parameterDeclaration,
-                     "ParseStatement: data type: failed parameter declaration");
+      auto variable = ParseVariable();
+      RET_ON_FAILURE(variable,
+                     "ParseStatement: data type: failed to parse variable");
 
-        // RET_ON_EQUAL(lexer.getCurrentToken(), TokenType::EQUAL)
+      // Declare the variable
+      RET_ON_FAILURE(
+          analyzer.ActOnLocalVariableDeclaration(*variable, statement),
+          "ParseStatement: data type: failed to act on local variable "
+          "declaration.");
 
-      // Assignment
+      // Check if the declaration is initalized with an assignment.
       if (lexer.getCurrentToken() == TokenType::EQUAL) {
-        auto assignment = ParseAssignment(*parameterDeclaration);
+        auto assignment = ParseAssignment(*variable);
 
         RET_ON_FAILURE(assignment,
                        "ParseStatement: data type: failed assignment");
 
-        statement->AddStatement(*assignment);
-      }
-      // Only a declaration without assignment.
-      else if(lexer.getCurrentToken() == TokenType::NEWLINE) {
-        statement->AddStatement(
-            new AST::VariableDeclaration::VariableDeclaration(
-                *parameterDeclaration));
-      }
-      else {
-        return {"ParseStatement: data type: expected assignment or variable declaration."};
-      }
+        RET_ON_FAILURE(
+            analyzer.ActOnAssignment(*assignment, statement),
+            "ParseStatement: data type: failed to act on assignment.");
 
+        RET_ON_WRONG_TOKEN(
+            TokenType::NEWLINE,
+            "ParseStatement: data type: newline does not follow a variable "
+            "assignment.");
+      }
+      // TODO newline should also follow variable declaration without
+      // assignment, but grammar currently does not require it.
       break;
     }
 

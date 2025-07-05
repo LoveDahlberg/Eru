@@ -49,6 +49,17 @@ public:
   std::vector<std::string> failureReasons;
   bool hasFailed;
 
+  bool hasSucceded()
+  {
+    return !hasFailed;
+  }
+
+  /// TODO might cause bugs to pop up..
+  // operator bool()
+  // {
+  //   return hasSucceded();
+  // }
+
   /// Constructor to use when the operation was successful.
   /// \param value The value to use in next operation.
   Result(underLyingType value) : value(value), hasFailed(false) {}
@@ -116,4 +127,4 @@ public:
   } while (0)
 
 #define RET_ON_FALSE(boolean, fmt, ...)                                        \
-  RET_ON_TRUE(!boolean, fmt __VA_OPT__(, ) __VA_ARGS__)
+  RET_ON_TRUE(!(boolean), fmt __VA_OPT__(, ) __VA_ARGS__)

@@ -45,6 +45,7 @@ Result<AST::Expression::Operand> Parser::ParseOperand() {
   }
 }
 
+// TODO: rewrite this, this is doing the analyzers job at the moment.
 Result<AST::Expression::ExpressionUnit *>
 Parser::ParseExpressionUnit(bool firstUnit) {
 
