@@ -40,7 +40,7 @@ struct FunctionBodyToParse {
 class Parser {
 
 public:
-  Parser(AST::Context::ASTContext &astContext, Analyzer::Analyzer &analyzer,
+  Parser(AST::Context::ASTContext &astContext, Analyzer::PublicAnalyzer &analyzer,
          Lexer &lexer)
       : astContext(astContext), analyzer(analyzer), lexer(lexer) {}
 
@@ -70,7 +70,7 @@ private:
   Result<std::string> ParseIdentifier();
 
   // Expression
-  Result<AST::Expression::Expression *> ParseExpression();
+  Result<AST::Expression::Expression *> ParseExpression(AST::Types::Types expectedType = AST::Types::NONE);
   Result<AST::Expression::ExpressionUnit *> ParseExpressionUnit(bool firstUnit);
 
   // Assignment
@@ -155,7 +155,7 @@ private:
   }
 
   AST::Context::ASTContext &astContext;
-  Analyzer::Analyzer &analyzer;
+  Analyzer::PublicAnalyzer &analyzer;
   Lexer &lexer;
 
   std::vector<FunctionBodyToParse> functionBodiesToParse;

@@ -18,7 +18,7 @@ Result<bool> Parser::ParseVariableDeclarationOrFunction() {
                        "after variable declaration");
   }
 
-  return analyzer.ActOnGlobalVariableDeclaration(*variable);
+  return analyzer.variable().ActOnGlobalDeclaration(*variable);
 }
 
 Result<bool> Parser::ParseTopLevelItems() {

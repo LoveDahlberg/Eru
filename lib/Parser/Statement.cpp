@@ -1,5 +1,3 @@
-#include "Lexer/Tokens.h"
-#include "Support/Result.h"
 #include <AST/Statement.h>
 #include <Parser/Parser.h>
 
@@ -31,7 +29,7 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
 
       // Declare the variable
       RET_ON_FAILURE(
-          analyzer.ActOnLocalVariableDeclaration(*variable, statement),
+          analyzer.variable().ActOnLocalDeclaration(*variable, statement),
           "ParseStatement: data type: failed to act on local variable "
           "declaration.");
 
@@ -43,16 +41,15 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
                        "ParseStatement: data type: failed assignment");
 
         RET_ON_FAILURE(
-            analyzer.ActOnAssignment(*assignment, statement),
+            analyzer.variable().ActOnAssignment(*assignment, statement),
             "ParseStatement: data type: failed to act on assignment.");
-
-        RET_ON_WRONG_TOKEN(
-            TokenType::NEWLINE,
-            "ParseStatement: data type: newline does not follow a variable "
-            "assignment.");
       }
       // TODO newline should also follow variable declaration without
       // assignment, but grammar currently does not require it.
+      RET_ON_WRONG_TOKEN(
+          TokenType::NEWLINE,
+          "ParseStatement: data type: newline does not follow a variable "
+          "assignment.");
       break;
     }
 

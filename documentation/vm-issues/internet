@@ -1,0 +1,8 @@
+
+test with:
+
+enabling it in the settings
+
+sudo dhclient
+
+sudo ip link set ens33 up

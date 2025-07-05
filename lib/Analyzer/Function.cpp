@@ -5,7 +5,7 @@
 
 namespace Analyzer {
 
-Result<bool> Analyzer::addFunction(AST::Function::Function *function,
+Result<bool> FunctionAnalyzer::addFunction(AST::Function::Function *function,
                                    AST::Function::FunctionStatus variant) {
 
   // TODO make this a concept/template check, so that its not callable with
@@ -83,36 +83,36 @@ Result<bool> Analyzer::addFunction(AST::Function::Function *function,
 }
 
 Result<bool>
-Analyzer::ActOnFunctionDeclaration(AST::Function::Function *function) {
+FunctionAnalyzer::ActOnDeclaration(AST::Function::Function *function) {
 
   // Must be in global scope to declare a function
-  RET_ON_FALSE(currentScope->isGlobal,
+  RET_ON_FALSE(analyzer.getCurrentScope()->isGlobal,
                "ActOnFunctionDeclaration: Function cannot be declared in other "
                "functions.");
 
   RET_ON_FAILURE(addFunction(function, AST::Function::DECLARATION),
                  "ActOnFunctionDeclaration: Failed to add function");
 
-  astContext.compilationUnit->AddCompilationUnitItems(function);
+  analyzer.getASTContext().compilationUnit->AddCompilationUnitItems(function);
   return true;
 }
 
 Result<bool>
-Analyzer::ActOnFunctionDefinition(AST::Function::Function *function) {
+FunctionAnalyzer::ActOnDefinition(AST::Function::Function *function) {
 
   // Must be in global scope to define a new function
-  RET_ON_FALSE(currentScope->isGlobal,
+  RET_ON_FALSE(analyzer.getCurrentScope()->isGlobal,
                "ActOnFunctionDefinition: Function cannot be defined in other "
                "functions.");
 
   RET_ON_FAILURE(addFunction(function, AST::Function::DEFINITION),
                  "ActOnFunctionDeclaration: Failed to add function");
 
-  astContext.compilationUnit->AddCompilationUnitItems(function);
+  analyzer.getASTContext().compilationUnit->AddCompilationUnitItems(function);
   return true;
 }
 
-Result<bool> Analyzer::ActOnFunctionCall(AST::Function::FunctionCall *call) {
+Result<bool> FunctionAnalyzer::ActOnCall(AST::Function::FunctionCall *call, AST::Types::Types expectedReturnValue) {
 
   // RET_ON_FAILURE(addFunction(call, AST::Function::CALL),
   // "ActOnFunctionDeclaration: Failed to add function");

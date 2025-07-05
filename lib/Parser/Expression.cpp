@@ -1,8 +1,10 @@
-#include "AST/Expression.h"
 #include <Parser/Parser.h>
 
 namespace Parser {
 
+// TODO properly implement the different operands. Currently its super unclear
+// what is done here. How are booleans handled here for example? What is the
+// difference between an integer literal and a int data type?
 Result<AST::Expression::Operand> Parser::ParseOperand() {
   switch (lexer.getCurrentToken().type) {
 
@@ -52,39 +54,27 @@ Parser::ParseExpressionUnit(bool firstUnit) {
   auto unit = new AST::Expression::ExpressionUnit();
 
   if (!firstUnit) {
-    // TODO create proper operator map and category.
-    switch (lexer.getCurrentToken().type) {
-    case TokenType::AND:
-    case TokenType::OR: {
-      unit->operation = AST::Expression::TokenToBooleanOperator.at(
-          lexer.getCurrentToken().type);
-      lexer.generateNextToken();
-      break;
-    }
+    RET_ON_FALSE(tokenTypeToCategory.at(lexer.getCurrentToken().type) ==
+                     TokenCategory::OPERATOR,
+                 "ParseExpressionUnit: unexpected token category.");
 
-    case TokenType::PLUS:
-    case TokenType::MINUS: {
-      unit->operation = AST::Expression::TokenToArithmeticOperator.at(
-          lexer.getCurrentToken().type);
-      lexer.generateNextToken();
-      break;
-    }
+    RET_ON_FALSE(tokenTypeToOperator.contains(lexer.getCurrentToken().type),
+                 "ParseExpressionUnit: misconfigured tokenTypeToOperator map.");
 
-    default: {
-      return {"ParseExpressionUnit: unexpected operation"};
-    }
-    }
+    unit->operation = tokenTypeToOperator.at(lexer.getCurrentToken().type);
+    lexer.generateNextToken();
   }
 
   auto operand = ParseOperand();
-  RET_ON_FAILURE(operand, "ParseExpressionUnit: failed operand");
+  RET_ON_FAILURE(operand, "ParseExpressionUnit: failed to parse operand");
 
   unit->operand = *operand;
 
   return unit;
 }
 
-Result<AST::Expression::Expression *> Parser::ParseExpression() {
+Result<AST::Expression::Expression *>
+Parser::ParseExpression(AST::Types::Types expectedType) {
 
   auto expression = new AST::Expression::Expression();
 
@@ -98,14 +88,14 @@ Result<AST::Expression::Expression *> Parser::ParseExpression() {
 
     expression->addExpressionUnit(*target);
 
-    // TODO create proper operator map and category.
-    auto nextTokenType = lexer.getCurrentToken().type;
-    // Expression is over if next token isn't a operator
-    if (nextTokenType != TokenType::PLUS && nextTokenType != TokenType::MINUS &&
-        nextTokenType != TokenType::OR && nextTokenType != TokenType::AND) {
+    if (tokenTypeToCategory.at(lexer.getCurrentToken().type) !=
+        TokenCategory::OPERATOR) {
       break;
     }
   } while (loopCounter++ < loopLimit);
+
+  RET_ON_FAILURE(analyzer.expression().ActOn(expression, expectedType),
+                 "ParseExpression: failed to act on expression.");
 
   return expression;
 }

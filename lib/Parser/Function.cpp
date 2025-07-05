@@ -30,7 +30,7 @@ Parser::ParseFunctionCall(std::string name) {
 
   auto call = new AST::Function::FunctionCall(name, *parameters);
 
-  RET_ON_FAILURE(analyzer.ActOnFunctionCall(call), "ParseFunctionCall: ");
+  RET_ON_FAILURE(analyzer.function().ActOnCall(call), "ParseFunctionCall: ");
 
   return call;
 }
@@ -100,8 +100,7 @@ Result<bool> Parser::SkipFunctionBody() {
       --curlyBraceCount;
     }
 
-    if(curlyBraceCount < 1)
-    {
+    if (curlyBraceCount < 1) {
       break;
     }
 
@@ -149,9 +148,9 @@ Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
     RET_ON_FAILURE(SkipFunctionBody(),
                    "ParseFunction: Failed SkipFunctionBody.");
 
-    return analyzer.ActOnFunctionDefinition(function);
+    return analyzer.function().ActOnDefinition(function);
   }
-  return analyzer.ActOnFunctionDeclaration(function);
+  return analyzer.function().ActOnDeclaration(function);
 }
 
 } // namespace Parser

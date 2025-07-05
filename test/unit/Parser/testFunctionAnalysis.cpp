@@ -10,13 +10,14 @@ TEST(Parser, TestSemanticFunctionFailure) {
   std::vector<failureTestCase> testCases;
 
   // Declaring function inside another function.
-  testCases.push_back({R"(
+  testCases.push_back(
+      {R"(
     int something(int a) [] {
       int somethingElse(int b)
     }
   )",
-                       "ParseStatement: data type: expected assignment or "
-                       "variable declaration."});
+       "ParseStatement: data type: newline does not follow a variable "
+       "assignment."});
 
   // Redeclaring function with different parameters.
   testCases.push_back({
@@ -46,13 +47,12 @@ TEST(Parser, TestSemanticFunctionFailure) {
                        "external, but is now also defined."});
 
   // Redefining functions.
-  testCases.push_back(
-      {R"(
+  testCases.push_back({R"(
     int something(int a) [] {}
     int something(int a) [] {}
   )",
-       "addFunction: Function defined multiple times in the same compilation "
-       "unit."});
+                       "addFunction: Function defined multiple times in the "
+                       "same compilation unit."});
 
   // Redeclaring function with different return type.
   testCases.push_back({R"(
@@ -62,10 +62,7 @@ TEST(Parser, TestSemanticFunctionFailure) {
                        "addFunction: Function with the same name but with a "
                        "different type already declared."});
 
-
-
   // TODO Implement expression analysis
-
 
   // Calling something that is never declared later.
   // To fail this, we need to actually look through all functions and check

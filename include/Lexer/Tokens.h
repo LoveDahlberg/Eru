@@ -16,8 +16,6 @@ enum class TokenType {
   ELSE,
   ELIF,
   RETURN,
-  OR,
-  AND,
 
   // Separators, punctuation characters and paried delimiters,
   LEFT_PARENTHESIS,
@@ -40,7 +38,10 @@ enum class TokenType {
   // Operators, symbols that operate on arguments and produce results, +, <, =
   PLUS,
   MINUS,
-  EQUAL,
+  OR,
+  AND,
+
+  EQUAL, // ?
 
   // Literals,  numbers, logical, textual and refernce literals
   INTEGER_LITERAL,
@@ -48,6 +49,8 @@ enum class TokenType {
 
   END_OF_FILE,
 };
+
+enum class Operator { PLUS, MINUS, OR, AND };
 
 // Mapping of reserved types
 // TODO statically assert that this map is correct, i.e no duplicate values.
@@ -102,8 +105,6 @@ const std::unordered_map<TokenType, TokenCategory> tokenTypeToCategory{
     {TokenType::ELSE, TokenCategory::KEYWORD},
     {TokenType::ELIF, TokenCategory::KEYWORD},
     {TokenType::RETURN, TokenCategory::KEYWORD},
-    {TokenType::OR, TokenCategory::KEYWORD},
-    {TokenType::AND, TokenCategory::KEYWORD},
 
     {TokenType::LEFT_PARENTHESIS, TokenCategory::SEPARATOR},
     {TokenType::RIGHT_PARENTHESIS, TokenCategory::SEPARATOR},
@@ -124,10 +125,19 @@ const std::unordered_map<TokenType, TokenCategory> tokenTypeToCategory{
     {TokenType::PLUS, TokenCategory::OPERATOR},
     {TokenType::MINUS, TokenCategory::OPERATOR},
     {TokenType::EQUAL, TokenCategory::OPERATOR},
+    {TokenType::OR, TokenCategory::OPERATOR},
+    {TokenType::AND, TokenCategory::OPERATOR},
 
     {TokenType::INTEGER_LITERAL, TokenCategory::LITERAL},
     {TokenType::STRING_LITERAL, TokenCategory::LITERAL},
     {TokenType::END_OF_FILE, TokenCategory::NONE},
+};
+
+const std::unordered_map<TokenType, Operator> tokenTypeToOperator{
+    {TokenType::PLUS, Operator::PLUS},
+    {TokenType::MINUS, Operator::MINUS},
+    {TokenType::OR, Operator::OR},
+    {TokenType::AND, Operator::AND},
 };
 
 } // namespace Lexing
