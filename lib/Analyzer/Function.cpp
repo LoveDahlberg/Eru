@@ -1,6 +1,3 @@
-#include "AST/Function.h"
-#include "AST/Types.h"
-#include "Support/Result.h"
 #include <Analyzer/Analyzer.h>
 
 // stl

@@ -26,14 +26,13 @@ inline items RunParser(std::string &stream, bool expectSuccess = true) {
 
   auto result = parser.Parse();
 
-  // Error if I expect success but it fails. 
+  // Error if I expect success but it fails.
   if (expectSuccess && result.hasFailed ||
       !expectSuccess && !result.hasFailed) {
-    std::cout << "\nFailure, printing description trace:\n";
-    for (auto reason : result.failureDescription) {
-      std::cout << reason << "\n";
+    std::cout << "\nFailure:\n";
+    if (!result.failureDescription.empty()) {
+      std::cout << result.failureDescription.front() << "\n";
     }
-    std::cout << "Printing code trace:\n";
     std::cout << result.codeSnippet << "\n";
 
     std::cout << "\n\n";
@@ -45,3 +44,8 @@ inline items RunParser(std::string &stream, bool expectSuccess = true) {
   item.result = result;
   return item;
 }
+
+struct failureTestCase {
+  std::string code;
+  std::string expectedFailure = "";
+};

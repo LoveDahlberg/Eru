@@ -48,6 +48,8 @@ Result<AST::Function::Block *> Parser::ParseBlock() {
   // eat the {
   lexer.generateNextToken();
 
+  skipUntilNotNewline();
+
   auto statement = ParseStatement();
   RET_ON_FAILURE_CODE(statement, "ParseBlock: Failed to parse statement",
                       lexer);

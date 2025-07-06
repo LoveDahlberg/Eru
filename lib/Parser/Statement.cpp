@@ -45,7 +45,7 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
         RET_ON_FAILURE_CODE(
             assignment, "ParseStatement: data type: failed assignment", lexer);
 
-        // Rn the assignment through the analyzer.
+        // Run the assignment through the analyzer.
         RET_ON_FAILURE_CODE(
             analyzer.variable().ActOnAssignment(*assignment),
             "ParseStatement: data type: failed to act on assignment.", lexer);
@@ -96,14 +96,19 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
             ParseAssignment(new AST::VariableDeclaration::Variable(
                 AST::Types::Types::NONE, *identifier));
         RET_ON_FAILURE_CODE(
-            identifier, "ParseStatement: identifier: equal: failed assignment",
+          assignment, "ParseStatement: identifier: equal: failed assignment",
             lexer);
+
+        // Run the assignment through the analyzer.
+        RET_ON_FAILURE_CODE(
+            analyzer.variable().ActOnAssignment(*assignment),
+            "ParseStatement: identifier: equal: failed to act on assignment.", lexer);
 
         statement->AddStatement(*assignment);
         break;
       }
 
-      // Function call
+      // Function call.
       case TokenType::LEFT_PARENTHESIS: {
         auto assignment = ParseFunctionCall(*identifier);
         RET_ON_FAILURE_CODE(
