@@ -2,6 +2,7 @@
 
 // stl
 #include <string>
+#include <unordered_map>
 
 namespace AST::Types {
 
@@ -18,6 +19,10 @@ enum Types {
   STRING,
 };
 
+static std::unordered_map<Types, std::string> typeToString{
+    {NONE, "none"}, {INT, "int"},   {SINT32, "sint32"},
+    {BOOl, "bool"}, {CHAR, "char"}, {STRING, "string"},
+};
 struct NamedIdentifier {
   std::string value;
 };

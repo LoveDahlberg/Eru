@@ -41,26 +41,12 @@ struct FunctionBody {
   Block *block;
 };
 
-struct Function {
-
-  // TODO type and name can be passed as a variableDeclaration, if it make sense
-  // for IR generation.
-  Function(Types::Types type, std::string name,
-           std::vector<VariableDeclaration::Variable *> parameters)
-      : type(type), name(name), parameters(parameters) {}
-
-  Function(Types::Types type, std::string name) : type(type), name(name) {}
-
-
-  void addFunctionBody(FunctionBody *body) { this->body = body; }
-
-  std::vector<VariableDeclaration::Variable *> parameters;
-
-  Types::Types type;
-
-  std::string name;
-  FunctionBody *body;
+enum FunctionStatus {
+  NONE,
+  DECLARATION,
+  DEFINITION,
 };
+
 
 struct FunctionCall {
   FunctionCall(std::string name,
@@ -70,6 +56,28 @@ struct FunctionCall {
   std::string name;
   // TODO: Does this need to be a pointer still? No polymorphism..
   std::vector<Expression::Expression *> parameters;
+};
+
+using Parameters = std::vector<VariableDeclaration::Variable *>;
+
+struct Function {
+
+  Function(Types::Types type, std::string name,
+    Parameters parameters)
+      : type(type), name(name), parameters(parameters) {}
+
+  Function(Types::Types type, std::string name) : type(type), name(name) {}
+
+  void addFunctionBody(FunctionBody *body) { this->body = body; }
+
+  Parameters parameters;
+
+  Types::Types type;
+
+  std::string name;
+  
+  FunctionStatus definitionStatus = NONE;
+  FunctionBody *body;
 };
 
 } // namespace AST::Function

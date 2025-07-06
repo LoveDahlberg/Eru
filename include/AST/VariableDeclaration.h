@@ -14,12 +14,14 @@ struct VariableDeclaration {
   VariableDeclaration(AST::Types::Types type, std::string name)
       : variable(new Variable{type, name}) {}
 
-  VariableDeclaration(Variable* variable) : variable(variable) {}
+  VariableDeclaration(Variable* variable, bool isGlobal = false) : variable(variable), isGlobal(isGlobal){}
 
   Variable* variable;
 
-  // TODO semantic analysis should figure out what IR this should create.
-  bool global = false;
+  bool isGlobal;
+
+  // Set to true if this variable is shadowing one 
+  bool hidingParentDeclaration = false;
 };
 
 } // namespace AST::VariableDeclaration

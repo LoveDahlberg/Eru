@@ -1,7 +1,4 @@
 // include
-#include "AST/Assignment.h"
-#include "AST/Controlflow.h"
-#include "AST/Expression.h"
 #include <AST/Function.h>
 #include <AST/Statement.h>
 #include <AST/Types.h>
@@ -30,7 +27,7 @@ TEST(IR, testGlobalVarialbe) {
   constexpr const char *variableName = "firstVariable";
   auto variable = new VariableDeclaration::VariableDeclaration(
       AST::Types::Types::INT, variableName);
-  variable->global = true;
+  variable->isGlobal = true;
   compilationUnit.AddCompilationUnitItems(variable);
 
   auto generator = IRGenerator(module);
@@ -45,7 +42,7 @@ TEST(IR, testGlobalVarialbe) {
 }
 
 Expression::Expression *
-CreateTestExpression(std::optional<::AST::Expression::Operator> opreator,
+CreateTestExpression(std::optional<Lexing::Operator> opreator,
                      ::AST::Expression::Operand operand) {
   auto expression = new Expression::Expression();
   auto unit = new Expression::ExpressionUnit(opreator, operand);
@@ -129,15 +126,15 @@ TEST(IR, testDeclarationAssignment) {
   expression->addExpressionUnit(unit1);
 
   auto unit2 = new Expression::ExpressionUnit(
-      Expression::ArithmeticOperator::PLUS, Types::IntegerLiteral("2"));
+    Lexing::Operator::PLUS, Types::IntegerLiteral("2"));
   expression->addExpressionUnit(unit2);
 
   auto unit3 = new Expression::ExpressionUnit(
-      Expression::ArithmeticOperator::PLUS, Types::IntegerLiteral("6"));
+    Lexing::Operator::PLUS, Types::IntegerLiteral("6"));
   expression->addExpressionUnit(unit3);
 
   auto unit4 = new Expression::ExpressionUnit(
-      Expression::ArithmeticOperator::MINUS, Types::IntegerLiteral("4"));
+    Lexing::Operator::MINUS, Types::IntegerLiteral("4"));
   expression->addExpressionUnit(unit4);
 
   assignment->setExpression(&expression);

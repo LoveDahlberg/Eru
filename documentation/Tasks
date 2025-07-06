@@ -1,1 +1,7 @@
-Tasks are on github
+Tmp:
+
+- With the top level parsing of directives, functions declarations and definitions, function declarations are only there to tell the CU that this symbol is defined somewhere else. 
+
+This also means that we don't need headers right? includes should just be referring to the file you want to import directly, as the compiler will resolve everything without headers.
+
+I'd like to avoid some extern keyword, this should be controlled from the directive directly. But how do I handle if a user wants to use an extern data symbol? I could add directives variable declarations, but that might be overkill? And I dont want to add just an exern for just variables?

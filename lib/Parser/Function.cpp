@@ -1,84 +1,75 @@
+#include "AST/Function.h"
+#include "Support/Result.h"
 #include <Parser/Parser.h>
 
 namespace Parser {
 
-std::optional<AST::Function::FunctionCall *> Parser::ParseFunctionCall(std::string name) {
+Result<AST::Function::FunctionCall *>
+Parser::ParseFunctionCall(std::string name) {
 
   // If name is empty, parse the identifier. Otherwise assume that it was parsed
   // before calling this function.
   if (name.empty()) {
     auto identifier = ParseIdentifier();
-    if (!identifier) {
-      // err
-      return std::nullopt;
-    }
+    RET_ON_FAILURE_CODE(identifier,
+                        "ParseFunctionCall: Failed to parse identifier", lexer);
     name = *identifier;
   }
 
-  if (lexer.getCurrentToken().type != TokenType::LEFT_PARENTHESIS) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_WRONG_TOKEN(TokenType::LEFT_PARENTHESIS,
+                     "ParseFunctionCall: Expected (");
 
   // eat the (
   lexer.generateNextToken();
 
   auto parameters = ParseParameters<AST::Expression::Expression *>();
-  if (!parameters) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_FAILURE_CODE(parameters,
+                      "ParseFunctionCall: Failed to parse parameters", lexer);
 
-  if (lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_WRONG_TOKEN(TokenType::RIGHT_PARENTHESIS,
+                     "ParseFunctionCall: Expected )");
 
   // eat the )
   lexer.generateNextToken();
 
-  // TODO newline here?
+  auto call = new AST::Function::FunctionCall(name, *parameters);
 
-  return new AST::Function::FunctionCall(name, *parameters);
+  RET_ON_FAILURE_CODE(analyzer.function().ActOnCall(call),
+                      "ParseFunctionCall: ", lexer);
+
+  return call;
 }
 
-std::optional<AST::Function::Block *> Parser::ParseBlock() {
+Result<AST::Function::Block *> Parser::ParseBlock() {
   skipUntilNotNewline();
 
-  if (lexer.getCurrentToken().type != TokenType::LEFT_CURLY_BRACE) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_WRONG_TOKEN(TokenType::LEFT_CURLY_BRACE, "ParseBlock: Expected {");
 
   // eat the {
   lexer.generateNextToken();
 
+  skipUntilNotNewline();
+
   auto statement = ParseStatement();
-  if (!statement) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_FAILURE_CODE(statement, "ParseBlock: Failed to parse statement",
+                      lexer);
 
   auto block = new AST::Function::Block(*statement);
 
-  if (lexer.getCurrentToken().type == TokenType::RETURN) {
+  if (lexer.getCurrentToken() == TokenType::RETURN) {
     // eat the return
     lexer.generateNextToken();
 
     auto expression = ParseExpression();
-    if (!expression) {
-      // err
-      return std::nullopt;
-    }
+    RET_ON_FAILURE_CODE(expression, "ParseBlock: Failed to parse expression",
+                        lexer);
+
     block->addReturn(*expression);
   }
 
   skipUntilNotNewline();
 
-  if (lexer.getCurrentToken().type != TokenType::RIGHT_CURLY_BRACE) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_WRONG_TOKEN(TokenType::RIGHT_CURLY_BRACE, "ParseBlock: Expected }");
 
   // eat the }
   lexer.generateNextToken();
@@ -86,52 +77,95 @@ std::optional<AST::Function::Block *> Parser::ParseBlock() {
   return block;
 }
 
-std::optional<AST::Function::FunctionBody *> Parser::ParseFunctionBody() {
-  auto directive = ParseDirective();
+Result<AST::Function::FunctionBody *>
+Parser::ParseFunctionBody(AST::Function::Parameters parameters) {
+  
+  analyzer.PushScope();
+
+  // Declare the function parameters as local variables in the current scope. 
+  RET_ON_FAILURE(analyzer.function().ActOnParameters(parameters),
+                 "ParseFunctionBody: failed to act on parameters.");
 
   auto block = ParseBlock();
-  if (!block) {
-    // err
-    return std::nullopt;
-  }
+  analyzer.PopScope();
+
+  RET_ON_FAILURE_CODE(block, "ParseFunctionBody: Failed to parse block", lexer);
 
   return new AST::Function::FunctionBody(*block);
 }
 
-bool Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
+Error Parser::SkipFunctionBody() {
+  if (lexer.getCurrentToken() != TokenType::LEFT_CURLY_BRACE) {
+    skipUntilNotNewline();
+    RET_ON_WRONG_TOKEN(TokenType::LEFT_CURLY_BRACE,
+                       "SkipFunctionBody: Expected {");
+  }
+
+  // Eat the {
+  lexer.generateNextToken();
+
+  int curlyBraceCount = 1;
+
+  int loopCounter = 0;
+  for (;;) {
+    if (lexer.getCurrentToken() == TokenType::LEFT_CURLY_BRACE) {
+      ++curlyBraceCount;
+    }
+    if (lexer.getCurrentToken() == TokenType::RIGHT_CURLY_BRACE) {
+      --curlyBraceCount;
+    }
+
+    if (curlyBraceCount < 1) {
+      break;
+    }
+
+    RET_ON_TRUE_CODE(loopCounter++ > loopLimit,
+                     "SkipFunctionBody: Loop limit reached", lexer);
+
+    lexer.generateNextToken();
+  };
+
+  return SUCCESS;
+}
+
+Error Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
   // eat the (
   lexer.generateNextToken();
 
   auto paramaters = ParseParameters<AST::VariableDeclaration::Variable *>();
-  if (!paramaters) {
-    // err
-    return false;
-  }
 
-  if (lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
-    // err
-    return false;
-  }
+  RET_ON_FAILURE_CODE(paramaters, "ParseFunction: Failed to parse parameters",
+                      lexer);
 
-  // Lookahead and get the next non newline token.
-  auto lookaheadToken = lexer.lookaheadTokenNotNewline();
+  RET_ON_WRONG_TOKEN(TokenType::RIGHT_PARENTHESIS, "ParseFunction: Expected )");
 
   // eat the ), needed before leaving this function.
   lexer.generateNextToken();
 
-  auto function = new AST::Function::Function(variable->type, variable->name, *paramaters);
+  auto directive = ParseDirective();
 
-  if (lookaheadToken.type == TokenType::LEFT_BRACKET) {
-    auto functionBody = ParseFunctionBody();
-    if (!functionBody) {
-      // err
-      return false;
-    }
-    function->addFunctionBody(*functionBody);
+  auto function =
+      new AST::Function::Function(variable->type, variable->name, *paramaters);
+
+  // Lookahead and get the next non newline token.
+  auto lookaheadToken = lexer.lookaheadTokenNotNewline();
+
+  // If the current or next non-newline token is a {, then its a function
+  // defintion.
+  if (lexer.getCurrentToken() == TokenType::LEFT_CURLY_BRACE ||
+      lookaheadToken.type == TokenType::LEFT_CURLY_BRACE) {
+
+    // Don't parse the function body yet. This is done in another pass over the
+    // code.
+    functionBodiesToParse.push_back({lexer.getCurrentIndex(), function});
+
+    // Instead skip over the entire function body.
+    RET_ON_FAILURE_CODE(SkipFunctionBody(),
+                        "ParseFunction: Failed SkipFunctionBody.", lexer);
+
+    return analyzer.function().ActOnDefinition(function);
   }
-
-  astContext.compilationUnit->AddCompilationUnitItems(function);
-  return true;
+  return analyzer.function().ActOnDeclaration(function);
 }
 
 } // namespace Parser

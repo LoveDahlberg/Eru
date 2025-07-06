@@ -1,26 +1,25 @@
-#include "AST/Expression.h"
 #include <Parser/Parser.h>
 
 namespace Parser {
 
-std::optional<AST::Expression::Operand> Parser::ParseOperand() {
+// TODO properly implement the different operands. Currently its super unclear
+// what is done here. How are booleans handled here for example? What is the
+// difference between an integer literal and a int data type?
+Result<AST::Expression::Operand> Parser::ParseOperand() {
   switch (lexer.getCurrentToken().type) {
 
   // Identifier or function call
   case TokenType::IDENTIFER: {
     auto identifier = ParseIdentifier();
-    if (!identifier) {
-      // err
-      return std::nullopt;
-    }
+    RET_ON_FAILURE_CODE(identifier, "ParseOperand: failed identifier", lexer);
 
     // Function call
-    if (lexer.getCurrentToken().type == TokenType::LEFT_PARENTHESIS) {
+    if (lexer.getCurrentToken() == TokenType::LEFT_PARENTHESIS) {
       auto functionCall = ParseFunctionCall(*identifier);
-      if (!functionCall) {
-        // err
-        return std::nullopt;
-      }
+
+      RET_ON_FAILURE_CODE(functionCall, "ParseOperand: failed function call",
+                          lexer);
+
       return AST::Expression::Operand(*functionCall);
     }
     // Identifier
@@ -29,73 +28,56 @@ std::optional<AST::Expression::Operand> Parser::ParseOperand() {
 
   case TokenType::STRING_LITERAL: {
     auto literal = ParseLiteral();
-    if (!literal) {
-      // err
-      return std::nullopt;
-    }
+
+    RET_ON_FAILURE_CODE(literal, "ParseOperand: failed string literal", lexer);
+
     return AST::Expression::Operand(AST::Types::StringLiteral(*literal));
   }
 
   case TokenType::INTEGER_LITERAL: {
     auto literal = ParseLiteral();
-    if (!literal) {
-      // err
-      return std::nullopt;
-    }
+
+    RET_ON_FAILURE_CODE(literal, "ParseOperand: failed integer literal", lexer);
+
     return AST::Expression::Operand(AST::Types::IntegerLiteral(*literal));
   }
 
   default: {
-    break;
+    return FAILURE_CODE("ParseOperand: unexpected token", lexer);
   }
   }
-  // err
-  return std::nullopt;
 }
 
-std::optional<AST::Expression::ExpressionUnit *>
+// TODO: rewrite this, this is doing the analyzers job at the moment.
+Result<AST::Expression::ExpressionUnit *>
 Parser::ParseExpressionUnit(bool firstUnit) {
 
   auto unit = new AST::Expression::ExpressionUnit();
 
   if (!firstUnit) {
-    // TODO create proper operator map and category.
-    switch (lexer.getCurrentToken().type) {
-    case TokenType::AND:
-    case TokenType::OR: {
-      unit->operation = AST::Expression::TokenToBooleanOperator.at(
-          lexer.getCurrentToken().type);
-      lexer.generateNextToken();
-      break;
-    }
+    RET_ON_FALSE_CODE(tokenTypeToCategory.at(lexer.getCurrentToken().type) ==
+                          TokenCategory::OPERATOR,
+                      "ParseExpressionUnit: unexpected token category.", lexer);
 
-    case TokenType::PLUS:
-    case TokenType::MINUS: {
-      unit->operation = AST::Expression::TokenToArithmeticOperator.at(
-          lexer.getCurrentToken().type);
-      lexer.generateNextToken();
-      break;
-    }
+    RET_ON_FALSE_CODE(
+        tokenTypeToOperator.contains(lexer.getCurrentToken().type),
+        "ParseExpressionUnit: misconfigured tokenTypeToOperator map.", lexer);
 
-    default: {
-      // err
-      return std::nullopt;
-    }
-    }
+    unit->operation = tokenTypeToOperator.at(lexer.getCurrentToken().type);
+    lexer.generateNextToken();
   }
 
   auto operand = ParseOperand();
-  if (!operand) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_FAILURE_CODE(operand, "ParseExpressionUnit: failed to parse operand",
+                      lexer);
 
   unit->operand = *operand;
 
   return unit;
 }
 
-std::optional<AST::Expression::Expression *> Parser::ParseExpression() {
+Result<AST::Expression::Expression *>
+Parser::ParseExpression() {
 
   auto expression = new AST::Expression::Expression();
 
@@ -103,23 +85,20 @@ std::optional<AST::Expression::Expression *> Parser::ParseExpression() {
   int loopCounter = 0;
   do {
     auto target = ParseExpressionUnit(firstIteration);
-    if (!target) {
-      // err
-      return std::nullopt;
-    }
+    RET_ON_FAILURE_CODE(target, "ParseExpression: failed target", lexer);
 
     firstIteration = false;
 
     expression->addExpressionUnit(*target);
 
-    // TODO create proper operator map and category.
-    auto nextTokenType = lexer.getCurrentToken().type;
-    // Expression is over if next token isn't a operator
-    if (nextTokenType != TokenType::PLUS && nextTokenType != TokenType::MINUS &&
-        nextTokenType != TokenType::OR && nextTokenType != TokenType::AND) {
+    if (tokenTypeToCategory.at(lexer.getCurrentToken().type) !=
+        TokenCategory::OPERATOR) {
       break;
     }
   } while (loopCounter++ < loopLimit);
+
+  RET_ON_FAILURE_CODE(analyzer.expression().ActOn(expression),
+                      "ParseExpression: failed to act on expression.", lexer);
 
   return expression;
 }

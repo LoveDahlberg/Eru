@@ -13,6 +13,8 @@ struct ASTContext {
   ASTContext() : compilationUnit(new CompilationUnit()) {}
 
   CompilationUnit *getAST() { return compilationUnit; }
+
+  
 };
 
 } // namespace AST::Context

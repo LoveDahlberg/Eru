@@ -37,22 +37,20 @@ llvm::Value *IRGenerator::handle(Expression::Expression &AST) {
       totalValue = operand;
       continue;
     }
-    if (std::holds_alternative<Expression::ArithmeticOperator>(
-            *expressionUnit->operation)) {
-      auto arithmeticOperator =
-          std::get<Expression::ArithmeticOperator>(*expressionUnit->operation);
 
-      switch (arithmeticOperator) {
-      case Expression::ArithmeticOperator::PLUS: {
-        totalValue = builder->CreateAdd(totalValue, operand);
-        break;
-      }
+    switch (*expressionUnit->operation) {
+    case Lexing::Operator::PLUS: {
+      totalValue = builder->CreateAdd(totalValue, operand);
+      break;
+    }
 
-      case Expression::ArithmeticOperator::MINUS: {
-        totalValue = builder->CreateSub(totalValue, operand);
-        break;
-      }
-      }
+    case Lexing::Operator::MINUS: {
+      totalValue = builder->CreateSub(totalValue, operand);
+      break;
+    }
+    case Lexing::Operator::OR:
+    case Lexing::Operator::AND:
+      break;
     }
   }
 

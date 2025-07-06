@@ -5,19 +5,14 @@
 
 namespace Parser {
 
-std::optional<AST::Assignment::Assignment *>
+Result<AST::Assignment::Assignment *>
 Parser::ParseAssignment(AST::VariableDeclaration::Variable *variable) {
 
   // If not null, variable information already parsed.
-  if (variable == nullptr) {
-    // TODO implement parsing of variable declaration or single identifier
-    return std::nullopt;
-  }
-
-  if (lexer.getCurrentToken().type != TokenType::EQUAL) {
-    // err
-    return std::nullopt;
-  }
+  // TODO implement parsing of variable declaration or single identifier
+  RET_ON_EQUAL_CODE(variable, nullptr, "ParseAssignment: variable is null", lexer);
+  
+  RET_ON_WRONG_TOKEN(TokenType::EQUAL, "ParseAssignment: expected =");
 
   // Eat the =
   lexer.generateNextToken();
@@ -32,17 +27,13 @@ Parser::ParseAssignment(AST::VariableDeclaration::Variable *variable) {
   }
 
   auto expression = ParseExpression();
-  if (!expression) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_FAILURE_CODE(expression, "ParseAssignment: expression failed", lexer);
 
-  assignment->setExpression(&*expression);
+  // TODO fix this ugly mess.
+  auto *expr = *expression;
+  assignment->setExpression(&expr);
 
-  if (lexer.getCurrentToken().type != TokenType::NEWLINE) {
-    // err
-    return std::nullopt;
-  }
+  RET_ON_WRONG_TOKEN(TokenType::NEWLINE, "ParseAssignment: newline expected");
 
   return assignment;
 }

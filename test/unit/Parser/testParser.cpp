@@ -1,47 +1,37 @@
-#include <gmock/gmock-matchers.h>
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
+#include "testParser.h"
 
-#include <Lexer/Lexer.h>
-#include <Lexer/Tokens.h>
-
-#include <Parser/Parser.h>
-
-TEST(Parser, TestDeclarations) {
+TEST(Parser, TestDeclarationsSuccess) {
   std::string stream = R"(
     int first
-    string second
+    char second
 
     int fourth()
     int bruh(char one)
     uint32 brotha(sint32 hello, bool world)
     )";
-  stream += EOF;
 
-  Lexing::Lexer lexer(stream);
+  auto item = RunParser(stream);
+  ASSERT_TRUE(item.success);
 
-  AST::Context::ASTContext astContext;
-  Analyzer::Analyzer analyzer(astContext);
-
-  Parser::Parser parser(astContext, analyzer, lexer);
-
-  auto parserItems = parser.Parse();
-
-  ASSERT_TRUE(parserItems);
-
-  EXPECT_EQ(astContext.compilationUnit->compilationUnitItems.size(), 5);
+  EXPECT_EQ(item.astContext.compilationUnit->compilationUnitItems.size(), 5);
 }
 
-TEST(Parser, TestFunctions) {
+TEST(Parser, TestFunctionBody) {
   std::string stream = R"(
+    // Considered extern
+    char third()
+    int something(int aa, string b)
+    int somethingElse(int first)
+    char alsoSomething(int a, int bb, string cc)
+
     int function(int a, bool b) [] {
-      int first = 3 - "asd"
-      bool second = 2 + a
+      int first = 3 - 1
+      string second = "a" + "b"
 
       char cc = third()
       if(1 + 2) {
         int aa
-        something(aa, b)
+        something(aa, second)
       }
       elif(second){
         somethingElse(first)
@@ -50,23 +40,12 @@ TEST(Parser, TestFunctions) {
       else
       {
         int bb
-        alsoSomething(a, bb, cc)
+        alsoSomething(first, bb, second)
       }
       return 1
     }
     )";
-  stream += EOF;
 
-  Lexer lexer(stream);
-
-  AST::Context::ASTContext astContext;
-  Analyzer::Analyzer analyzer(astContext);
-
-  Parser::Parser parser(astContext, analyzer, lexer);
-
-  auto parserItems = parser.Parse();
-
-  ASSERT_TRUE(parserItems);
+  auto item = RunParser(stream);
+  ASSERT_TRUE(item.success);
 }
-
-// TODO add more tests for each sub category.

@@ -2,20 +2,16 @@
 
 namespace Parser {
 
-std::optional<AST::Controlflow::ConditionalBranch *>
+Result<AST::Controlflow::ConditionalBranch *>
 Parser::ParseConditionalBranch(bool start) {
 
   // TODO could refactor this to be more readable.
   if (start) {
-    if (lexer.getCurrentToken().type != TokenType::IF) {
-      // err
-      return std::nullopt;
-    }
+    RET_ON_WRONG_TOKEN(TokenType::IF, "ParseConditionalBranch: Expected if");
   } else {
     if (lexer.getCurrentToken().type != TokenType::ELIF &&
         lexer.getCurrentToken().type != TokenType::ELSE) {
-      // err
-      return std::nullopt;
+      return FAILURE_CODE("ParseConditionalBranch: Expected elif or else", lexer);
     }
   }
 
@@ -28,41 +24,39 @@ Parser::ParseConditionalBranch(bool start) {
 
   if (isNotElse) {
 
-    if (lexer.getCurrentToken().type != TokenType::LEFT_PARENTHESIS) {
-      // err
-      return std::nullopt;
-    }
+    RET_ON_WRONG_TOKEN(TokenType::LEFT_PARENTHESIS,
+                       "ParseConditionalBranch: Expected (");
 
     // Eat the (
     lexer.generateNextToken();
 
     auto expression = ParseExpression();
-    if (!expression) {
-      // err
-      return std::nullopt;
-    }
+    RET_ON_FAILURE_CODE(expression, "ParseConditionalBranch: failure in expression", lexer);
 
-    if (lexer.getCurrentToken().type != TokenType::RIGHT_PARENTHESIS) {
-      // err
-      return std::nullopt;
-    }
+    RET_ON_WRONG_TOKEN(TokenType::RIGHT_PARENTHESIS,
+                       "ParseConditionalBranch: Expected )");
+
     // Eat the )
     lexer.generateNextToken();
 
-    branch->addExpression(&*expression);
+    // TODO fix this mess
+    auto *expr = *expression;
+    branch->addExpression(&expr);
   }
 
+  analyzer.PushScope();
   auto block = ParseBlock();
-  if (!block) {
-    // err
-    return std::nullopt;
-  }
+  analyzer.PopScope();
 
-  branch->addBlock(&*block);
+  RET_ON_FAILURE_CODE(block, "ParseConditionalBranch: failure in block", lexer);
+
+  // TODO fix this mess
+  auto *br = *block;
+  branch->addBlock(&br);
   return branch;
 }
 
-std::optional<AST::Controlflow::ConditionalBranchingGroup *>
+Result<AST::Controlflow::ConditionalBranchingGroup *>
 Parser::ParseConditionalBranchingGroup() {
   std::vector<AST::Controlflow::ConditionalBranch *> conditionalChain;
 
@@ -71,10 +65,11 @@ Parser::ParseConditionalBranchingGroup() {
   do {
     skipUntilNotNewline();
     auto ConditionalBranch = ParseConditionalBranch(start);
-    if (!ConditionalBranch) {
-      // err
-      return std::nullopt;
-    }
+
+    RET_ON_FAILURE_CODE(
+        ConditionalBranch,
+        "ParseConditionalBranchingGroup: Failed to get conditional branch", lexer);
+
     start = false;
     conditionalChain.push_back(*ConditionalBranch);
 
