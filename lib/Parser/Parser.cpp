@@ -18,16 +18,16 @@ void Parser::skipUntilNotNewline() {
   }
 }
 
-Result<bool> Parser::Parse() { 
+Error Parser::Parse() { 
 
   // Parse all top level declarations and definitons.
   // Should this also resolve all directives?
-  RET_ON_FAILURE(ParseTopLevelItems(), "Parse: ParseTopLevelItems failed.");
+  RET_ON_FAILURE_CODE(ParseTopLevelItems(), "Parse: ParseTopLevelItems failed.", lexer);
   
   // For each function definition, call ParseBlock.
-  RET_ON_FAILURE(ParseFunctionBodies(), "Parse: ParseFunctionBodies failed.");
+  RET_ON_FAILURE_CODE(ParseFunctionBodies(), "Parse: ParseFunctionBodies failed.", lexer);
 
-  return true;
+  return SUCCESS;
 }
 
 } // namespace Parser

@@ -33,7 +33,7 @@ class VariableAnalyzer {
   getDeclaredVariableParentScope(AST::Types::NamedIdentifier &identifier,
                                  std::unique_ptr<Scope> &scope);
 
-  Result<bool> addVariableDeclarationToCurrentScope(
+  Error addVariableDeclarationToCurrentScope(
       AST::VariableDeclaration::Variable *variable);
 
   Result<AST::VariableDeclaration::VariableDeclaration *>
@@ -47,13 +47,11 @@ public:
   AST::VariableDeclaration::Variable *
   getDeclaredVariable(AST::Types::NamedIdentifier &identifier);
 
-  Result<bool>
+  Error
   ActOnGlobalDeclaration(AST::VariableDeclaration::Variable *variable);
-  Result<bool>
-  ActOnLocalDeclaration(AST::VariableDeclaration::Variable *variable,
-                        AST::Statement::Statement *statement);
-  Result<bool> ActOnAssignment(AST::Assignment::Assignment *assignment,
-                               AST::Statement::Statement *statement);
+  Result<AST::VariableDeclaration::VariableDeclaration *>
+  ActOnLocalDeclaration(AST::VariableDeclaration::Variable *variable);
+  Error ActOnAssignment(AST::Assignment::Assignment *assignment);
 };
 
 } // namespace Analyzer

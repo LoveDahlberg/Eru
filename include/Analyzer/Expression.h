@@ -1,8 +1,3 @@
-
-
-#include "AST/Function.h"
-#include "AST/Types.h"
-#include "Lexer/Tokens.h"
 #include <AST/Expression.h>
 #include <Support/Result.h>
 
@@ -14,14 +9,18 @@ class ExpressionAnalyzer {
 
   PrivateAnalyzer &analyser;
 
-  Result<bool> evaluateInteger(AST::Types::IntegerLiteral integer,
-                               AST::Types::Types expectedType);
+  Error evaluateInteger(AST::Types::IntegerLiteral integer,
+                        AST::Types::Types expectedType);
 
-  Result<bool> evaluateString(AST::Types::StringLiteral string,
-                              AST::Types::Types expectedType);
+  Error evaluateString(AST::Types::StringLiteral string,
+                       AST::Types::Types expectedType);
 
-  Result<bool> evaluateIdentifier(AST::Types::NamedIdentifier identifier,
-                                  AST::Types::Types expectedType);
+  /// Use when we know the type from before.
+  Error evaluateIdentifier(AST::Types::NamedIdentifier identifier,
+                           AST::Types::Types expectedType);
+
+  /// Use when we need to figure out the type.
+  Result<AST::Types::Types> getIdentifierType(AST::Types::NamedIdentifier identifier);
 
   bool isOperatorAllowed(Lexing::Operator operatorToCheck,
                          AST::Types::Types type);
@@ -29,8 +28,7 @@ class ExpressionAnalyzer {
 public:
   ExpressionAnalyzer(PrivateAnalyzer &analyser) : analyser(analyser) {}
 
-  Result<bool> ActOn(AST::Expression::Expression *expression,
-                     AST::Types::Types expectedType);
+  Error ActOn(AST::Expression::Expression *expression);
 };
 
 } // namespace Analyzer

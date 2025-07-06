@@ -58,17 +58,19 @@ struct FunctionCall {
   std::vector<Expression::Expression *> parameters;
 };
 
+using Parameters = std::vector<VariableDeclaration::Variable *>;
+
 struct Function {
 
   Function(Types::Types type, std::string name,
-           std::vector<VariableDeclaration::Variable *> parameters)
+    Parameters parameters)
       : type(type), name(name), parameters(parameters) {}
 
   Function(Types::Types type, std::string name) : type(type), name(name) {}
 
   void addFunctionBody(FunctionBody *body) { this->body = body; }
 
-  std::vector<VariableDeclaration::Variable *> parameters;
+  Parameters parameters;
 
   Types::Types type;
 

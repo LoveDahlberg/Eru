@@ -1,6 +1,5 @@
 
 
-#include "AST/Types.h"
 #include <AST/Function.h>
 #include <Support/Result.h>
 
@@ -15,17 +14,27 @@ class FunctionAnalyzer {
   std::vector<AST::Function::Function *> functions;
 
   /// Attempt to add a function. Returns an error if not successful.
-  Result<bool> addFunction(AST::Function::Function *function,
-                           AST::Function::FunctionStatus status);
+  Error addFunction(AST::Function::Function *function,
+                    AST::Function::FunctionStatus status);
 
 public:
   FunctionAnalyzer(PrivateAnalyzer &analyser) : analyzer(analyser) {}
 
-  Result<bool> ActOnDeclaration(AST::Function::Function *function);
-  Result<bool> ActOnDefinition(AST::Function::Function *function);
-  Result<bool>
-  ActOnCall(AST::Function::FunctionCall *call,
-            AST::Types::Types expectedReturnValue = AST::Types::NONE);
+  Error ActOnDeclaration(AST::Function::Function *function);
+  Error ActOnDefinition(AST::Function::Function *function);
+
+  /// Checks the call, its return type has to match with expectedReturnValue.
+  Error ActOnCall(AST::Function::FunctionCall *call,
+                  AST::Types::Types expectedReturnValue);
+
+  /// Check the call, don't verify return value.
+  Result<AST::Function::Function *>
+  ActOnCall(AST::Function::FunctionCall *call);
+
+  /// Declare the parameters of the given function in the current scope.
+  Result<> ActOnParameters(AST::Function::Parameters parameters);
+  
+  AST::Function::Function *getFunction(std::string name);
 };
 
 } // namespace Analyzer

@@ -24,26 +24,38 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
 
       // Both start with a variable declaration.
       auto variable = ParseVariable();
-      RET_ON_FAILURE(variable,
-                     "ParseStatement: data type: failed to parse variable");
+      RET_ON_FAILURE_CODE(variable,
+                          "ParseStatement: data type: failed to parse variable",
+                          lexer);
 
-      // Declare the variable
-      RET_ON_FAILURE(
-          analyzer.variable().ActOnLocalDeclaration(*variable, statement),
+      // Declare the variable through the analyzer.
+      auto declaration = analyzer.variable().ActOnLocalDeclaration(*variable);
+      RET_ON_FAILURE_CODE(
+          declaration,
           "ParseStatement: data type: failed to act on local variable "
-          "declaration.");
+          "declaration.",
+          lexer);
+
+      statement->AddStatement(*declaration);
 
       // Check if the declaration is initalized with an assignment.
       if (lexer.getCurrentToken() == TokenType::EQUAL) {
         auto assignment = ParseAssignment(*variable);
 
-        RET_ON_FAILURE(assignment,
-                       "ParseStatement: data type: failed assignment");
+        RET_ON_FAILURE_CODE(
+            assignment, "ParseStatement: data type: failed assignment", lexer);
 
-        RET_ON_FAILURE(
-            analyzer.variable().ActOnAssignment(*assignment, statement),
-            "ParseStatement: data type: failed to act on assignment.");
+        // Rn the assignment through the analyzer.
+        RET_ON_FAILURE_CODE(
+            analyzer.variable().ActOnAssignment(*assignment),
+            "ParseStatement: data type: failed to act on assignment.", lexer);
+
+        // TODO consider if we should add a declaration and a assignment
+        // statement on assignment, or if it is enough to just add a assignment
+        // (which then auto includes a declaration if ).
+        statement->AddStatement(*assignment);
       }
+
       // TODO newline should also follow variable declaration without
       // assignment, but grammar currently does not require it.
       RET_ON_WRONG_TOKEN(
@@ -60,8 +72,8 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
       RET_ON_WRONG_TOKEN(TokenType::IF, "ParseStatement: keyword: expected if");
 
       auto controlFlow = ParseConditionalBranchingGroup();
-      RET_ON_FAILURE(controlFlow,
-                     "ParseStatement: keyword: failed controlFlow");
+      RET_ON_FAILURE_CODE(controlFlow,
+                          "ParseStatement: keyword: failed controlFlow", lexer);
 
       statement->AddStatement(*controlFlow);
       break;
@@ -72,8 +84,8 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
 
       // Both start with an identifier.
       auto identifier = ParseIdentifier();
-      RET_ON_FAILURE(identifier,
-                     "ParseStatement: identifier: failed identifier");
+      RET_ON_FAILURE_CODE(
+          identifier, "ParseStatement: identifier: failed identifier", lexer);
 
       // TODO move this switch case to getter function.
       switch (lexer.getCurrentToken().type) {
@@ -83,8 +95,9 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
         auto assignment =
             ParseAssignment(new AST::VariableDeclaration::Variable(
                 AST::Types::Types::NONE, *identifier));
-        RET_ON_FAILURE(identifier,
-                       "ParseStatement: identifier: equal: failed assignment");
+        RET_ON_FAILURE_CODE(
+            identifier, "ParseStatement: identifier: equal: failed assignment",
+            lexer);
 
         statement->AddStatement(*assignment);
         break;
@@ -93,22 +106,23 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
       // Function call
       case TokenType::LEFT_PARENTHESIS: {
         auto assignment = ParseFunctionCall(*identifier);
-        RET_ON_FAILURE(
+        RET_ON_FAILURE_CODE(
             assignment,
-            "ParseStatement: identifier: left paran: failed assignment");
+            "ParseStatement: identifier: left paran: failed assignment", lexer);
 
         statement->AddStatement(*assignment);
         break;
       }
 
       default: {
-        return {"ParseStatement: identifier: unexpected token"};
+        return FAILURE_CODE("ParseStatement: identifier: unexpected token",
+                            lexer);
       }
       }
       break;
     }
     default: {
-      return {"ParseStatement: unexpected token"};
+      return FAILURE_CODE("ParseStatement: unexpected token", lexer);
     }
     }
 

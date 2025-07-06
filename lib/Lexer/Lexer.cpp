@@ -4,11 +4,15 @@
 #include <string>
 
 // include
-#include <Support/Constants.h>
-#include <Lexer/Tokens.h>
 #include <Lexer/Lexer.h>
+#include <Lexer/Tokens.h>
+#include <Support/Constants.h>
 
 using namespace Lexing;
+
+bool isNewline(int currentChar) {
+  return currentChar == '\n' || currentChar == '\r';
+}
 
 // TODO, get next and lookahead could be an object used by the lexer
 // It could be attached to the 'input' object itself.
@@ -18,8 +22,18 @@ int Lexer::getNext() {
   }
   assert(index + 1 > index && "index is overflowing");
 
-  if(!isLookingAhead){
-    parsedInput += getCurrent();
+  auto current = getCurrent();
+  if (!isLookingAhead) {
+    parsedInput += current;
+  }
+
+  if (skipNext) {
+    parsedInput.clear();
+    skipNext = false;
+  }
+
+  if (isNewline(current)) {
+    skipNext = true;
   }
 
   return input[++index];
@@ -158,10 +172,7 @@ Token Lexer::getUnknown() {
   return token;
 }
 
-bool isNewline(int currentChar) {
-  return currentChar == '\n' || currentChar == '\r';
-}
-
+// TODO parse booleans.
 Token Lexer::getNextToken() {
   currentChar = getCurrent();
   while (isspace(currentChar)) {

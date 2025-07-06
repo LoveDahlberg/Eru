@@ -1,5 +1,3 @@
-#include "AST/Types.h"
-#include "Support/Result.h"
 #include <Analyzer/Analyzer.h>
 
 namespace Analyzer {
@@ -10,9 +8,8 @@ namespace Analyzer {
 // Also rewrite Parser/Expression.cpp to not care about what kind of operator it
 // is using to connect operands, this is what the analyzer should do.
 
-Result<bool>
-ExpressionAnalyzer::evaluateInteger(AST::Types::IntegerLiteral integer,
-                                    AST::Types::Types expectedType) {
+Error ExpressionAnalyzer::evaluateInteger(AST::Types::IntegerLiteral integer,
+                                          AST::Types::Types expectedType) {
 
   RET_ON_FALSE(expectedType == AST::Types::Types::INT ||
                    expectedType == AST::Types::Types::UINT32 ||
@@ -25,12 +22,11 @@ ExpressionAnalyzer::evaluateInteger(AST::Types::IntegerLiteral integer,
   // TODO verify that the integer is within 32 bits and consider signed and
   // unsgined.
 
-  return true;
+  return SUCCESS;
 }
 
-Result<bool>
-ExpressionAnalyzer::evaluateString(AST::Types::StringLiteral string,
-                                   AST::Types::Types expectedType) {
+Error ExpressionAnalyzer::evaluateString(AST::Types::StringLiteral string,
+                                         AST::Types::Types expectedType) {
 
   RET_ON_FALSE(expectedType == AST::Types::Types::CHAR ||
                    expectedType == AST::Types::Types::STRING,
@@ -38,30 +34,40 @@ ExpressionAnalyzer::evaluateString(AST::Types::StringLiteral string,
 
   // TODO evaluate that this contains legal characters (?)
 
-  return true;
+  return SUCCESS;
 }
 
-Result<bool>
-ExpressionAnalyzer::evaluateIdentifier(AST::Types::NamedIdentifier identifier,
-                                       AST::Types::Types expectedType) {
+Result<AST::Types::Types>
+ExpressionAnalyzer::getIdentifierType(AST::Types::NamedIdentifier identifier) {
 
   // Check if identifier is declared in current or any parent scope.
   auto *variable = analyser.variable().getDeclaredVariable(identifier);
 
   RET_ON_EQUAL(variable, nullptr,
-               "evaluateIdentifier: use of undeclared variable.");
+               "getIdentifierType: use of undeclared identifier.");
+
+  return variable->type;
+}
+
+Error ExpressionAnalyzer::evaluateIdentifier(
+    AST::Types::NamedIdentifier identifier, AST::Types::Types expectedType) {
+
+  // Get the type of the identifier
+  auto type = getIdentifierType(identifier);
+
+  RET_ON_FAILURE(type, "evaluateIdentifier: failed to get identifier type");
 
   // Check that declared variable has the correct type
-  RET_ON_NOT_EQUAL(variable->type, expectedType,
+  RET_ON_NOT_EQUAL(*type, expectedType,
                    "evaluateIdentifier: types do not match.");
 
-  return true;
+  return SUCCESS;
 }
 
 // TODO expand this if we need to restrict usages of certain operators and
 // types. Like string OR string.
 bool ExpressionAnalyzer::isOperatorAllowed(Lexing::Operator operatorToCheck,
-                       AST::Types::Types type) {
+                                           AST::Types::Types type) {
   switch (operatorToCheck) {
   case Lexing::Operator::MINUS:
   case Lexing::Operator::OR:
@@ -76,11 +82,13 @@ bool ExpressionAnalyzer::isOperatorAllowed(Lexing::Operator operatorToCheck,
 // place of long convert it etc) and type convertions (zero or nullable values
 // becomes boolean false and everything else becomes boolean true etc) as
 // needed.
-Result<bool> ExpressionAnalyzer::ActOn(AST::Expression::Expression *expression,
-                                       AST::Types::Types expectedType) {
+Error ExpressionAnalyzer::ActOn(AST::Expression::Expression *expression) {
+
+  // We don't know the type before parsing. For now, all types in the expression
+  // much match. Assume that this type is the first seen.
+  AST::Types::Types evaluatedType = AST::Types::NONE;
 
   bool first = true;
-
   for (auto unit : expression->ExpressionUnits) {
 
     if (!first) {
@@ -88,41 +96,72 @@ Result<bool> ExpressionAnalyzer::ActOn(AST::Expression::Expression *expression,
                    "ActOnExpression: expected operator.");
 
       // TODO add verificaiton of operator between types.
-      isOperatorAllowed(*unit->operation, expectedType);
+      isOperatorAllowed(*unit->operation, evaluatedType);
     }
 
     auto operand = unit->operand;
 
     if (std::holds_alternative<AST::Types::IntegerLiteral>(operand)) {
 
+      if (first) {
+        evaluatedType = AST::Types::Types::INT;
+      }
+
       auto integer = std::get<AST::Types::IntegerLiteral>(operand);
-      RET_ON_FAILURE(evaluateInteger(integer, expectedType),
+      RET_ON_FAILURE(evaluateInteger(integer, evaluatedType),
                      "ActOnExpression: failed to evaluate integer.");
 
     } else if (std::holds_alternative<AST::Types::StringLiteral>(operand)) {
 
+      if (first) {
+        evaluatedType = AST::Types::Types::STRING;
+      }
+
       auto string = std::get<AST::Types::StringLiteral>(operand);
-      RET_ON_FAILURE(evaluateString(string, expectedType),
+      RET_ON_FAILURE(evaluateString(string, evaluatedType),
                      "ActOnExpression: failed to evaluate string.");
 
     } else if (std::holds_alternative<AST::Types::NamedIdentifier>(operand)) {
 
       auto identifier = std::get<AST::Types::NamedIdentifier>(operand);
-      RET_ON_FAILURE(evaluateIdentifier(identifier, expectedType),
-                     "ActOnExpression: failed to evaluate identifer.");
+
+      // Get the actual type of the identifer to use in next iteration.
+      if (first) {
+        auto type = getIdentifierType(identifier);
+
+        RET_ON_FAILURE(type,
+                       "evaluateIdentifier: failed to get identifier type");
+        evaluatedType = *type;
+      } else {
+        RET_ON_FAILURE(evaluateIdentifier(identifier, evaluatedType),
+                       "ActOnExpression: failed to evaluate identifer.");
+      }
 
     } else if (std::holds_alternative<AST::Function::FunctionCall *>(operand)) {
 
       auto call = std::get<AST::Function::FunctionCall *>(operand);
-      RET_ON_FAILURE(analyser.function().ActOnCall(call, expectedType),
-                     "ActOnExpression: failed to evaluate function call.");
+
+      // Get the actual type of the function to be called to use in the next
+      // iteration.
+      if (first) {
+        auto function = analyser.function().getFunction(call->name);
+
+        RET_ON_EQUAL(function, nullptr,
+                     "ActOnExpression: failed to act on call.");
+        evaluatedType = function->type;
+      } else {
+        RET_ON_FAILURE(analyser.function().ActOnCall(call, evaluatedType),
+                       "ActOnExpression: failed to evaluate function call.");
+      }
 
     } else {
-      return {"ActOnExpression: unexpected operand type"};
+      return FAILURE("ActOnExpression: unexpected operand type");
     }
     first = false;
   }
-  return true;
+
+  expression->evaluatedType = evaluatedType;
+  return SUCCESS;
 }
 
 } // namespace Analyzer

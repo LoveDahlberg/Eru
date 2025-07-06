@@ -1,4 +1,3 @@
-
 #include <AST/Statement.h>
 #include <Analyzer/Analyzer.h>
 
@@ -12,10 +11,9 @@ Result<bool> VariableAnalyzer::isTypeCheckedVariableDeclared(
     // Found matching declaration in scope.
     if (declaredVarible->name == variable->name) {
 
-      RET_ON_NOT_EQUAL(
-          declaredVarible->type, variable->type,
-          "isTypeCheckedVariableDeclared: Found matching variable but type "
-          "does not match.");
+      RET_ON_NOT_EQUAL(declaredVarible->type, variable->type,
+                       "isTypeCheckedVariableDeclared: Found matching variable "
+                       "but type does not match.");
       return true;
     }
   }
@@ -59,7 +57,7 @@ VariableAnalyzer::getDeclaredVariable(AST::Types::NamedIdentifier &identifier) {
                                               analyzer.getCurrentScope());
 }
 
-Result<bool> VariableAnalyzer::addVariableDeclarationToCurrentScope(
+Error VariableAnalyzer::addVariableDeclarationToCurrentScope(
     AST::VariableDeclaration::Variable *variable) {
 
   auto result =
@@ -72,7 +70,7 @@ Result<bool> VariableAnalyzer::addVariableDeclarationToCurrentScope(
       "addVariableDeclarationToCurrentScope: Variable already declared");
 
   analyzer.getCurrentScope()->variableDeclarations.push_back(variable);
-  return true;
+  return SUCCESS;
 }
 
 bool VariableAnalyzer::isVariableDeclaredParentScope(
@@ -108,7 +106,7 @@ VariableAnalyzer::getDeclaredVariableParentScope(
              : getDeclaredVariableParentScope(identifier, scope->parentScope);
 }
 
-Result<bool> VariableAnalyzer::ActOnGlobalDeclaration(
+Error VariableAnalyzer::ActOnGlobalDeclaration(
     AST::VariableDeclaration::Variable *variable) {
 
   RET_ON_FALSE(analyzer.getCurrentScope()->isGlobal,
@@ -121,12 +119,12 @@ Result<bool> VariableAnalyzer::ActOnGlobalDeclaration(
 
   analyzer.getASTContext().compilationUnit->AddCompilationUnitItems(
       *declaration);
-  return true;
+  return SUCCESS;
 }
 
-Result<bool> VariableAnalyzer::ActOnLocalDeclaration(
-    AST::VariableDeclaration::Variable *variable,
-    AST::Statement::Statement *statement) {
+Result<AST::VariableDeclaration::VariableDeclaration *>
+VariableAnalyzer::ActOnLocalDeclaration(
+    AST::VariableDeclaration::Variable *variable) {
 
   RET_ON_TRUE(analyzer.getCurrentScope()->isGlobal,
               "ActOnLocalDeclaration: current scope is not local.");
@@ -136,8 +134,7 @@ Result<bool> VariableAnalyzer::ActOnLocalDeclaration(
       declaration,
       "ActOnLocalDeclaration: failed to verify variable declaration.");
 
-  statement->AddStatement(*declaration);
-  return true;
+  return declaration;
 }
 
 Result<AST::VariableDeclaration::VariableDeclaration *>
@@ -161,9 +158,8 @@ VariableAnalyzer::declareVariable(
   return declaration;
 }
 
-Result<bool>
-VariableAnalyzer::ActOnAssignment(AST::Assignment::Assignment *assignment,
-                                  AST::Statement::Statement *statement) {
+Error VariableAnalyzer::ActOnAssignment(
+    AST::Assignment::Assignment *assignment) {
 
   auto target = assignment->target;
 
@@ -192,15 +188,12 @@ VariableAnalyzer::ActOnAssignment(AST::Assignment::Assignment *assignment,
                  "ActOnAssignment: identifier not previously declared.");
   }
 
-  // Check that the type of the expression matches the type of the variable
+  // Check that the type of the expression matches the type of the variable.
+  RET_ON_NOT_EQUAL(assignment->expression->evaluatedType, variable->type,
+                   "ActOnAssignment: type mismatch between declared variable "
+                   "and assignment expression.");
 
-  // RET_ON_FAILURE(
-  //     analyzer.expression().ActOn(assignment->expression, variable->type),
-  //     "ActOnAssignment: failed to act on expression");
-
-  statement->AddStatement(assignment);
-
-  return true;
+  return SUCCESS;
 }
 
 } // namespace Analyzer

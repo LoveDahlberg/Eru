@@ -1,81 +1,102 @@
 
 #pragma once
 
-#include <cstdarg>
-#include <cstdio>
+#include <cassert>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <vector>
 
-// TODO This does not work!
+/// This file essentially reimplements llvm::Expected<> and llvm::Error.
+/// Difference is that this uses my custom formatter, stores a string based call
+/// chain with formatted descriptions and stores the code snippet of when the
+/// problem occured.
 
-inline std::string vformat(const char *fmt, va_list args) {
-  // 1) Make a true copy of the va_list
-  va_list args_copy;
-  va_copy(args_copy, args);
-
-  // 2) Figure out required buffer size
-  int len = std::vsnprintf(nullptr, 0, fmt, args_copy);
-  va_end(args_copy); // done with the copy
-
-  if (len < 0) {
-    // formatting error
-    return {};
-  }
-
-  // 3) Allocate a buffer and print into it
-  std::string buf;
-  buf.resize(len);
-  va_list args_copy2;
-  va_copy(args_copy2, args);
-  std::vsnprintf(buf.data(), buf.size() + 1, fmt, args_copy2);
-  va_end(args_copy2);
-
-  return buf;
-}
-
-inline std::string format(const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  std::string s = vformat(fmt, args);
-  va_end(args);
-  return s;
-}
-
-template <typename underLyingType> struct [[nodiscard]] Result {
-  std::optional<underLyingType> value;
+class Formatter {
+  std::string result;
 
 public:
-  std::vector<std::string> failureReasons;
-  bool hasFailed;
+  Formatter() : result({}){};
 
-  bool hasSucceded()
-  {
-    return !hasFailed;
+  template <typename... Args> Formatter(Args &&...args) {
+    std::ostringstream stream;
+
+    // fold‑expression: stream << arg1 << arg2 << ... << argN;
+    (stream << ... << std::forward<Args>(args));
+
+    result = stream.str();
   }
 
-  /// TODO might cause bugs to pop up..
-  // operator bool()
-  // {
-  //   return hasSucceded();
-  // }
+  operator std::string() const & { return result; }
+  operator std::string() && { return std::move(result); }
+  const std::string &get() const noexcept { return result; }
+};
 
-  /// Constructor to use when the operation was successful.
+struct Void {
+  Void() = delete;
+};
+
+// TODO remove the explicit boolean from functions that actually dont return
+// anything.
+template <typename underLyingType = Void> struct [[nodiscard]] Result {
+  std::optional<underLyingType> value;
+  bool checked = false;
+
+public:
+  std::vector<std::string> failureDescription;
+  std::string codeSnippet{};
+  bool hasFailed;
+
+  bool hasSucceded() { return !hasFailed; }
+
+  ~Result() {
+    if (!checked) {
+      assert("Discarding a Result object without checking its status");
+    }
+  }
+
+  /// Constructor to use when the operation was successful and the value should
+  /// be propagated.
   /// \param value The value to use in next operation.
-  Result(underLyingType value) : value(value), hasFailed(false) {}
+  Result(underLyingType value) requires(
+      !std::is_same_v<underLyingType, Formatter>)
+      : value(value), hasFailed(false) {}
+
+  /// Constructor to use when the operation was successful and no value needs to
+  /// be propagated.
+  Result() requires(std::is_same_v<underLyingType, Void>) : hasFailed(false) {}
 
   /// Constructor to use when the operation was a failure.
-  /// \param fmtStr A format string that describes the reason for failure.
-  /// \param args The argument to include in the format string, optional.
-  template <typename... Args>
-  Result(const char *fmtStr, Args &&...args)
-      : failureReasons({format(fmtStr, std::forward<Args>(args)...)}),
-        hasFailed(true) {}
+  /// \param format A format string that describes the reason for failure.
+  Result(const Formatter description, const Formatter code = {})
+      : failureDescription({description}), codeSnippet(code), hasFailed(true) {
+    // auto codeString = code.get();
+    // if (!codeString.empty()) {
+    //   codeSnippet = codeString);
+    // }
+  }
+
+  /// Checks if an error has occoured. If it has, store the incoming description
+  /// and code and return false. Otherwise return true.
+  bool check(const Formatter description, const Formatter code = {}) {
+    checked = true;
+    if (hasFailed) {
+      storeNewStackTrace(description, code);
+      return false;
+    }
+    return true;
+  }
 
   // Stores the new error message received with the old ones.
-  template <typename... Args>
-  void storeNewErrorMessage(const char *fmtStr, Args &&...args) {
-    failureReasons.push_back(format(fmtStr, std::forward<Args>(args)...));
+  void storeNewStackTrace(const Formatter description,
+                          const Formatter code = {}) {
+    failureDescription.push_back(description);
+
+    // Only add code snippet if its not already there.
+    auto codeString = code.get();
+    if (codeSnippet.empty()) {
+      codeSnippet = codeString;
+    }
   }
 
   /// Implicit convertion operator for the new type.
@@ -83,48 +104,83 @@ public:
     // Create the new type with the information from the old type and then
     // return it. This will be the new type used one step up in the call chain
     // hierarchy.
-    return Result<newType>(hasFailed, failureReasons);
+    return Result<newType>(hasFailed, failureDescription, codeSnippet);
+  }
+
+  /// Get the underlying value. Only enable this for non-void values.
+  underLyingType operator*() requires(!std::is_same_v<underLyingType, Void>) {
+    if (hasFailed) {
+      assert("Cannot get resulting value when an error has occoured.");
+      return {};
+    }
+    return *value;
   }
 
   // Constructor called from the implicit converation operator, to create a new
   // object
-  Result(bool hasFailed, std::vector<std::string> failureReasons)
-      : hasFailed(hasFailed), failureReasons(failureReasons) {}
-
-  underLyingType operator*() { return *value; }
+  Result(bool hasFailed, std::vector<std::string> failureDescription,
+         std::string codeSnippet)
+      : hasFailed(hasFailed), failureDescription(failureDescription),
+        codeSnippet(codeSnippet) {}
 };
 
-/// Returns only when obj has failed previously. Append the formatted string to
-/// the stack trace error message.
-#define RET_ON_FAILURE(obj, fmt, ...)                                          \
+using Error = Result<>;
+
+#define SUCCESS Result<>()
+
+#define FAILURE(description)                                                   \
+  Formatter { description }
+#define FAILURE_CODE(description, lexer)                                       \
+  { Formatter{description}, lexer.getParsedInput() }
+
+// Anon namespace to not expose internal macros.
+namespace {
+
+/// Returns only when obj has failed previously. Append the error description
+/// and optional a code snippet.
+#define RET_ON_FAILURE_FULL(obj, desc, code)                                   \
   do {                                                                         \
     auto evaluatedObj = obj;                                                   \
-    if (evaluatedObj.hasFailed) {                                              \
-      evaluatedObj.storeNewErrorMessage(fmt __VA_OPT__(, ) __VA_ARGS__);       \
+    if (!evaluatedObj.check(desc, code)) {                                     \
       return std::move(evaluatedObj);                                          \
     }                                                                          \
   } while (0)
 
-#define RET_ON_NOT_EQUAL(left, right, fmt, ...)                                \
+#define RET_ON_(what, desc, code)                                              \
   do {                                                                         \
-    if (left != right) {                                                       \
-      return {fmt __VA_OPT__(, ) __VA_ARGS__};                                 \
+    if (what) {                                                                \
+      return {desc, code};                                                     \
     }                                                                          \
   } while (0)
 
-#define RET_ON_EQUAL(left, right, fmt, ...)                                    \
-  do {                                                                         \
-    if (left == right) {                                                       \
-      return {fmt __VA_OPT__(, ) __VA_ARGS__};                                 \
-    }                                                                          \
-  } while (0)
+} // namespace
 
-#define RET_ON_TRUE(boolean, fmt, ...)                                         \
-  do {                                                                         \
-    if (boolean) {                                                             \
-      return {fmt __VA_OPT__(, ) __VA_ARGS__};                                 \
-    }                                                                          \
-  } while (0)
+// Variants for return on without code snippet.
 
-#define RET_ON_FALSE(boolean, fmt, ...)                                        \
-  RET_ON_TRUE(!(boolean), fmt __VA_OPT__(, ) __VA_ARGS__)
+#define RET_ON_FAILURE(obj, desc) RET_ON_FAILURE_FULL(obj, desc, {""})
+
+#define RET_ON_NOT_EQUAL(left, right, desc)                                    \
+  RET_ON_((left) != (right), desc, {""})
+
+#define RET_ON_EQUAL(left, right, desc) RET_ON_((left) == (right), desc, {""})
+
+#define RET_ON_TRUE(boolean, desc) RET_ON_((boolean), desc, {""})
+
+#define RET_ON_FALSE(boolean, desc) RET_ON_(!(boolean), desc, {""})
+
+// Variants for return on with code snippet.
+
+#define RET_ON_FAILURE_CODE(obj, desc, lexer)                                  \
+  RET_ON_FAILURE_FULL(obj, desc, lexer.getParsedInput())
+
+#define RET_ON_NOT_EQUAL_CODE(left, right, desc, lexer)                        \
+  RET_ON_((left) != (right), desc, lexer.getParsedInput())
+
+#define RET_ON_EQUAL_CODE(left, right, desc, lexer)                            \
+  RET_ON_((left) == (right), desc, lexer.getParsedInput())
+
+#define RET_ON_TRUE_CODE(boolean, desc, lexer)                                 \
+  RET_ON_((boolean), desc, lexer.getParsedInput())
+
+#define RET_ON_FALSE_CODE(boolean, desc, lexer)                                \
+  RET_ON_(!(boolean), desc, lexer.getParsedInput())

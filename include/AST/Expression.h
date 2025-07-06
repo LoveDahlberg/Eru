@@ -6,8 +6,8 @@
 #include <Lexer/Tokens.h>
 
 // stl
-#include <variant>
 #include <optional>
+#include <variant>
 
 namespace AST::Expression {
 
@@ -27,6 +27,7 @@ struct Expression {
   }
 
   std::vector<ExpressionUnit *> ExpressionUnits;
+  AST::Types::Types evaluatedType = AST::Types::NONE;
 };
 
 // a + b + c + d

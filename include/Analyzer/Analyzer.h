@@ -34,6 +34,8 @@ struct Scope {
   std::unique_ptr<Scope> parentScope;
   std::vector<AST::VariableDeclaration::Variable *> variableDeclarations;
 
+  std::vector<AST::VariableDeclaration::Variable *> parameters;
+
   bool isGlobal;
 };
 

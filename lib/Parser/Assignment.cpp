@@ -10,7 +10,7 @@ Parser::ParseAssignment(AST::VariableDeclaration::Variable *variable) {
 
   // If not null, variable information already parsed.
   // TODO implement parsing of variable declaration or single identifier
-  RET_ON_EQUAL(variable, nullptr, "ParseAssignment: variable is null");
+  RET_ON_EQUAL_CODE(variable, nullptr, "ParseAssignment: variable is null", lexer);
   
   RET_ON_WRONG_TOKEN(TokenType::EQUAL, "ParseAssignment: expected =");
 
@@ -27,7 +27,7 @@ Parser::ParseAssignment(AST::VariableDeclaration::Variable *variable) {
   }
 
   auto expression = ParseExpression();
-  RET_ON_FAILURE(expression, "ParseAssignment: expression failed");
+  RET_ON_FAILURE_CODE(expression, "ParseAssignment: expression failed", lexer);
 
   // TODO fix this ugly mess.
   auto *expr = *expression;

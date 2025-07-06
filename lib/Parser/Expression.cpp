@@ -11,13 +11,14 @@ Result<AST::Expression::Operand> Parser::ParseOperand() {
   // Identifier or function call
   case TokenType::IDENTIFER: {
     auto identifier = ParseIdentifier();
-    RET_ON_FAILURE(identifier, "ParseOperand: failed identifier");
+    RET_ON_FAILURE_CODE(identifier, "ParseOperand: failed identifier", lexer);
 
     // Function call
     if (lexer.getCurrentToken() == TokenType::LEFT_PARENTHESIS) {
       auto functionCall = ParseFunctionCall(*identifier);
 
-      RET_ON_FAILURE(functionCall, "ParseOperand: failed function call");
+      RET_ON_FAILURE_CODE(functionCall, "ParseOperand: failed function call",
+                          lexer);
 
       return AST::Expression::Operand(*functionCall);
     }
@@ -28,7 +29,7 @@ Result<AST::Expression::Operand> Parser::ParseOperand() {
   case TokenType::STRING_LITERAL: {
     auto literal = ParseLiteral();
 
-    RET_ON_FAILURE(literal, "ParseOperand: failed string literal");
+    RET_ON_FAILURE_CODE(literal, "ParseOperand: failed string literal", lexer);
 
     return AST::Expression::Operand(AST::Types::StringLiteral(*literal));
   }
@@ -36,13 +37,13 @@ Result<AST::Expression::Operand> Parser::ParseOperand() {
   case TokenType::INTEGER_LITERAL: {
     auto literal = ParseLiteral();
 
-    RET_ON_FAILURE(literal, "ParseOperand: failed integer literal");
+    RET_ON_FAILURE_CODE(literal, "ParseOperand: failed integer literal", lexer);
 
     return AST::Expression::Operand(AST::Types::IntegerLiteral(*literal));
   }
 
   default: {
-    return {"ParseOperand: unexpected token"};
+    return FAILURE_CODE("ParseOperand: unexpected token", lexer);
   }
   }
 }
@@ -54,19 +55,21 @@ Parser::ParseExpressionUnit(bool firstUnit) {
   auto unit = new AST::Expression::ExpressionUnit();
 
   if (!firstUnit) {
-    RET_ON_FALSE(tokenTypeToCategory.at(lexer.getCurrentToken().type) ==
-                     TokenCategory::OPERATOR,
-                 "ParseExpressionUnit: unexpected token category.");
+    RET_ON_FALSE_CODE(tokenTypeToCategory.at(lexer.getCurrentToken().type) ==
+                          TokenCategory::OPERATOR,
+                      "ParseExpressionUnit: unexpected token category.", lexer);
 
-    RET_ON_FALSE(tokenTypeToOperator.contains(lexer.getCurrentToken().type),
-                 "ParseExpressionUnit: misconfigured tokenTypeToOperator map.");
+    RET_ON_FALSE_CODE(
+        tokenTypeToOperator.contains(lexer.getCurrentToken().type),
+        "ParseExpressionUnit: misconfigured tokenTypeToOperator map.", lexer);
 
     unit->operation = tokenTypeToOperator.at(lexer.getCurrentToken().type);
     lexer.generateNextToken();
   }
 
   auto operand = ParseOperand();
-  RET_ON_FAILURE(operand, "ParseExpressionUnit: failed to parse operand");
+  RET_ON_FAILURE_CODE(operand, "ParseExpressionUnit: failed to parse operand",
+                      lexer);
 
   unit->operand = *operand;
 
@@ -74,7 +77,7 @@ Parser::ParseExpressionUnit(bool firstUnit) {
 }
 
 Result<AST::Expression::Expression *>
-Parser::ParseExpression(AST::Types::Types expectedType) {
+Parser::ParseExpression() {
 
   auto expression = new AST::Expression::Expression();
 
@@ -82,7 +85,7 @@ Parser::ParseExpression(AST::Types::Types expectedType) {
   int loopCounter = 0;
   do {
     auto target = ParseExpressionUnit(firstIteration);
-    RET_ON_FAILURE(target, "ParseExpression: failed target");
+    RET_ON_FAILURE_CODE(target, "ParseExpression: failed target", lexer);
 
     firstIteration = false;
 
@@ -94,8 +97,8 @@ Parser::ParseExpression(AST::Types::Types expectedType) {
     }
   } while (loopCounter++ < loopLimit);
 
-  RET_ON_FAILURE(analyzer.expression().ActOn(expression, expectedType),
-                 "ParseExpression: failed to act on expression.");
+  RET_ON_FAILURE_CODE(analyzer.expression().ActOn(expression),
+                      "ParseExpression: failed to act on expression.", lexer);
 
   return expression;
 }

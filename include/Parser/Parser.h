@@ -44,7 +44,7 @@ public:
          Lexer &lexer)
       : astContext(astContext), analyzer(analyzer), lexer(lexer) {}
 
-  Result<bool> Parse();
+  Error Parse();
 
 private:
   // Support functions
@@ -53,12 +53,12 @@ private:
   // Parser functions
 
   // Compilation unit
-  Result<bool> ParseTopLevelItems();
-  Result<bool> ParseFunctionBodies();
-  Result<bool> ParseVariableDeclarationOrFunction();
+  Error ParseTopLevelItems();
+  Error ParseFunctionBodies();
+  Error ParseVariableDeclarationOrFunction();
 
   // Directive
-  Result<bool> ParseDirective();
+  Error ParseDirective();
 
   // Variable Declaration
   Result<AST::VariableDeclaration::Variable *> ParseVariable();
@@ -70,7 +70,7 @@ private:
   Result<std::string> ParseIdentifier();
 
   // Expression
-  Result<AST::Expression::Expression *> ParseExpression(AST::Types::Types expectedType = AST::Types::NONE);
+  Result<AST::Expression::Expression *> ParseExpression();
   Result<AST::Expression::ExpressionUnit *> ParseExpressionUnit(bool firstUnit);
 
   // Assignment
@@ -91,11 +91,11 @@ private:
   ParseConditionalBranch(bool start = false);
 
   // Function
-  Result<bool> ParseFunction(AST::VariableDeclaration::Variable *variable);
+  Error ParseFunction(AST::VariableDeclaration::Variable *variable);
   Result<AST::Function::Block *> ParseBlock();
   Result<AST::Function::FunctionCall *> ParseFunctionCall(std::string name);
-  Result<AST::Function::FunctionBody *> ParseFunctionBody();
-  Result<bool> SkipFunctionBody();
+  Result<AST::Function::FunctionBody *> ParseFunctionBody(AST::Function::Parameters parameters);
+  Error SkipFunctionBody();
 
   /// This function is supposed to be used for parameter parsing for:
   /// - Function declarations and definitions -> type is

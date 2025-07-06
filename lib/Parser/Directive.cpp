@@ -2,10 +2,10 @@
 
 namespace Parser {
 
-Result<bool> Parser::ParseDirective() {
+Error Parser::ParseDirective() {
 
   if (lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
-    return true;
+    return SUCCESS;
   }
 
   // Eat [
@@ -16,7 +16,7 @@ Result<bool> Parser::ParseDirective() {
   // Eat ]
   lexer.generateNextToken();
 
-  return true;
+  return SUCCESS;
 }
 
 } // namespace Parser

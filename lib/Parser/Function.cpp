@@ -1,3 +1,5 @@
+#include "AST/Function.h"
+#include "Support/Result.h"
 #include <Parser/Parser.h>
 
 namespace Parser {
@@ -9,7 +11,8 @@ Parser::ParseFunctionCall(std::string name) {
   // before calling this function.
   if (name.empty()) {
     auto identifier = ParseIdentifier();
-    RET_ON_FAILURE(identifier, "ParseFunctionCall: Failed to parse identifier");
+    RET_ON_FAILURE_CODE(identifier,
+                        "ParseFunctionCall: Failed to parse identifier", lexer);
     name = *identifier;
   }
 
@@ -20,7 +23,8 @@ Parser::ParseFunctionCall(std::string name) {
   lexer.generateNextToken();
 
   auto parameters = ParseParameters<AST::Expression::Expression *>();
-  RET_ON_FAILURE(parameters, "ParseFunctionCall: Failed to parse parameters");
+  RET_ON_FAILURE_CODE(parameters,
+                      "ParseFunctionCall: Failed to parse parameters", lexer);
 
   RET_ON_WRONG_TOKEN(TokenType::RIGHT_PARENTHESIS,
                      "ParseFunctionCall: Expected )");
@@ -30,7 +34,8 @@ Parser::ParseFunctionCall(std::string name) {
 
   auto call = new AST::Function::FunctionCall(name, *parameters);
 
-  RET_ON_FAILURE(analyzer.function().ActOnCall(call), "ParseFunctionCall: ");
+  RET_ON_FAILURE_CODE(analyzer.function().ActOnCall(call),
+                      "ParseFunctionCall: ", lexer);
 
   return call;
 }
@@ -44,7 +49,8 @@ Result<AST::Function::Block *> Parser::ParseBlock() {
   lexer.generateNextToken();
 
   auto statement = ParseStatement();
-  RET_ON_FAILURE(statement, "ParseBlock: Failed to parse statement");
+  RET_ON_FAILURE_CODE(statement, "ParseBlock: Failed to parse statement",
+                      lexer);
 
   auto block = new AST::Function::Block(*statement);
 
@@ -53,7 +59,8 @@ Result<AST::Function::Block *> Parser::ParseBlock() {
     lexer.generateNextToken();
 
     auto expression = ParseExpression();
-    RET_ON_FAILURE(expression, "ParseBlock: Failed to parse expression");
+    RET_ON_FAILURE_CODE(expression, "ParseBlock: Failed to parse expression",
+                        lexer);
 
     block->addReturn(*expression);
   }
@@ -68,18 +75,24 @@ Result<AST::Function::Block *> Parser::ParseBlock() {
   return block;
 }
 
-Result<AST::Function::FunctionBody *> Parser::ParseFunctionBody() {
-
+Result<AST::Function::FunctionBody *>
+Parser::ParseFunctionBody(AST::Function::Parameters parameters) {
+  
   analyzer.PushScope();
+
+  // Declare the function parameters as local variables in the current scope. 
+  RET_ON_FAILURE(analyzer.function().ActOnParameters(parameters),
+                 "ParseFunctionBody: failed to act on parameters.");
+
   auto block = ParseBlock();
   analyzer.PopScope();
 
-  RET_ON_FAILURE(block, "ParseFunctionBody: Failed to parse block");
+  RET_ON_FAILURE_CODE(block, "ParseFunctionBody: Failed to parse block", lexer);
 
   return new AST::Function::FunctionBody(*block);
 }
 
-Result<bool> Parser::SkipFunctionBody() {
+Error Parser::SkipFunctionBody() {
   if (lexer.getCurrentToken() != TokenType::LEFT_CURLY_BRACE) {
     skipUntilNotNewline();
     RET_ON_WRONG_TOKEN(TokenType::LEFT_CURLY_BRACE,
@@ -104,23 +117,23 @@ Result<bool> Parser::SkipFunctionBody() {
       break;
     }
 
-    RET_ON_TRUE(loopCounter++ > loopLimit,
-                "SkipFunctionBody: Loop limit reached");
+    RET_ON_TRUE_CODE(loopCounter++ > loopLimit,
+                     "SkipFunctionBody: Loop limit reached", lexer);
 
     lexer.generateNextToken();
   };
 
-  return true;
+  return SUCCESS;
 }
 
-Result<bool>
-Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
+Error Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
   // eat the (
   lexer.generateNextToken();
 
   auto paramaters = ParseParameters<AST::VariableDeclaration::Variable *>();
 
-  RET_ON_FAILURE(paramaters, "ParseFunction: Failed to parse parameters");
+  RET_ON_FAILURE_CODE(paramaters, "ParseFunction: Failed to parse parameters",
+                      lexer);
 
   RET_ON_WRONG_TOKEN(TokenType::RIGHT_PARENTHESIS, "ParseFunction: Expected )");
 
@@ -145,8 +158,8 @@ Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
     functionBodiesToParse.push_back({lexer.getCurrentIndex(), function});
 
     // Instead skip over the entire function body.
-    RET_ON_FAILURE(SkipFunctionBody(),
-                   "ParseFunction: Failed SkipFunctionBody.");
+    RET_ON_FAILURE_CODE(SkipFunctionBody(),
+                        "ParseFunction: Failed SkipFunctionBody.", lexer);
 
     return analyzer.function().ActOnDefinition(function);
   }

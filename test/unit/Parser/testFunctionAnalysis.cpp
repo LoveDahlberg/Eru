@@ -108,7 +108,8 @@ TEST(Parser, TestSemanticFunctionFailure) {
   for (auto testCase : testCases) {
     auto item = RunParser(testCase.code, false);
     ASSERT_TRUE(item.success);
-    EXPECT_EQ(item.result->failureReasons.front(), testCase.expectedFailure);
+    EXPECT_EQ(item.result->failureDescription.front(),
+              testCase.expectedFailure);
   }
 }
 
@@ -135,6 +136,19 @@ TEST(Parser, TestSemanticFunctionSuccess) {
         something(1)
       }
       int something(int a) [] {}
+    )");
+
+  // Call function as parameter to other function. Once when we don't need the
+  // return type, once when we do.
+  testCases.push_back(R"(
+      int something(bool a) [] {}
+      bool somethingElse(int a) [] {}
+
+
+      int main(int a) [] {
+        something(somethingElse(a))
+        return something(somethingElse(a))
+      }
     )");
 
   // TODO this is not implemented yet, always returns true.

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include <string>
 
 #include <Support/IO/FileReader.h>
@@ -78,7 +77,7 @@ public:
 
     // To reset it, go back one index and generate next token forward.
 
-    // If zero (or negative) make sure new index is also is 0. 
+    // If zero (or negative) make sure new index is also is 0.
     if (newIndex < 1) {
       newIndex = 1;
     }
@@ -87,8 +86,12 @@ public:
     // Only show current parsed function.
     parsedInput.clear();
 
+    skipNext = false;
+
     generateNextToken();
   }
+
+  std::string getParsedInput() { return parsedInput; }
 
 private:
   Token getNextToken();
@@ -108,11 +111,14 @@ private:
   Token getUnknown();
 
   const std::string input;
-  std::string parsedInput;
+  
   indexType index = 0;
   int currentChar = ' ';
   Token currentToken;
   bool isLookingAhead = false;
+
+  std::string parsedInput;
+  bool skipNext = false;
 };
 
 } // namespace Lexing

@@ -29,7 +29,9 @@ Result<Type> Parser::ParseType() {
     type = Type::STRING;
     break;
   default:
-    return {"ParseType: invalid type .."};
+    return FAILURE_CODE(Formatter("ParseType: invalid type '",
+                                  lexer.getCurrentToken().value, "'"),
+                        lexer);
   }
 
   // Get next, current type saved.

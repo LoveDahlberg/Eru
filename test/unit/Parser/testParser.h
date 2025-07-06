@@ -14,7 +14,7 @@ struct items {
   Analyzer::Analyzer analyzer;
 
   bool success = true;
-  std::optional<Result<bool>> result;
+  std::optional<Error> result;
 };
 
 inline items RunParser(std::string &stream, bool expectSuccess = true) {
@@ -29,10 +29,13 @@ inline items RunParser(std::string &stream, bool expectSuccess = true) {
   // Error if I expect success but it fails. 
   if (expectSuccess && result.hasFailed ||
       !expectSuccess && !result.hasFailed) {
-    std::cout << "\nFailure, printing stack trace:\n";
-    for (auto reason : result.failureReasons) {
+    std::cout << "\nFailure, printing description trace:\n";
+    for (auto reason : result.failureDescription) {
       std::cout << reason << "\n";
     }
+    std::cout << "Printing code trace:\n";
+    std::cout << result.codeSnippet << "\n";
+
     std::cout << "\n\n";
 
     // item.lexer.

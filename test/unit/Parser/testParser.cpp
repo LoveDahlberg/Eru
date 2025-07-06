@@ -18,14 +18,20 @@ TEST(Parser, TestDeclarationsSuccess) {
 
 TEST(Parser, TestFunctionBody) {
   std::string stream = R"(
+    // Considered extern
+    char third()
+    int something(int aa, string b)
+    int somethingElse(int first)
+    char alsoSomething(int a, int bb, string cc)
+
     int function(int a, bool b) [] {
-      int first = 3 - "asd"
-      bool second = 2 + a
+      int first = 3 - 1
+      string second = "a" + "b"
 
       char cc = third()
       if(1 + 2) {
         int aa
-        something(aa, b)
+        something(aa, second)
       }
       elif(second){
         somethingElse(first)
@@ -34,11 +40,12 @@ TEST(Parser, TestFunctionBody) {
       else
       {
         int bb
-        alsoSomething(a, bb, cc)
+        alsoSomething(first, bb, second)
       }
       return 1
     }
     )";
+
   auto item = RunParser(stream);
   ASSERT_TRUE(item.success);
 }

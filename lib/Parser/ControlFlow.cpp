@@ -11,7 +11,7 @@ Parser::ParseConditionalBranch(bool start) {
   } else {
     if (lexer.getCurrentToken().type != TokenType::ELIF &&
         lexer.getCurrentToken().type != TokenType::ELSE) {
-      return {"ParseConditionalBranch: Expected elif or else"};
+      return FAILURE_CODE("ParseConditionalBranch: Expected elif or else", lexer);
     }
   }
 
@@ -31,7 +31,7 @@ Parser::ParseConditionalBranch(bool start) {
     lexer.generateNextToken();
 
     auto expression = ParseExpression();
-    RET_ON_FAILURE(expression, "ParseConditionalBranch: failure in expression");
+    RET_ON_FAILURE_CODE(expression, "ParseConditionalBranch: failure in expression", lexer);
 
     RET_ON_WRONG_TOKEN(TokenType::RIGHT_PARENTHESIS,
                        "ParseConditionalBranch: Expected )");
@@ -44,8 +44,11 @@ Parser::ParseConditionalBranch(bool start) {
     branch->addExpression(&expr);
   }
 
+  analyzer.PushScope();
   auto block = ParseBlock();
-  RET_ON_FAILURE(block, "ParseConditionalBranch: failure in block");
+  analyzer.PopScope();
+
+  RET_ON_FAILURE_CODE(block, "ParseConditionalBranch: failure in block", lexer);
 
   // TODO fix this mess
   auto *br = *block;
@@ -63,9 +66,9 @@ Parser::ParseConditionalBranchingGroup() {
     skipUntilNotNewline();
     auto ConditionalBranch = ParseConditionalBranch(start);
 
-    RET_ON_FAILURE(
+    RET_ON_FAILURE_CODE(
         ConditionalBranch,
-        "ParseConditionalBranchingGroup: Failed to get conditional branch");
+        "ParseConditionalBranchingGroup: Failed to get conditional branch", lexer);
 
     start = false;
     conditionalChain.push_back(*ConditionalBranch);
