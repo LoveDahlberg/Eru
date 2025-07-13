@@ -3,6 +3,8 @@
 #include <string>
 #include <unordered_map>
 
+#include <AST/ASTContext.h>
+
 // - GetAction defines what actions we can have and it returns which one we
 // should use here.
 //  - We could have:
@@ -27,11 +29,11 @@ static const std::unordered_map<std::string, ActionKind> argumentToActionKind =
 
 class Action {
 public:
-  virtual bool ActOn() = 0;
+  virtual bool ActOn(AST::Context::ASTContext) = 0;
 };
 
 class EmitObjectiveFile : public Action {
-  virtual bool ActOn() override;
+  virtual bool ActOn(AST::Context::ASTContext) override;
 };
 
 Action *GetAction(std::string relevantArgument);

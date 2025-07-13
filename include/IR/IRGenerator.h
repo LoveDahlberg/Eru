@@ -4,12 +4,13 @@
 
 // llvm
 #include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/NoFolder.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/NoFolder.h>
 #include <llvm/IR/Value.h>
 
 namespace IR {
 
+// TODO refactor this to use the Result error return convention.
 class IRGenerator : public ASTTraversal<llvm::Value *> {
   llvm::Module &module;
   llvm::IRBuilder<llvm::NoFolder> *builder = nullptr;

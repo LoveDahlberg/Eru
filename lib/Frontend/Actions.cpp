@@ -15,6 +15,4 @@ Action *GetAction(std::string relevantArgument) {
   }
 }
 
-bool EmitObjectiveFile::ActOn() { return true; }
-
 } // namespace Frontend::Action

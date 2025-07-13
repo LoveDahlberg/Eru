@@ -29,11 +29,15 @@ bool Compiler(Action::Action *action, const std::string &fileInput) {
   auto parser = Parser::Parser(astContext, analyzer, lexer);
 
   // Run Parser.Parse()
-  parser.Parse();
+  auto result = parser.Parse();
+  // Propagate or show the error somehow.
+  if(result.hasFailed)
+  {
+    return false;
+  }
 
   // Run action.ActOn(ASTContext)
-  action->ActOn();
-  return true;
+  return action->ActOn(astContext);
 }
 
 } // namespace Frontend::Compiler
