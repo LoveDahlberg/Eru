@@ -67,6 +67,8 @@ Result<AST::Function::Block *> Parser::ParseBlock() {
     block->addReturn(*expression);
   }
 
+  // TODO Error if return is expected but not present..
+
   skipUntilNotNewline();
 
   RET_ON_WRONG_TOKEN(TokenType::RIGHT_CURLY_BRACE, "ParseBlock: Expected }");

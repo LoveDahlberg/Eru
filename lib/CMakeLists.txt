@@ -56,6 +56,7 @@ add_library(Frontend STATIC
     Frontend/Actions.cpp
     Frontend/Compiler.cpp
     Frontend/Linker.cpp
+    Frontend/EmitObjectFile.cpp
 )
 target_include_directories(Frontend PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(Frontend PRIVATE ${llvm_libs} Lexer Parser)

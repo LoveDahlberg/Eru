@@ -39,7 +39,7 @@ typedef long long unsigned indexType;
 
 class Lexer {
 public:
-  Lexer(const std::string &input) : input(input) {}
+  explicit Lexer(const std::string &input) : input(input) {}
 
   Token generateNextToken() {
     currentToken = getNextToken();

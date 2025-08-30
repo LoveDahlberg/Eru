@@ -2,17 +2,22 @@
 
 namespace Frontend::Action {
 
-Action *GetAction(std::string relevantArgument) {
+Action *GetAction(const std::string &relevantArgument) {
   if (!argumentToActionKind.contains(relevantArgument)) {
     return nullptr;
   }
 
-  switch (argumentToActionKind.at(relevantArgument)) {
-  case EmitObj:
-    return new EmitObjectiveFile();
-  default:
-    return nullptr;
-  }
+  return GetAction(argumentToActionKind.at(relevantArgument));
+}
+
+Action *GetAction(const ActionKind &actionKind) {
+
+  // switch (actionKind) {
+  // case EmitObj:
+  //   return new EmitObjectFile();
+  // default:
+  //   return nullptr;
+  // }
 }
 
 } // namespace Frontend::Action

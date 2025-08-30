@@ -2,10 +2,6 @@
 
 #include <filesystem>
 
-std::string getFileContent(std::filesystem::path path);
+#include <Support/Result.h>
 
-struct args {
-  std::string input;
-};
-
-args parseArgs(int argc, char *argv[]);
+Result<std::string> getFileContent(std::filesystem::path path);

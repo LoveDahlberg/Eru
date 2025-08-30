@@ -1,3 +1,4 @@
+#include "Support/Result.h"
 #include <AST/ASTContext.h>
 #include <Analyzer/Analyzer.h>
 #include <Frontend/Compiler.h>
@@ -15,26 +16,25 @@
 
 namespace Frontend::Compiler {
 
-bool Compiler(Action::Action *action, const std::string &fileInput) {
+Error Compiler(Action::Action *action, const std::filesystem::path &fileInput) {
+
   // Create ASTContext
   auto astContext = AST::Context::ASTContext();
 
   // Create Analyzer with ASTContext
   auto analyzer = Analyzer::Analyzer(astContext);
 
-  // Create Lexer
-  auto lexer = Lexing::Lexer(fileInput);
+  // Get fileInput content and create the Lexer with it.
+  auto fileContent = getFileContent(fileInput);
+  RET_ON_FAILURE(fileContent, "Failed to get file.");
+
+  auto lexer = Lexing::Lexer(*fileContent);
 
   // Create Parser with ASTContext, Analyzer and lexer.
   auto parser = Parser::Parser(astContext, analyzer, lexer);
 
   // Run Parser.Parse()
-  auto result = parser.Parse();
-  // Propagate or show the error somehow.
-  if(result.hasFailed)
-  {
-    return false;
-  }
+  RET_ON_FAILURE(parser.Parse(), "Failed to parse.");
 
   // Run action.ActOn(ASTContext)
   return action->ActOn(astContext);

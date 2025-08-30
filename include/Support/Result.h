@@ -87,6 +87,15 @@ public:
     return true;
   }
 
+  bool check()
+  {
+    checked = true;
+    if (hasFailed) {
+      return false;
+    }
+    return true;
+  }
+
   // Stores the new error message received with the old ones.
   void storeNewStackTrace(const Formatter description,
                           const Formatter code = {}) {

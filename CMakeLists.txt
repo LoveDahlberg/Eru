@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.20)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+add_compile_options(-Wunused-result)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++ -gdwarf-4")
 
 project(project)
@@ -67,7 +69,7 @@ add_subdirectory(lib)
 ############################
 
 # Add each lib folder to each own lib that can be included here.
-add_executable(main lib/Main.cpp)
+add_executable(main lib/Driver/main.cpp)
 
 # Link dependencies
 target_link_libraries(main PRIVATE
@@ -78,7 +80,7 @@ target_link_libraries(main PRIVATE
     CURL::libcurl
     
     # Project dependencies
-    Lexer
+    Frontend
     FileReader)
 
 add_custom_target(run

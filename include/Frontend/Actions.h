@@ -1,8 +1,12 @@
 #pragma once
 
+// llvm
+#include <llvm/IR/Module.h>
+
 #include <string>
 #include <unordered_map>
 
+#include <Support/Result.h>
 #include <AST/ASTContext.h>
 
 // - GetAction defines what actions we can have and it returns which one we
@@ -29,13 +33,23 @@ static const std::unordered_map<std::string, ActionKind> argumentToActionKind =
 
 class Action {
 public:
-  virtual bool ActOn(AST::Context::ASTContext) = 0;
+  virtual Error ActOn(AST::Context::ASTContext) = 0;
 };
 
-class EmitObjectiveFile : public Action {
-  virtual bool ActOn(AST::Context::ASTContext) override;
+class EmitObjectFile : public Action {
+public:  
+  EmitObjectFile(const std::string &outputFile) : outputFile(outputFile) {}
+  
+  virtual Error ActOn(AST::Context::ASTContext) override;
+
+private:
+
+  bool emitObject(llvm::Module &module);
+
+  const std::string &outputFile;
 };
 
-Action *GetAction(std::string relevantArgument);
+Action *GetAction(const std::string &relevantArgument);
+Action *GetAction(const ActionKind &actionKind);
 
 } // namespace Frontend::Action

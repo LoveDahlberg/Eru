@@ -1,3 +1,4 @@
+#include "Support/Result.h"
 #include <Frontend/Actions.h>
 #include <IR/IRGenerator.h>
 
@@ -15,9 +16,7 @@
 
 namespace Frontend::Action {
 
-namespace {
-
-bool emitObject(llvm::Module &module, llvm::StringRef filename) {
+bool EmitObjectFile::emitObject(llvm::Module &module) {
 
   // From kolidascope. TODO rewrite this with the new pass manager.
 
@@ -53,9 +52,8 @@ bool emitObject(llvm::Module &module, llvm::StringRef filename) {
   module.setTargetTriple(TargetTriple);
 
   // Define some output file
-  auto Filename = "output.o";
   std::error_code EC;
-  llvm::raw_fd_ostream dest(Filename, EC, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream dest(outputFile, EC, llvm::sys::fs::OF_None);
 
   if (EC) {
     return false;
@@ -74,15 +72,10 @@ bool emitObject(llvm::Module &module, llvm::StringRef filename) {
   return true;
 }
 
-} // namespace
-
-// TODO move this to its own file
-bool EmitObjectiveFile::ActOn(AST::Context::ASTContext context) {
-
-  constexpr auto &name = "default-module";
+Error EmitObjectFile::ActOn(AST::Context::ASTContext context) {
 
   auto ctx = new llvm::LLVMContext();
-  auto module = llvm::Module(name, *ctx);
+  auto module = llvm::Module("default-module", *ctx);
 
   auto generator = IR::IRGenerator(module);
 
@@ -90,15 +83,12 @@ bool EmitObjectiveFile::ActOn(AST::Context::ASTContext context) {
   generator.Walk(context);
 
   // For now just verify the module.
-  if (!llvm::verifyModule(module, &llvm::errs())) {
-    return false;
-  }
+  RET_ON_FALSE(!llvm::verifyModule(module, &llvm::errs()),
+               "Failed to verify module.");
 
-  if (!emitObject(module, name)) {
-    return false;
-  }
+  RET_ON_FALSE(emitObject(module), "Failed to emit object file");
 
-  return true;
+  return SUCCESS;
 }
 
 } // namespace Frontend::Action
