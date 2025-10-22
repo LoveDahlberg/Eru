@@ -1,8 +1,8 @@
 #include <IR/IRGenerator.h>
 
 // llvm
-#include <llvm-20/llvm/IR/LLVMContext.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/LLVMContext.h>
 #include <llvm/Support/Casting.h>
 
 namespace IR {
@@ -12,8 +12,8 @@ llvm::Value *IRGenerator::handle(Function::FunctionCall &AST) {
     return nullptr;
   }
 
-  // TODO make use of symbol table here?
-  auto callingFunction = module.getFunction(AST.name);
+  auto callingFunction =
+      scopeHandler.getGlobal().getFunctionDeclaration(AST.name);
   if (callingFunction == nullptr) {
     return nullptr;
   }
@@ -27,6 +27,8 @@ llvm::Value *IRGenerator::handle(Function::FunctionCall &AST) {
 }
 
 llvm::Value *IRGenerator::handle(Function::Block &AST) {
+  scopeHandler.Push();
+
   auto statementResult = ASTTraversal::handle(*AST.statement);
 
   // Expect all generated statements to be non null. If statementResult is
@@ -38,8 +40,9 @@ llvm::Value *IRGenerator::handle(Function::Block &AST) {
     }
   }
 
-  // If the returnValue is nullptr, then it means this block has no return (this
-  // is ok). Return the latest statement pointer.
+  // If the returnValue is nullptr, then it means this block has no return. This
+  // is ok here. If it is a controlflow block, it will also be handled
+  // correctly by the caller. Now just return the latest statement pointer.
   if (AST.returnValue == nullptr) {
     return statementResult.back();
   }
@@ -49,12 +52,26 @@ llvm::Value *IRGenerator::handle(Function::Block &AST) {
     return nullptr;
   }
 
+  // Load it and then return the loaded value.
+  // TODO: need to think if this makes sense to always do here.
+  // Most likely needs to be done elsewhere ()
+  // auto* loaded = builder->CreateLoad(builder->getInt32Ty(), slot);
+
+
+  
   return builder->CreateRet(value);
+
+  scopeHandler.Pop();
 }
 
 llvm::Value *IRGenerator::handle(Function::FunctionBody &AST) {
 
-  // Generate directive
+  // TODO Generate directive
+
+  for (auto &parameter : currentFunction->args()) {
+    scopeHandler.AddParametersForNextPushedLocalScope(parameter.getName().str(),
+                                                      &parameter);
+  }
 
   return AST.block == nullptr ? nullptr : handle(*AST.block);
 }
@@ -82,8 +99,12 @@ llvm::Value *IRGenerator::handle(Function::Function &AST) {
 
   unsigned Idx = 0;
   for (auto &parameter : function->args()) {
-    parameter.setName(AST.parameters.at(Idx++)->name);
+    auto name = AST.parameters.at(Idx++)->name;
+    parameter.setName(name);
   }
+
+  // Save reference to function so that it can be called later.
+  scopeHandler.getGlobal().functionDeclarations.emplace(AST.name, function);
 
   // If the function has no body, it is a declaration.
   if (AST.body != nullptr) {
@@ -101,6 +122,7 @@ llvm::Value *IRGenerator::handle(Function::Function &AST) {
   }
 
   currentFunction = nullptr;
+
   return function;
 }
 } // namespace IR

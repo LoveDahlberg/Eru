@@ -4,37 +4,22 @@
 namespace Analyzer {
 
 Result<bool> VariableAnalyzer::isTypeCheckedVariableDeclared(
-    AST::VariableDeclaration::Variable *variable,
-    std::unique_ptr<Scope> &scope) {
-  for (auto *declaredVarible : scope->variableDeclarations) {
+    AST::VariableDeclaration::Variable *variable, AnalyzerScope &scope) {
 
-    // Found matching declaration in scope.
-    if (declaredVarible->name == variable->name) {
+  auto declaredVariable = scope.getDeclaredVariable(variable->name);
 
-      RET_ON_NOT_EQUAL(declaredVarible->type, variable->type,
-                       "isTypeCheckedVariableDeclared: Found matching variable "
-                       "but type does not match.");
-      return true;
-    }
+  if (declaredVariable == nullptr) {
+    return false;
   }
-  return false;
-}
 
-// TODO: rewrite in std::ranges get_if or something
-AST::VariableDeclaration::Variable *
-VariableAnalyzer::getDeclaredVariable(AST::Types::NamedIdentifier &identifier,
-                                      std::unique_ptr<Scope> &scope) {
-  for (auto *declaredVarible : scope->variableDeclarations) {
-    if (declaredVarible->name == identifier.value) {
-      return declaredVarible;
-    }
-  }
-  return nullptr;
+  RET_ON_NOT_EQUAL(declaredVariable->type, variable->type,
+                   "isTypeCheckedVariableDeclared: Found matching variable "
+                   "but type does not match.");
+  return true;
 }
 
 bool VariableAnalyzer::isVariableDeclared(
-    AST::VariableDeclaration::Variable *variable,
-    std::unique_ptr<Scope> &scope) {
+    AST::VariableDeclaration::Variable *variable, AnalyzerScope &scope) {
   auto result = isTypeCheckedVariableDeclared(variable, scope);
 
   // If check failed or is true, then it means it exist in some form in scope.
@@ -47,7 +32,7 @@ VariableAnalyzer::getDeclaredVariable(AST::Types::NamedIdentifier &identifier) {
 
   // Check current scope.
   auto currentScopeVariable =
-      getDeclaredVariable(identifier, analyzer.getCurrentScope());
+      analyzer.getCurrentScope().getDeclaredVariable(identifier.value);
 
   // If found in current scope, return. Otherwise recursively check all parents
   // for it.
@@ -69,47 +54,47 @@ Error VariableAnalyzer::addVariableDeclarationToCurrentScope(
       *result,
       "addVariableDeclarationToCurrentScope: Variable already declared");
 
-  analyzer.getCurrentScope()->variableDeclarations.push_back(variable);
+  analyzer.getCurrentScope().variableDeclarations.emplace(variable->name,
+                                                          variable);
   return SUCCESS;
 }
 
 bool VariableAnalyzer::isVariableDeclaredParentScope(
-    AST::VariableDeclaration::Variable *variable,
-    std::unique_ptr<Scope> &scope) {
+    AST::VariableDeclaration::Variable *variable, AnalyzerScope &scope) {
 
   // If no parent, then it is never declared in parent scope.
-  if (scope->parentScope == nullptr) {
+  if (scope.parentScope == nullptr) {
     return false;
   }
 
   // Check declaration in parent. If its found return true.
   // Else recursively check grandparents
-  return isVariableDeclared(variable, scope->parentScope)
+  return isVariableDeclared(variable, *scope.parentScope)
              ? true
-             : isVariableDeclaredParentScope(variable, scope->parentScope);
+             : isVariableDeclaredParentScope(variable, *scope.parentScope);
 }
 
 AST::VariableDeclaration::Variable *
 VariableAnalyzer::getDeclaredVariableParentScope(
-    AST::Types::NamedIdentifier &identifier, std::unique_ptr<Scope> &scope) {
+    AST::Types::NamedIdentifier &identifier, AnalyzerScope &scope) {
 
   // If no parent, then it is never declared in parent scope.
-  if (scope->parentScope == nullptr) {
+  if (scope.parentScope == nullptr) {
     return nullptr;
   }
 
   // Check declaration in parent. If its found return it.
   // Else recursively check grandparents
-  auto *variable = getDeclaredVariable(identifier, scope->parentScope);
+  auto *variable = scope.getDeclaredVariable(identifier.value);
   return variable != nullptr
              ? variable
-             : getDeclaredVariableParentScope(identifier, scope->parentScope);
+             : getDeclaredVariableParentScope(identifier, *scope.parentScope);
 }
 
 Error VariableAnalyzer::ActOnGlobalDeclaration(
     AST::VariableDeclaration::Variable *variable) {
 
-  RET_ON_FALSE(analyzer.getCurrentScope()->isGlobal,
+  RET_ON_FALSE(analyzer.getCurrentScope().isGlobal(),
                "ActOnGlobalDeclaration: current scope is not global.");
 
   auto declaration = declareVariable(variable);
@@ -126,7 +111,7 @@ Result<AST::VariableDeclaration::VariableDeclaration *>
 VariableAnalyzer::ActOnLocalDeclaration(
     AST::VariableDeclaration::Variable *variable) {
 
-  RET_ON_TRUE(analyzer.getCurrentScope()->isGlobal,
+  RET_ON_TRUE(analyzer.getCurrentScope().isGlobal(),
               "ActOnLocalDeclaration: current scope is not local.");
 
   auto declaration = declareVariable(variable);
@@ -147,7 +132,7 @@ VariableAnalyzer::declareVariable(
                  "verifyVariableDeclaration: failed addVariableDeclaration");
 
   auto declaration = new AST::VariableDeclaration::VariableDeclaration(
-      variable, analyzer.getCurrentScope()->isGlobal);
+      variable, analyzer.getCurrentScope().isGlobal());
 
   // Check if variable is declared in any of the parent scopes. If it is, set
   // variable as hidingParentDeclaration. For now allow redefining of type.
@@ -178,9 +163,8 @@ Error VariableAnalyzer::ActOnAssignment(
 
   } else if (std::holds_alternative<AST::Types::NamedIdentifier *>(target)) {
 
-    variable =
-        getDeclaredVariable(*std::get<AST::Types::NamedIdentifier *>(target),
-                            analyzer.getCurrentScope());
+    variable = analyzer.getCurrentScope().getDeclaredVariable(
+        std::get<AST::Types::NamedIdentifier *>(target)->value);
 
     // Verify that the identifier matches with something that was previously
     // declared.

@@ -1,5 +1,7 @@
 #include "testParser.h"
 
+#include <llvm/IR/Verifier.h>
+
 TEST(Parser, TestDeclarationsSuccess) {
   std::string stream = R"(
     int first
@@ -48,4 +50,70 @@ TEST(Parser, TestFunctionBody) {
 
   auto item = RunParser(stream);
   ASSERT_TRUE(item.success);
+}
+
+// TODO: This are just temporary testing functions used to iron out some bugs.
+// They should not be placed here in the unit parser, as it tests the parser +
+// the IRGenerator together.
+// I'm unsure if this should just be a lit test or if these tests should be
+// added to like a Compiler test.. but thats essentially the whole program at
+// this point.
+
+#include <IR/IRGenerator.h>
+
+#include <gmock/gmock-matchers.h>
+#include <gmock/gmock.h>
+
+TEST(Parser, testSmallFunctionBody) {
+  std::string stream = R"(
+  int something(int a) []
+
+int main(int a) [] {
+  int b = something(1)
+  return b + a
+}
+)";
+
+  auto item = RunParser(stream);
+  ASSERT_TRUE(item.success);
+
+  auto ctx = llvm::LLVMContext();
+  auto module = llvm::Module("default-module", ctx);
+
+  auto generator = IR::IRGenerator(module);
+
+  EXPECT_THAT(generator.Walk(item.astContext),
+              testing::Each(testing::NotNull()));
+  EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
+}
+
+TEST(Parser, testSmallFunctionBody2) {
+  std::string stream = R"(
+  int something(int a) []
+
+  int d
+
+int main(int a) [] {
+  int b = something(a)
+  int g = b + a
+
+  if(1) {
+    d = g + 1
+  }
+
+  return d
+}
+)";
+
+  auto item = RunParser(stream);
+  ASSERT_TRUE(item.success);
+
+  auto ctx = llvm::LLVMContext();
+  auto module = llvm::Module("default-module", ctx);
+
+  auto generator = IR::IRGenerator(module);
+
+  EXPECT_THAT(generator.Walk(item.astContext),
+              testing::Each(testing::NotNull()));
+  EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }

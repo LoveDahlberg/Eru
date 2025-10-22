@@ -1,6 +1,7 @@
 #include <IR/IRGenerator.h>
 
 // llvm
+#include <llvm-20/llvm/Support/Error.h>
 #include <llvm/IR/Constants.h>
 
 namespace IR {
@@ -13,7 +14,27 @@ IRGenerator::getOperand(Expression::ExpressionUnit *expressionUnit) {
 
     return llvm::ConstantInt::get(llvm::Type::getInt32Ty(module.getContext()),
                                   stoi(integerLiteral.value));
+  } else if (std::holds_alternative<Function::FunctionCall *>(
+                 expressionUnit->operand)) {
+    auto call = std::get<Function::FunctionCall *>(expressionUnit->operand);
+
+    return handle(*call);
+
+  } else if (std::holds_alternative<Types::NamedIdentifier>(
+                 expressionUnit->operand)) {
+    auto identifier = std::get<Types::NamedIdentifier>(expressionUnit->operand);
+
+    // Make sure the variable value being pointed to is used here, as the
+    // expression is done on the value itself.
+    // TODO: If pointer arithmetic is added, extend this logic to handle it.
+    return scopeHandler.getCurrent()
+        .getDeclaredVariable(identifier.value)
+        .getValue(builder);
+  } else {
+    llvm::report_fatal_error(
+        "IRExpression: getOperand: encountered unimplemented type");
   }
+
   // TODO Add the rest
   return nullptr;
 }

@@ -11,8 +11,6 @@ class FunctionAnalyzer {
 
   PrivateAnalyzer &analyzer;
 
-  std::vector<AST::Function::Function *> functions;
-
   /// Attempt to add a function. Returns an error if not successful.
   Error addFunction(AST::Function::Function *function,
                     AST::Function::FunctionStatus status);

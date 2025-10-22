@@ -144,7 +144,8 @@ Error ExpressionAnalyzer::ActOn(AST::Expression::Expression *expression) {
       // Get the actual type of the function to be called to use in the next
       // iteration.
       if (first) {
-        auto function = analyser.function().getFunction(call->name);
+        auto function =
+            analyser.getGlobalScope().getFunctionDeclaration(call->name);
 
         RET_ON_EQUAL(function, nullptr,
                      "ActOnExpression: failed to act on call.");

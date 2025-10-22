@@ -64,20 +64,19 @@ struct Function {
 
   Function(Types::Types type, std::string name,
     Parameters parameters)
-      : type(type), name(name), parameters(parameters) {}
+      : type(type), name(name), parameters(parameters)  {}
 
   Function(Types::Types type, std::string name) : type(type), name(name) {}
 
   void addFunctionBody(FunctionBody *body) { this->body = body; }
 
-  Parameters parameters;
-
-  Types::Types type;
-
-  std::string name;
   
+  Types::Types type;
+  std::string name;
+  Parameters parameters;
+  
+  FunctionBody *body = nullptr;
   FunctionStatus definitionStatus = NONE;
-  FunctionBody *body;
 };
 
 } // namespace AST::Function

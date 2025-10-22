@@ -12,24 +12,29 @@ namespace IR {
 llvm::Value *
 IRGenerator::handle(VariableDeclaration::VariableDeclaration &AST) {
 
-  auto type = GetType(AST.variable->type);
+  auto *type = GetType(AST.variable->type);
   if (type == nullptr) {
     return nullptr;
   }
 
+  auto storeDeclaration = [&AST, &type, this](auto *variable) {
+    ;
+    scopeHandler.getCurrent().variableDeclarations.emplace(
+        AST.variable->name, ScopeVariable{variable, type});
+    return variable;
+  };
+
   if (AST.isGlobal) {
-    return new llvm::GlobalVariable(
+    return storeDeclaration(new llvm::GlobalVariable(
         module, type, false, llvm::GlobalValue::ExternalLinkage, nullptr,
         AST.variable->name, nullptr,
         llvm::GlobalValue::ThreadLocalMode::NotThreadLocal, std::nullopt,
-        false);
+        false));
   }
 
-  if (builder == nullptr) {
-    return nullptr;
-  }
-
-  return builder->CreateAlloca(type, nullptr, AST.variable->name);
+  return builder != nullptr ? storeDeclaration(builder->CreateAlloca(
+                                  type, nullptr, AST.variable->name))
+                            : nullptr;
 }
 
 } // namespace IR

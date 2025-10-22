@@ -1,12 +1,15 @@
 #include <AST/ASTTraversal.h>
 #include <AST/CompilationUnit.h>
 #include <AST/Expression.h>
+#include <IR/IRScope.h>
 
 // llvm
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/NoFolder.h>
 #include <llvm/IR/Value.h>
+
+using namespace Support::Scope;
 
 namespace IR {
 
@@ -33,6 +36,8 @@ class IRGenerator : public ASTTraversal<llvm::Value *> {
 
   // Support
   llvm::Type *GetType(Types::Types type);
+
+  IRScopeHandler scopeHandler;
 
 public:
   IRGenerator(llvm::Module &module) : module(module) {}

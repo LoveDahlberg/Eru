@@ -2,12 +2,16 @@
 
 #include <AST/Assignment.h>
 #include <Support/Result.h>
+#include <Support/Scope.h>
 
 #include <memory>
 
+using namespace Support::Scope;
+
 namespace Analyzer {
 
-struct Scope;
+
+using AnalyzerScope = Scope<AST::VariableDeclaration::Variable *>;
 class PrivateAnalyzer;
 
 class VariableAnalyzer {
@@ -16,22 +20,17 @@ class VariableAnalyzer {
 
   Result<bool>
   isTypeCheckedVariableDeclared(AST::VariableDeclaration::Variable *variable,
-                                std::unique_ptr<Scope> &scope);
+                                AnalyzerScope &scope);
   bool isVariableDeclared(AST::VariableDeclaration::Variable *variable,
-                          std::unique_ptr<Scope> &scope);
-
-  /// Get the declared variable using the given identifers in given scope.
-  AST::VariableDeclaration::Variable *
-  getDeclaredVariable(AST::Types::NamedIdentifier &identifier,
-                      std::unique_ptr<Scope> &scope);
+                          AnalyzerScope &scope);
 
   bool
   isVariableDeclaredParentScope(AST::VariableDeclaration::Variable *variable,
-                                std::unique_ptr<Scope> &scope);
+                                AnalyzerScope &scope);
 
   AST::VariableDeclaration::Variable *
   getDeclaredVariableParentScope(AST::Types::NamedIdentifier &identifier,
-                                 std::unique_ptr<Scope> &scope);
+                                 AnalyzerScope &scope);
 
   Error addVariableDeclarationToCurrentScope(
       AST::VariableDeclaration::Variable *variable);

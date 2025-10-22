@@ -5,12 +5,6 @@
 
 namespace Analyzer {
 
-AST::Function::Function *FunctionAnalyzer::getFunction(std::string name) {
-  auto result =
-      std::ranges::find(functions, name, &AST::Function::Function::name);
-  return result == functions.end() ? nullptr : *result;
-}
-
 Error FunctionAnalyzer::addFunction(AST::Function::Function *function,
                                     AST::Function::FunctionStatus variant) {
 
@@ -19,12 +13,14 @@ Error FunctionAnalyzer::addFunction(AST::Function::Function *function,
   RET_ON_EQUAL(variant, AST::Function::FunctionStatus::NONE,
                "addFunction: variant has with definitionStatus NONE");
 
-  auto existingFunction = getFunction(function->name);
+  auto& globalScope = analyzer.getGlobalScope();
+
+  auto existingFunction = globalScope.getFunctionDeclaration(function->name);
 
   // Function does not exist.
-  if (existingFunction == nullptr) {
+  if (!globalScope.functionDeclarations.contains(function->name)) {
     function->definitionStatus = variant;
-    functions.push_back(function);
+    globalScope.functionDeclarations.emplace(function->name, function);
 
     return SUCCESS;
   }
@@ -90,7 +86,7 @@ Error FunctionAnalyzer::addFunction(AST::Function::Function *function,
 Error FunctionAnalyzer::ActOnDeclaration(AST::Function::Function *function) {
 
   // Must be in global scope to declare a function
-  RET_ON_FALSE(analyzer.getCurrentScope()->isGlobal,
+  RET_ON_FALSE(analyzer.getCurrentScope().isGlobal(),
                "ActOnFunctionDeclaration: Function cannot be declared in other "
                "functions.");
 
@@ -104,7 +100,7 @@ Error FunctionAnalyzer::ActOnDeclaration(AST::Function::Function *function) {
 Error FunctionAnalyzer::ActOnDefinition(AST::Function::Function *function) {
 
   // Must be in global scope to define a new function
-  RET_ON_FALSE(analyzer.getCurrentScope()->isGlobal,
+  RET_ON_FALSE(analyzer.getCurrentScope().isGlobal(),
                "ActOnFunctionDefinition: Function cannot be defined in other "
                "functions.");
 
@@ -117,7 +113,8 @@ Error FunctionAnalyzer::ActOnDefinition(AST::Function::Function *function) {
 
 Result<AST::Function::Function *>
 FunctionAnalyzer::ActOnCall(AST::Function::FunctionCall *call) {
-  auto existingFunction = getFunction(call->name);
+  auto existingFunction =
+      analyzer.getGlobalScope().getFunctionDeclaration(call->name);
 
   RET_ON_EQUAL(existingFunction, nullptr,
                "ActOnCall: function does not exist.");
@@ -136,7 +133,8 @@ FunctionAnalyzer::ActOnCall(AST::Function::FunctionCall *call) {
             "ActOnCall: parameter '", i, ":",
             AST::Types::typeToString.at(call->parameters[i]->evaluatedType),
             "' for '", call->name,
-            "' does not match with the resulting type from expression '", i, ":",
+            "' does not match with the resulting type from expression '", i,
+            ":",
             AST::Types::typeToString.at(existingFunction->parameters[i]->type),
             "' for '", existingFunction->name, "'."));
   }

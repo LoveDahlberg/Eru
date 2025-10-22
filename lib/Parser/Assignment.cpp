@@ -10,21 +10,17 @@ Parser::ParseAssignment(AST::VariableDeclaration::Variable *variable) {
 
   // If not null, variable information already parsed.
   // TODO implement parsing of variable declaration or single identifier
-  RET_ON_EQUAL_CODE(variable, nullptr, "ParseAssignment: variable is null", lexer);
-  
+  RET_ON_EQUAL_CODE(variable, nullptr, "ParseAssignment: variable is null",
+                    lexer);
+
   RET_ON_WRONG_TOKEN(TokenType::EQUAL, "ParseAssignment: expected =");
 
   // Eat the =
   lexer.generateNextToken();
 
   AST::Assignment::Assignment *assignment;
-  if (variable->type == AST::Types::Types::NONE) {
-    assignment = new AST::Assignment::Assignment(
-        new AST::Types::NamedIdentifier{.value = variable->name});
-  } else {
-    assignment =
-        new AST::Assignment::Assignment(new AST::VariableDeclaration::VariableDeclaration(variable));
-  }
+  assignment = new AST::Assignment::Assignment(
+      new AST::Types::NamedIdentifier{.value = variable->name});
 
   auto expression = ParseExpression();
   RET_ON_FAILURE_CODE(expression, "ParseAssignment: expression failed", lexer);
