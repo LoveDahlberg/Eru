@@ -1,2 +1,7 @@
 .cache
 compile_commands.json
+
+test/lit/**/Output
+
+# TODO: figure out how to not create this
+test/lit/.lit_test_times.txt

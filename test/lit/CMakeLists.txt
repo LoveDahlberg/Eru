@@ -1,0 +1,1 @@
+# TODO Add a cmake target to run all lit tests

@@ -43,6 +43,14 @@ In addition to having the posibility of obfuscating the code in the directive, i
 
 I can also make it so that the directive allows control what kind of mangling a function should have. If I go with function overloading, but I want C code to be able to call it, then this could be specified in the directive.
 
+Name of language:
+
+Eru - from the god of the lord of the ring world who created the world.
+
+File extenion is .arda - as in the Lord of the ring planet itself.
+The world it self "Eä" could also work, but it uses non standard asci and
+I dont want Ea only.
+
 -------------------
 
 Data types:

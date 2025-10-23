@@ -71,6 +71,7 @@ int main(int argc, char *argv[]) {
     llvm::outs()  << result.codeSnippet << "\n";
 
     llvm::outs()  << "\n\n";
+    return 1;
   }
 
   return 0;
