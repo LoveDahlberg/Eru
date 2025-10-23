@@ -81,7 +81,7 @@ target_link_libraries(main PRIVATE
     
     # Project dependencies
     Frontend
-    FileReader)
+    Support)
 
 add_custom_target(run
     COMMAND $<TARGET_FILE:main>

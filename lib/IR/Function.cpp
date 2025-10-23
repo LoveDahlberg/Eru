@@ -14,7 +14,8 @@ llvm::Value *IRGenerator::handle(Function::FunctionCall &AST) {
 
   auto callingFunction =
       scopeHandler.getGlobal().getFunctionDeclaration(AST.name);
-  if (callingFunction == nullptr) {
+
+  if (!callingFunction.has_value()) {
     return nullptr;
   }
 
@@ -23,7 +24,7 @@ llvm::Value *IRGenerator::handle(Function::FunctionCall &AST) {
     evaluatedParameters.push_back(handle(*paramter));
   }
 
-  return builder->CreateCall(callingFunction, evaluatedParameters);
+  return builder->CreateCall(*callingFunction, evaluatedParameters);
 }
 
 llvm::Value *IRGenerator::handle(Function::Block &AST) {
@@ -52,16 +53,11 @@ llvm::Value *IRGenerator::handle(Function::Block &AST) {
     return nullptr;
   }
 
-  // Load it and then return the loaded value.
-  // TODO: need to think if this makes sense to always do here.
-  // Most likely needs to be done elsewhere ()
-  // auto* loaded = builder->CreateLoad(builder->getInt32Ty(), slot);
-
-
-  
-  return builder->CreateRet(value);
+  auto *returnValue = builder->CreateRet(value);
 
   scopeHandler.Pop();
+
+  return returnValue;
 }
 
 llvm::Value *IRGenerator::handle(Function::FunctionBody &AST) {
@@ -104,7 +100,7 @@ llvm::Value *IRGenerator::handle(Function::Function &AST) {
   }
 
   // Save reference to function so that it can be called later.
-  scopeHandler.getGlobal().functionDeclarations.emplace(AST.name, function);
+  scopeHandler.getGlobal().addFunctionDeclaration(AST.name, function);
 
   // If the function has no body, it is a declaration.
   if (AST.body != nullptr) {

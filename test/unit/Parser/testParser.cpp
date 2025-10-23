@@ -87,6 +87,7 @@ int main(int a) [] {
   EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
 
+// Fix so that variables are found also looking at the parent scopes.
 TEST(Parser, testSmallFunctionBody2) {
   std::string stream = R"(
   int something(int a) []
@@ -101,7 +102,31 @@ int main(int a) [] {
     d = g + 1
   }
 
-  return d
+  return g
+}
+)";
+
+  auto item = RunParser(stream);
+  ASSERT_TRUE(item.success);
+
+  auto ctx = llvm::LLVMContext();
+  auto module = llvm::Module("default-module", ctx);
+
+  auto generator = IR::IRGenerator(module);
+
+  EXPECT_THAT(generator.Walk(item.astContext),
+              testing::Each(testing::NotNull()));
+  EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
+}
+
+TEST(Parser, testSmallFunctionBody3) {
+  std::string stream = R"(
+int external(int input) []
+
+int main(int input) [] {
+  int response = external(input)
+
+  return input + response
 }
 )";
 

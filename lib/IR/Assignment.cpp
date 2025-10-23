@@ -31,15 +31,14 @@ llvm::Value *IRGenerator::handle(Assignment::Assignment &AST) {
 
     // Make sure the pointer of the variable is used here, it is needed for the
     // store.
-    auto *variable = scopeHandler.getCurrent()
-                         .getDeclaredVariable(name->value)
-                         .getHighestOrderValue(builder);
+    auto variable = scopeHandler.getCurrent().getDeclaredVariable(name->value);
 
-    if (variable == nullptr) {
+    // Variable note declared.
+    if (!variable.has_value()) {
       return nullptr;
     }
 
-    assignmentTarget = variable;
+    assignmentTarget = variable->getHighestOrderValue(builder);
   }
 
   auto exp = handle(*AST.expression);

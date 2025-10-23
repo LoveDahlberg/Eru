@@ -41,12 +41,13 @@ Result<AST::Types::Types>
 ExpressionAnalyzer::getIdentifierType(AST::Types::NamedIdentifier identifier) {
 
   // Check if identifier is declared in current or any parent scope.
-  auto *variable = analyser.variable().getDeclaredVariable(identifier);
+  auto variable =
+      analyser.getCurrentScope().getDeclaredVariable(identifier.value);
 
-  RET_ON_EQUAL(variable, nullptr,
+  RET_ON_FALSE(variable.has_value(),
                "getIdentifierType: use of undeclared identifier.");
 
-  return variable->type;
+  return (*variable)->type;
 }
 
 Error ExpressionAnalyzer::evaluateIdentifier(
@@ -147,9 +148,9 @@ Error ExpressionAnalyzer::ActOn(AST::Expression::Expression *expression) {
         auto function =
             analyser.getGlobalScope().getFunctionDeclaration(call->name);
 
-        RET_ON_EQUAL(function, nullptr,
+        RET_ON_FALSE(function.has_value(),
                      "ActOnExpression: failed to act on call.");
-        evaluatedType = function->type;
+        evaluatedType = (*function)->type;
       } else {
         RET_ON_FAILURE(analyser.function().ActOnCall(call, evaluatedType),
                        "ActOnExpression: failed to evaluate function call.");

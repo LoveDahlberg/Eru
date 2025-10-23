@@ -10,7 +10,6 @@ using namespace Support::Scope;
 
 namespace Analyzer {
 
-
 using AnalyzerScope = Scope<AST::VariableDeclaration::Variable *>;
 class PrivateAnalyzer;
 
@@ -20,9 +19,8 @@ class VariableAnalyzer {
 
   Result<bool>
   isTypeCheckedVariableDeclared(AST::VariableDeclaration::Variable *variable,
-                                AnalyzerScope &scope);
-  bool isVariableDeclared(AST::VariableDeclaration::Variable *variable,
-                          AnalyzerScope &scope);
+                                bool checkParents);
+  bool isVariableDeclaredGlobally(AST::VariableDeclaration::Variable *variable);
 
   bool
   isVariableDeclaredParentScope(AST::VariableDeclaration::Variable *variable,
@@ -32,7 +30,7 @@ class VariableAnalyzer {
   getDeclaredVariableParentScope(AST::Types::NamedIdentifier &identifier,
                                  AnalyzerScope &scope);
 
-  Error addVariableDeclarationToCurrentScope(
+  Error addVariableDeclarationInCurrentScope(
       AST::VariableDeclaration::Variable *variable);
 
   Result<AST::VariableDeclaration::VariableDeclaration *>
@@ -46,11 +44,9 @@ public:
   AST::VariableDeclaration::Variable *
   getDeclaredVariable(AST::Types::NamedIdentifier &identifier);
 
-  Error
-  ActOnGlobalDeclaration(AST::VariableDeclaration::Variable *variable);
+  Error ActOnGlobalDeclaration(AST::VariableDeclaration::Variable *variable);
   Result<AST::VariableDeclaration::VariableDeclaration *>
   ActOnLocalDeclaration(AST::VariableDeclaration::Variable *variable);
   Error ActOnAssignment(AST::Assignment::Assignment *assignment);
 };
-
 } // namespace Analyzer

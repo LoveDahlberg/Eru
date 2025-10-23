@@ -1,4 +1,5 @@
 #include "testParser.h"
+#include <string>
 
 TEST(Parser, TestSemanticVariableFailure) {
 
@@ -165,8 +166,14 @@ TEST(Parser, TestSemanticVariableSuccess) {
     } 
   )"});
 
+  int order = 0;
   for (auto testCase : testCases) {
     auto item = RunParser(testCase);
+    if (!item.success) {
+      std::cout << "Failed for case " << std::to_string(order) << "\n";
+    }
+
     ASSERT_TRUE(item.success);
+    ++order;
   }
 }

@@ -18,8 +18,7 @@ IRGenerator::handle(VariableDeclaration::VariableDeclaration &AST) {
   }
 
   auto storeDeclaration = [&AST, &type, this](auto *variable) {
-    ;
-    scopeHandler.getCurrent().variableDeclarations.emplace(
+    scopeHandler.getCurrent().addVariableDeclaration(
         AST.variable->name, ScopeVariable{variable, type});
     return variable;
   };

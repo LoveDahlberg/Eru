@@ -6,8 +6,9 @@ target_link_libraries(testFileReader PRIVATE
     GTest::GTest 
     GTest::Main
     Threads::Threads
+    
     # Add linking agains the specific lib.
-    FileReader
+    Support
 )
 # target_include_directories(testFileReader PRIVATE ${CMAKE_SOURCE_DIR}/lib)
 

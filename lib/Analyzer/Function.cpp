@@ -13,17 +13,20 @@ Error FunctionAnalyzer::addFunction(AST::Function::Function *function,
   RET_ON_EQUAL(variant, AST::Function::FunctionStatus::NONE,
                "addFunction: variant has with definitionStatus NONE");
 
-  auto& globalScope = analyzer.getGlobalScope();
+  auto &globalScope = analyzer.getGlobalScope();
 
-  auto existingFunction = globalScope.getFunctionDeclaration(function->name);
+  auto maybeExistingFunction =
+      globalScope.getFunctionDeclaration(function->name);
 
-  // Function does not exist.
-  if (!globalScope.functionDeclarations.contains(function->name)) {
+  // Check if function does not exist, and if not, add it.
+  if (!maybeExistingFunction.has_value()) {
     function->definitionStatus = variant;
-    globalScope.functionDeclarations.emplace(function->name, function);
+    globalScope.addFunctionDeclaration(function->name, function);
 
     return SUCCESS;
   }
+
+  auto existingFunction = *maybeExistingFunction;
 
   // For now, no function overloading to keep symbols easy to handle and look
   // at.
@@ -113,11 +116,13 @@ Error FunctionAnalyzer::ActOnDefinition(AST::Function::Function *function) {
 
 Result<AST::Function::Function *>
 FunctionAnalyzer::ActOnCall(AST::Function::FunctionCall *call) {
-  auto existingFunction =
+  auto maybeExistingFunction =
       analyzer.getGlobalScope().getFunctionDeclaration(call->name);
 
-  RET_ON_EQUAL(existingFunction, nullptr,
+  RET_ON_FALSE(maybeExistingFunction.has_value(),
                "ActOnCall: function does not exist.");
+
+  auto existingFunction = *maybeExistingFunction;
 
   auto numberOfParameters = existingFunction->parameters.size();
   RET_ON_NOT_EQUAL(numberOfParameters, call->parameters.size(),

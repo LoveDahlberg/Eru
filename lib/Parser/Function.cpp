@@ -41,6 +41,9 @@ Parser::ParseFunctionCall(std::string name) {
 }
 
 Result<AST::Function::Block *> Parser::ParseBlock() {
+  // TODO refactor so that the push and pop of the Scope happens in here instead
+  // of before the call, like how its done for the IR.
+
   skipUntilNotNewline();
 
   RET_ON_WRONG_TOKEN(TokenType::LEFT_CURLY_BRACE, "ParseBlock: Expected {");
@@ -81,10 +84,10 @@ Result<AST::Function::Block *> Parser::ParseBlock() {
 
 Result<AST::Function::FunctionBody *>
 Parser::ParseFunctionBody(AST::Function::Parameters parameters) {
-  
+
   analyzer.PushScope();
 
-  // Declare the function parameters as local variables in the current scope. 
+  // Declare the function parameters as local variables in the current scope.
   RET_ON_FAILURE(analyzer.function().ActOnParameters(parameters),
                  "ParseFunctionBody: failed to act on parameters.");
 

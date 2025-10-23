@@ -27,9 +27,11 @@ IRGenerator::getOperand(Expression::ExpressionUnit *expressionUnit) {
     // Make sure the variable value being pointed to is used here, as the
     // expression is done on the value itself.
     // TODO: If pointer arithmetic is added, extend this logic to handle it.
-    return scopeHandler.getCurrent()
-        .getDeclaredVariable(identifier.value)
-        .getValue(builder);
+    auto result =
+        scopeHandler.getCurrent().getDeclaredVariable(identifier.value);
+
+    return result.has_value() ? result->getValue(builder) : nullptr;
+
   } else {
     llvm::report_fatal_error(
         "IRExpression: getOperand: encountered unimplemented type");

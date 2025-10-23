@@ -12,10 +12,8 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
   }
 
   int loopCounter = 0;
-  bool generateNewToken;
+  skipUntilNotNewline();
   do {
-    generateNewToken = true;
-    skipUntilNotNewline();
     auto tokenCategory = tokenTypeToCategory.at(lexer.getCurrentToken().type);
     switch (tokenCategory) {
 
@@ -133,6 +131,8 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
 
     // Check if we should stop.
     lexer.generateNextToken();
+    skipUntilNotNewline();
+
     if (lexer.getCurrentToken() == TokenType::RETURN ||
         lexer.getCurrentToken() == TokenType::RIGHT_CURLY_BRACE) {
       break;
