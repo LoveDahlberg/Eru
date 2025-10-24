@@ -65,14 +65,14 @@ add_subdirectory(test)
 add_subdirectory(lib)
 
 ############################
-# Create main target
+# Create Eru target
 ############################
 
 # Add each lib folder to each own lib that can be included here.
-add_executable(main lib/Driver/main.cpp)
+add_executable(eru lib/Driver/Eru.cpp)
 
 # Link dependencies
-target_link_libraries(main PRIVATE
+target_link_libraries(eru PRIVATE
     # LLVM dependecies
     ${LLVM_LIBRARIES}
     LibEdit::LibEdit
@@ -82,9 +82,3 @@ target_link_libraries(main PRIVATE
     # Project dependencies
     Frontend
     Support)
-
-add_custom_target(run
-    COMMAND $<TARGET_FILE:main>
-    DEPENDS main
-    COMMENT "Compile and run my_program"
-  )

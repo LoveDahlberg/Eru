@@ -1,7 +1,59 @@
-#include <AST/Statement.h>
+#include "Support/Result.h"
 #include <Parser/Parser.h>
 
 namespace Parser {
+
+Result<std::vector<AST::Statement::StatementVariant>>
+Parser::ParseVaribleAndMaybeAssignment() {
+
+  std::vector<AST::Statement::StatementVariant> statements;
+
+  // Both start with a variable declaration.
+  auto variable = ParseVariable();
+  RET_ON_FAILURE_CODE(
+      variable,
+      "ParseVaribleAndMaybeAssignment: data type: failed to parse variable",
+      lexer);
+
+  // Declare the variable through the analyzer.
+  auto declaration = analyzer.variable().ActOnLocalDeclaration(*variable);
+  RET_ON_FAILURE_CODE(declaration,
+                      "ParseVaribleAndMaybeAssignment: data type: failed to "
+                      "act on local variable "
+                      "declaration.",
+                      lexer);
+
+  statements.push_back(*declaration);
+
+  // Check if the declaration is initalized with an assignment.
+  if (lexer.getCurrentToken() == TokenType::EQUAL) {
+    auto assignment = ParseAssignment(*variable);
+
+    RET_ON_FAILURE_CODE(
+        assignment,
+        "ParseVaribleAndMaybeAssignment: data type: failed assignment", lexer);
+
+    // Run the assignment through the analyzer.
+    RET_ON_FAILURE_CODE(analyzer.variable().ActOnAssignment(*assignment),
+                        "ParseVaribleAndMaybeAssignment: data type: failed to "
+                        "act on assignment.",
+                        lexer);
+
+    // TODO consider if we should add a declaration and a assignment
+    // statement on assignment, or if it is enough to just add a assignment
+    // (which then auto includes a declaration if ).
+    statements.push_back(*assignment);
+  }
+
+  // TODO newline should also follow variable declaration without
+  // assignment, but grammar currently does not require it.
+  RET_ON_WRONG_TOKEN(TokenType::NEWLINE,
+                     "ParseVaribleAndMaybeAssignment: data type: newline does "
+                     "not follow a variable "
+                     "assignment.");
+
+  return statements;
+}
 
 Result<AST::Statement::Statement *> Parser::ParseStatement() {
   auto statement = new AST::Statement::Statement();
@@ -20,46 +72,12 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
     // Variable declaration or assignment.
     case TokenCategory::DATA_TYPE: {
 
-      // Both start with a variable declaration.
-      auto variable = ParseVariable();
-      RET_ON_FAILURE_CODE(variable,
-                          "ParseStatement: data type: failed to parse variable",
-                          lexer);
+      auto statements = ParseVaribleAndMaybeAssignment();
 
-      // Declare the variable through the analyzer.
-      auto declaration = analyzer.variable().ActOnLocalDeclaration(*variable);
-      RET_ON_FAILURE_CODE(
-          declaration,
-          "ParseStatement: data type: failed to act on local variable "
-          "declaration.",
-          lexer);
+      RET_ON_FAILURE(statements,
+                     "ParseStatement: Failed ParseVaribleAndMaybeAssignment");
 
-      statement->AddStatement(*declaration);
-
-      // Check if the declaration is initalized with an assignment.
-      if (lexer.getCurrentToken() == TokenType::EQUAL) {
-        auto assignment = ParseAssignment(*variable);
-
-        RET_ON_FAILURE_CODE(
-            assignment, "ParseStatement: data type: failed assignment", lexer);
-
-        // Run the assignment through the analyzer.
-        RET_ON_FAILURE_CODE(
-            analyzer.variable().ActOnAssignment(*assignment),
-            "ParseStatement: data type: failed to act on assignment.", lexer);
-
-        // TODO consider if we should add a declaration and a assignment
-        // statement on assignment, or if it is enough to just add a assignment
-        // (which then auto includes a declaration if ).
-        statement->AddStatement(*assignment);
-      }
-
-      // TODO newline should also follow variable declaration without
-      // assignment, but grammar currently does not require it.
-      RET_ON_WRONG_TOKEN(
-          TokenType::NEWLINE,
-          "ParseStatement: data type: newline does not follow a variable "
-          "assignment.");
+      statement->AddStatements(*statements);
       break;
     }
 
@@ -94,13 +112,14 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
             ParseAssignment(new AST::VariableDeclaration::Variable(
                 AST::Types::Types::NONE, *identifier));
         RET_ON_FAILURE_CODE(
-          assignment, "ParseStatement: identifier: equal: failed assignment",
+            assignment, "ParseStatement: identifier: equal: failed assignment",
             lexer);
 
         // Run the assignment through the analyzer.
         RET_ON_FAILURE_CODE(
             analyzer.variable().ActOnAssignment(*assignment),
-            "ParseStatement: identifier: equal: failed to act on assignment.", lexer);
+            "ParseStatement: identifier: equal: failed to act on assignment.",
+            lexer);
 
         statement->AddStatement(*assignment);
         break;

@@ -48,7 +48,8 @@ Error VariableAnalyzer::addVariableDeclarationInCurrentScope(
 }
 
 Error VariableAnalyzer::ActOnGlobalDeclaration(
-    AST::VariableDeclaration::Variable *variable) {
+    AST::VariableDeclaration::Variable *variable,
+    std::optional<AST::Expression::ConstantOperand> constOperand) {
 
   RET_ON_FALSE(analyzer.getCurrentScope().isGlobal(),
                "ActOnGlobalDeclaration: current scope is not global.");
@@ -58,8 +59,15 @@ Error VariableAnalyzer::ActOnGlobalDeclaration(
       declaration,
       "ActOnGlobalDeclaration: failed to verify variable declaration.");
 
+  auto *globalVariableInitialization =
+      new AST::VariableDeclaration::GlobalVariableInitialization(*declaration);
+
+  if (constOperand.has_value()) {
+    globalVariableInitialization->constOperand = *constOperand;
+  }
+
   analyzer.getASTContext().compilationUnit->AddCompilationUnitItems(
-      *declaration);
+      globalVariableInitialization);
   return SUCCESS;
 }
 

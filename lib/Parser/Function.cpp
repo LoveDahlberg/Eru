@@ -134,6 +134,9 @@ Error Parser::SkipFunctionBody() {
 }
 
 Error Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
+
+  // TODO add parsing of the main function Valinor here.
+
   // eat the (
   lexer.generateNextToken();
 

@@ -1,3 +1,5 @@
+#include "AST/VariableDeclaration.h"
+#include "Support/Result.h"
 #include <Parser/Parser.h>
 
 namespace Parser {
@@ -10,17 +12,28 @@ Error Parser::ParseVariableDeclarationOrFunction() {
 
   if (lexer.getCurrentToken() == TokenType::LEFT_PARENTHESIS) {
     return ParseFunction(*variable);
-  } else {
+  } 
 
-    // TODO should we parse expressions here? If so, only constants should be
-    // able to be used.
+  std::optional<AST::Expression::ConstantOperand> constOperand;
 
-    RET_ON_WRONG_TOKEN(TokenType::NEWLINE,
-                       "ParseVariableDeclarationOrFunction: Expected newline "
-                       "after variable declaration");
-  }
+  // Check if the global value is assigned.
+  if (lexer.getCurrentToken() == TokenType::EQUAL) {
 
-  return analyzer.variable().ActOnGlobalDeclaration(*variable);
+    // Pop the equal.
+    lexer.generateNextToken();
+
+    auto operand = ParseConstantOperand();
+
+    RET_ON_FAILURE(operand, "ParseVariableDeclarationOrFunction: Faled to parse Constant Operand");
+
+    constOperand = *operand;
+  } 
+
+  RET_ON_WRONG_TOKEN(TokenType::NEWLINE,
+                     "ParseVariableDeclarationOrFunction: Expected newline "
+                     "after global variable declaration.");
+
+  return analyzer.variable().ActOnGlobalDeclaration(*variable, constOperand);
 }
 
 Error Parser::ParseTopLevelItems() {

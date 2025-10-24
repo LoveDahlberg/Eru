@@ -9,7 +9,9 @@
 namespace AST {
 
 // TODO add directive
-using CompilationUnitVariant = std::variant<VariableDeclaration::VariableDeclaration*, Function::Function*>;
+using CompilationUnitVariant =
+    std::variant<VariableDeclaration::GlobalVariableInitialization *,
+                 Function::Function *>;
 
 /// Concept that the given CompilationUnit is:
 /// 1. A pointer.
@@ -25,8 +27,7 @@ struct CompilationUnit {
     compilationUnitItems.push_back(construct);
   }
 
-  std::vector<CompilationUnitVariant>
-      compilationUnitItems;
+  std::vector<CompilationUnitVariant> compilationUnitItems;
 };
 
 } // namespace AST

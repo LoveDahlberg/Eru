@@ -5,14 +5,13 @@ TEST(Parser, TestSemanticFunctionFailure) {
   std::vector<failureTestCase> testCases;
 
   // Declaring function inside another function.
-  testCases.push_back(
-      {R"(
+  testCases.push_back({R"(
     int something(int a) [] {
       int somethingElse(int b)
     }
   )",
-       "ParseStatement: data type: newline does not follow a variable "
-       "assignment."});
+                       "ParseVaribleAndMaybeAssignment: data type: newline "
+                       "does not follow a variable assignment."});
 
   // Redeclaring function with different parameters.
   testCases.push_back({

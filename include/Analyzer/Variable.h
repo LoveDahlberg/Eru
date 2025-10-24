@@ -44,7 +44,9 @@ public:
   AST::VariableDeclaration::Variable *
   getDeclaredVariable(AST::Types::NamedIdentifier &identifier);
 
-  Error ActOnGlobalDeclaration(AST::VariableDeclaration::Variable *variable);
+  Error ActOnGlobalDeclaration(
+      AST::VariableDeclaration::Variable *variable,
+      std::optional<AST::Expression::ConstantOperand> constOperand);
   Result<AST::VariableDeclaration::VariableDeclaration *>
   ActOnLocalDeclaration(AST::VariableDeclaration::Variable *variable);
   Error ActOnAssignment(AST::Assignment::Assignment *assignment);

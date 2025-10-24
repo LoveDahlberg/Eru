@@ -26,6 +26,8 @@ class IRGenerator : public ASTTraversal<llvm::Value *> {
   llvm::Value *handle(Function::Block &AST) override;
   llvm::Value *handle(Function::FunctionBody &AST) override;
   llvm::Value *handle(Function::Function &AST) override;
+  llvm::Value *
+  handle(VariableDeclaration::GlobalVariableInitialization &AST) override;
 
   llvm::Value *handle(Controlflow::ConditionalBranchingGroup &AST) override;
   llvm::Value *

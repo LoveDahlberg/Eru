@@ -28,7 +28,13 @@ TEST(IR, testGlobalVarialbe) {
   auto variable = new VariableDeclaration::VariableDeclaration(
       AST::Types::Types::INT, variableName);
   variable->isGlobal = true;
-  compilationUnit.AddCompilationUnitItems(variable);
+
+  auto initializer =
+      new VariableDeclaration::GlobalVariableInitialization(variable);
+  initializer->constOperand =
+      AST::Expression::ConstantOperand(AST::Types::IntegerLiteral("1"));
+
+  compilationUnit.AddCompilationUnitItems(initializer);
 
   auto generator = IRGenerator(module);
   auto context = Context::ASTContext(&compilationUnit);
@@ -125,16 +131,16 @@ TEST(IR, testDeclarationAssignment) {
       new Expression::ExpressionUnit(std::nullopt, Types::IntegerLiteral("1"));
   expression->addExpressionUnit(unit1);
 
-  auto unit2 = new Expression::ExpressionUnit(
-    Lexing::Operator::PLUS, Types::IntegerLiteral("2"));
+  auto unit2 = new Expression::ExpressionUnit(Lexing::Operator::PLUS,
+                                              Types::IntegerLiteral("2"));
   expression->addExpressionUnit(unit2);
 
-  auto unit3 = new Expression::ExpressionUnit(
-    Lexing::Operator::PLUS, Types::IntegerLiteral("6"));
+  auto unit3 = new Expression::ExpressionUnit(Lexing::Operator::PLUS,
+                                              Types::IntegerLiteral("6"));
   expression->addExpressionUnit(unit3);
 
-  auto unit4 = new Expression::ExpressionUnit(
-    Lexing::Operator::MINUS, Types::IntegerLiteral("4"));
+  auto unit4 = new Expression::ExpressionUnit(Lexing::Operator::MINUS,
+                                              Types::IntegerLiteral("4"));
   expression->addExpressionUnit(unit4);
 
   assignment->setExpression(&expression);

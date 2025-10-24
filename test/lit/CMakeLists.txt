@@ -1,1 +1,6 @@
-# TODO Add a cmake target to run all lit tests
+add_custom_target(lit
+    COMMAND ${CMAKE_COMMAND} -E env BUILD=${CMAKE_BINARY_DIR}
+    lit -v ${CMAKE_CURRENT_SOURCE_DIR}
+    DEPENDS eru
+    COMMENT "Running all lit tests"
+)

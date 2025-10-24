@@ -22,11 +22,13 @@ formal grammar definition:
 _____
 
 [compilationUnit] → {compilationUnitItem} {compilationUnit} | END_OF_FILE
-  [compilationUnitItem] → {variableDeclaration} | {directive} | {function}
+  [compilationUnitItem] → {globalVariableDeclaration} | {directive} | {function}
   
-    [variableDeclaration] → {type} (IDENTIFER) 
+    [globalVariableDeclaration] → {type} (IDENTIFER) {initializer}
       [type] → {data}
         [data] → (INT) | (SIGNED_INT_32) | (UNSIGNED_INT_32) | (BOOl) | (STRING) | (CHAR)    
+      [initializer] → (EQUAL) {literal} (NEWLINE) | e
+        [literal] → (STRING_LITERAL) | (INTEGER_LITERAL) 
     
     [directive] → (LEFT_BRACKET)(RIGHT_BRACKET) | e
 
@@ -37,12 +39,12 @@ _____
       [functionBody] →  {block} | e
         [block] → (LEFT_CURLY_BRACE) {statement} {return} (RIGHT_CURLY_BRACE)
           [statement] → {variableDeclaration} {statement} | {assignment} {statement} | {controlflow} {statement} | {functionCall} {statement} | e
+            [variableDeclaration] → {type} (IDENTIFER)
             [assignment] → {assignmentTarget} (EQUAL) {expression} (NEWLINE)
               [assignmentTarget] → {variableDeclaration} | (IDENTIFER) 
               
               [expression] → {expression} {operator} {operand} | {operand} 
-                [operand] → (IDENTIFER) | {literal} | {functionCall} 
-                  [literal] → (STRING_LITERAL) | (INTEGER_LITERAL)          
+                [operand] → (IDENTIFER) | {literal} | {functionCall}       
                   [functionCall] → (IDENTIFER) (LEFT_PARENTHESIS) {parametersCall} (RIGHT_PARENTHESIS)
                     [parametersCall] → {parametersCallList} | e
                       [parametersCallList] → {expression} | {expression} (COMMA) {parametersCallList}

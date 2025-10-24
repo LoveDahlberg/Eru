@@ -4,12 +4,7 @@
 TEST(Parser, TestSemanticVariableFailure) {
 
   std::vector<failureTestCase> testCases;
-
-  // Assign to global variable
-  testCases.push_back({R"(
-   int hello = 1 
-  )"});
-
+  
   // Redeclaring the same variable multiple times different types
   testCases.push_back({R"(
     int hello
@@ -59,8 +54,14 @@ TEST(Parser, TestSemanticVariableFailure) {
     }
   )"});
 
+  int order = 0;
   for (auto testCase : testCases) {
     auto item = RunParser(testCase.code, false);
+
+    if (!item.success) {
+      std::cout << "Failed for case " << std::to_string(order) << "\n";
+    }
+
     ASSERT_TRUE(item.success);
     if (!testCase.expectedFailure.empty()) {
       EXPECT_EQ(item.result->failureDescription.front(),
@@ -85,13 +86,13 @@ TEST(Parser, TestSemanticVariableSuccess) {
       int something
       something = 1
     }
-  )");
+  // )");
 
   // Redeclaring the same global variable in a function.
   testCases.push_back(R"(
-    int something
+    int something = 0
     int main() {
-      int something
+      int something = 1
     }
   )");
 

@@ -79,7 +79,7 @@ bool ExpressionAnalyzer::isOperatorAllowed(Lexing::Operator operatorToCheck,
   }
 }
 
-// TODO: Expand this to have automatic promption (like in C, if int is used in
+// TODO: Expand this to have automatic promoption (like in C, if int is used in
 // place of long convert it etc) and type convertions (zero or nullable values
 // becomes boolean false and everything else becomes boolean true etc) as
 // needed.

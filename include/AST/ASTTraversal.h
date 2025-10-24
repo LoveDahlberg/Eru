@@ -30,6 +30,8 @@ template <typename ReturnType> struct ASTTraversal {
   virtual ReturnType handle(Function::Block &AST) = 0;
   virtual ReturnType handle(Function::FunctionBody &AST) = 0;
   virtual ReturnType handle(Function::Function &AST) = 0;
+  virtual ReturnType
+  handle(VariableDeclaration::GlobalVariableInitialization &AST) = 0;
 
 private:
   /// Helper function that calls handle on all std::variant items in a vector.
@@ -48,11 +50,10 @@ private:
 
     for (auto item : itemsToVisit) {
       auto r = std::visit(
-        [this](auto *nodePtr) -> ReturnType {
-          return this->handle(*nodePtr);
-        },
-        item
-      );
+          [this](auto *nodePtr) -> ReturnType {
+            return this->handle(*nodePtr);
+          },
+          item);
       result.push_back(std::move(r));
     }
 

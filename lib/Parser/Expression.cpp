@@ -1,6 +1,28 @@
+#include "AST/Types.h"
+#include <AST/VariableDeclaration.h>
 #include <Parser/Parser.h>
+#include <Support/Result.h>
 
 namespace Parser {
+
+Result<AST::Expression::ConstantOperand> Parser::ParseConstantOperand() {
+
+  if (lexer.getCurrentToken().type != TokenType::STRING_LITERAL &&
+      lexer.getCurrentToken().type != TokenType::INTEGER_LITERAL) {
+    return FAILURE_CODE(
+        "ParseConstantOperand: Expected string or integer literal", lexer);
+  }
+
+  auto literal = ParseLiteral();
+  RET_ON_FAILURE_CODE(literal, "ParseConstantOperand: failed to parse literal",
+                      lexer);
+
+  return lexer.getCurrentToken().type == TokenType::STRING_LITERAL
+             ? AST::Expression::ConstantOperand(
+                   AST::Types::StringLiteral(*literal))
+             : AST::Expression::ConstantOperand(
+                   AST::Types::IntegerLiteral(*literal));
+}
 
 // TODO properly implement the different operands. Currently its super unclear
 // what is done here. How are booleans handled here for example? What is the
@@ -76,8 +98,7 @@ Parser::ParseExpressionUnit(bool firstUnit) {
   return unit;
 }
 
-Result<AST::Expression::Expression *>
-Parser::ParseExpression() {
+Result<AST::Expression::Expression *> Parser::ParseExpression() {
 
   auto expression = new AST::Expression::Expression();
 

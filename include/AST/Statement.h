@@ -16,7 +16,6 @@ using StatementVariant =
                  Assignment::Assignment *, Function::FunctionCall *,
                  Controlflow::ConditionalBranchingGroup *>;
 
-
 /// Concept that the given statementType is:
 /// 1. A pointer.
 /// 2. One of the variants in StatementVariant.
@@ -28,6 +27,12 @@ struct Statement {
   template <ValidStatementType statementType>
   void AddStatement(statementType construct) {
     statements.push_back(construct);
+  }
+
+  void AddStatements(const std::vector<StatementVariant> &construct) {
+    for (auto statement : construct) {
+      statements.push_back(statement);
+    }
   }
 
   std::vector<StatementVariant> statements;

@@ -7,12 +7,14 @@
 #include <Lexer/Lexer.h>
 #include <Lexer/Tokens.h>
 
+#include <AST/Statement.h>
 #include <AST/ASTContext.h>
 #include <AST/Assignment.h>
 #include <AST/CompilationUnit.h>
 #include <AST/Controlflow.h>
 #include <AST/Expression.h>
 #include <AST/Types.h>
+#include <AST/VariableDeclaration.h>
 
 #include <Analyzer/Analyzer.h>
 
@@ -77,12 +79,14 @@ private:
   Result<AST::Assignment::Assignment *>
   ParseAssignment(AST::VariableDeclaration::Variable *variable = nullptr);
   Result<AST::Expression::Operand> ParseOperand();
+  Result<AST::Expression::ConstantOperand> ParseConstantOperand();
 
   // Literal
   Result<std::string> ParseLiteral();
 
   // Statement
   Result<AST::Statement::Statement *> ParseStatement();
+  Result<std::vector<AST::Statement::StatementVariant>> ParseVaribleAndMaybeAssignment();
 
   // Controlflow
   Result<AST::Controlflow::ConditionalBranchingGroup *>

@@ -42,5 +42,3 @@ int external(int input){
   return 5;
 }
 
-
-
