@@ -1,15 +1,20 @@
 
-//stl
-// #include <format>
-#include <iostream>
 
-// template <class... args>
-// inline void LogError(std::format_string<args...> formatString, args&&... arguments) {
-//     std::cerr << std::vformat(formatString.get(), std::make_format_args(arguments...));
-// }
+#include <llvm/Support/raw_ostream.h>
 
-// template <class... args>
-// inline void LogFatal(std::format_string<args...> formatString, args&&... arguments) {
-//     LogError(formatString, arguments...);
-//     exit(1);
-// }
+inline void ExitAndPrintOnError(auto result) {
+  // If error occoured
+  if (!result.check()) {
+
+    // Print stack trace.
+    llvm::outs() << "\nFailure:\n";
+    if (!result.failureDescription.empty()) {
+      llvm::outs() << result.failureDescription.front() << "\n";
+    }
+    llvm::outs() << result.codeSnippet << "\n";
+
+    llvm::outs() << "\n\n";
+    exit(1);
+  }
+};
+

@@ -9,5 +9,5 @@
 namespace Frontend::Compiler {
 
 // TODO: Fileinput should represent all input files.
-Error Compiler(Action::Action *action, const std::filesystem::path &fileInput);
+Error Compile(Action::Action *action, const std::filesystem::path &fileInput);
 }

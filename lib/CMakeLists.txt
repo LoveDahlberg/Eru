@@ -7,6 +7,7 @@ target_link_libraries(Lexer PRIVATE ${llvm_libs})
 # Create a library target for Support
 add_library(Support STATIC
     Support/IO/FileReader.cpp
+    Support/Triple.cpp
 )
 target_include_directories(Support PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(Support PRIVATE ${llvm_libs})
@@ -59,4 +60,4 @@ add_library(Frontend STATIC
     Frontend/EmitObjectFile.cpp
 )
 target_include_directories(Frontend PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(Frontend PRIVATE ${llvm_libs} Lexer Parser IR)
+target_link_libraries(Frontend PRIVATE ${llvm_libs} Lexer Parser IR Support)

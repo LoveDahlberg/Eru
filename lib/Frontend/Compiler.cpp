@@ -16,7 +16,7 @@
 
 namespace Frontend::Compiler {
 
-Error Compiler(Action::Action *action, const std::filesystem::path &fileInput) {
+Error Compile(Action::Action *action, const std::filesystem::path &fileInput) {
 
   // Create ASTContext
   auto astContext = AST::Context::ASTContext();

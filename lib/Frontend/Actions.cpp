@@ -18,6 +18,7 @@ Action *GetAction(const ActionKind &actionKind) {
   // default:
   //   return nullptr;
   // }
+  return nullptr;
 }
 
 } // namespace Frontend::Action

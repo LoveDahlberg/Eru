@@ -1,0 +1,23 @@
+// Test that compiles an eru program with the compiler. It then manually links
+// it with the Ainur standard library. Then it runs it to verify that it works
+// like expected.
+
+// RUN: %split-file %s %t
+
+// Compile test.arda
+// RUN: %processor %t/test.arda -o %t/test.o -c
+
+// Link Ainur with the eru program
+// RUN: ld.lld -L%stdlibFolder -lAinur %t/test.o -o %t/program
+
+// RUN: %print-exit-code %t/program two three | FileCheck %s
+
+// CHECK: Exit Code: 3
+
+//--- test.arda
+
+// clang-format off
+
+int Valinor(int argc)[] { 
+  return argc
+}

@@ -3,11 +3,12 @@
 // llvm
 #include <llvm/IR/Module.h>
 
+#include <filesystem>
 #include <string>
 #include <unordered_map>
 
-#include <Support/Result.h>
 #include <AST/ASTContext.h>
+#include <Support/Result.h>
 
 // - GetAction defines what actions we can have and it returns which one we
 // should use here.
@@ -37,16 +38,16 @@ public:
 };
 
 class EmitObjectFile : public Action {
-public:  
-  EmitObjectFile(const std::string &outputFile) : outputFile(outputFile) {}
-  
+public:
+  EmitObjectFile(const std::filesystem::path &outputFile,
+                 const std::string &targetTriple)
+      : outputFile(outputFile), targetTriple(targetTriple) {}
+
   virtual Error ActOn(AST::Context::ASTContext) override;
 
 private:
-
-  bool emitObject(llvm::Module &module);
-
-  const std::string &outputFile;
+  const std::filesystem::path &outputFile;
+  const std::string &targetTriple;
 };
 
 Action *GetAction(const std::string &relevantArgument);

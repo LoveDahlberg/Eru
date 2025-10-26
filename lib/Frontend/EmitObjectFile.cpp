@@ -1,6 +1,6 @@
-#include "Support/Result.h"
 #include <Frontend/Actions.h>
 #include <IR/IRGenerator.h>
+#include <Support/Result.h>
 
 // llvm
 #include <llvm/IR/LLVMContext.h>
@@ -16,12 +16,12 @@
 
 namespace Frontend::Action {
 
-bool EmitObjectFile::emitObject(llvm::Module &module) {
+namespace {
+
+Error emitObject(llvm::Module &module, const std::filesystem::path &outputFile,
+                 const std::string &targetTriple) {
 
   // From kolidascope. TODO rewrite this with the new pass manager.
-
-  // Get the default system target triple.
-  auto TargetTriple = llvm::sys::getDefaultTargetTriple();
 
   // Initialize targets for emitting object code.
   llvm::InitializeAllTargetInfos();
@@ -31,46 +31,51 @@ bool EmitObjectFile::emitObject(llvm::Module &module) {
   llvm::InitializeAllAsmPrinters();
 
   std::string Error;
-  auto Target = llvm::TargetRegistry::lookupTarget(TargetTriple, Error);
+  auto Target = llvm::TargetRegistry::lookupTarget(targetTriple, Error);
 
   // Print an error and exit if we couldn't find the requested target.
   // This generally occurs if we've forgotten to initialise the
   // TargetRegistry or we have a bogus target triple.
-  if (!Target) {
-    return false;
+  if (Target == nullptr) {
+    return FAILURE(
+        "EmitObjectFile: Cannot find the reqested target with error '" + Error +
+        "'");
   }
 
   // Target machine, use generic configuration for basic case
   auto CPU = "generic";
   auto Features = "";
   llvm::TargetOptions opt;
-  auto TargetMachine = Target->createTargetMachine(TargetTriple, CPU, Features,
+  auto TargetMachine = Target->createTargetMachine(targetTriple, CPU, Features,
                                                    opt, llvm::Reloc::PIC_);
 
   // Set layout and triple in module, may be useful for some passes.
   module.setDataLayout(TargetMachine->createDataLayout());
-  module.setTargetTriple(TargetTriple);
+  module.setTargetTriple(targetTriple);
 
   // Define some output file
   std::error_code EC;
-  llvm::raw_fd_ostream dest(outputFile, EC, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream dest(outputFile.string(), EC, llvm::sys::fs::OF_None);
 
   if (EC) {
-    return false;
+    return FAILURE("EmitObjectFile: Failed to define output file '" +
+                   EC.message() + "'");
   }
 
   llvm::legacy::PassManager pass;
   auto FileType = llvm::CodeGenFileType::ObjectFile;
 
   if (TargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType)) {
-    return false;
+    return FAILURE("EmitObjectFile: Failed to add pass to emit file.");
   }
 
   pass.run(module);
   dest.flush();
 
-  return true;
+  return SUCCESS;
 }
+
+} // namespace
 
 Error EmitObjectFile::ActOn(AST::Context::ASTContext context) {
 
@@ -84,9 +89,10 @@ Error EmitObjectFile::ActOn(AST::Context::ASTContext context) {
 
   // For now just verify the module.
   RET_ON_FALSE(!llvm::verifyModule(module, &llvm::errs()),
-               "Failed to verify module.");
+               "EmitObjectFile: Failed to verify module.");
 
-  RET_ON_FALSE(emitObject(module), "Failed to emit object file");
+  RET_ON_FAILURE(emitObject(module, outputFile, targetTriple),
+                 "EmitObjectFile: Failed to emit object file");
 
   return SUCCESS;
 }

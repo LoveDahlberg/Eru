@@ -63,6 +63,7 @@ set(CMAKE_BUILD_TYPE Debug)
 
 add_subdirectory(test)
 add_subdirectory(lib)
+add_subdirectory(tools)
 
 ############################
 # Create Eru target
@@ -70,6 +71,11 @@ add_subdirectory(lib)
 
 # Add each lib folder to each own lib that can be included here.
 add_executable(eru lib/Driver/Eru.cpp)
+
+# Place in bin folder
+set_target_properties(eru PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
 
 # Link dependencies
 target_link_libraries(eru PRIVATE

@@ -1,11 +1,14 @@
 
 
 // llvm
-#include "Frontend/Compiler.h"
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/raw_ostream.h>
 
 #include <Frontend/Actions.h>
+#include <Frontend/Compiler.h>
+#include <Frontend/Linker.h>
+#include <Support/Log.h>
+#include <Support/Triple.h>
 
 namespace Driver {
 
@@ -28,6 +31,10 @@ llvm::cl::opt<bool>
                        llvm::cl::desc("Only compile to object file, dont link"),
                        llvm::cl::cat(compilerCategory));
 
+llvm::cl::opt<std::string>
+    TargetTriple("target", llvm::cl::desc("Specify target triple."),
+                 llvm::cl::cat(compilerCategory));
+
 } // namespace Driver
 
 // - Handles parsing of arguments
@@ -38,40 +45,39 @@ llvm::cl::opt<bool>
 //   Linker.cpp.
 int main(int argc, char *argv[]) {
 
+  // Setup llvm commandline lib.
   llvm::cl::SetVersionPrinter(
       [](llvm::raw_ostream &OS) { OS << "Compiler 0.1.0\n"; });
-
   llvm::cl::HideUnrelatedOptions(Driver::compilerCategory);
-
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
-  const std::string &inputFile = Driver::InputFilename;
-  const std::string &outputFile = Driver::OutputFilename;
+  // Retrive the command line args.
+  const std::filesystem::path &inputFile = std::string(Driver::InputFilename);
+  const std::filesystem::path &outputFile = std::string(Driver::OutputFilename);
   const bool compileOnly = Driver::CompileAndDontLink;
 
-  // Determine action to use.
-  Frontend::Action::Action* action;
-  if (compileOnly) {
-      action = new Frontend::Action::EmitObjectFile(outputFile);
-  } else {
-    llvm::outs() << "Only supports compile only with -c.\n";
-    exit(1);
-  }
+  auto maybeTarget = Support::GetSupportedTriple(Driver::TargetTriple);
+  ExitAndPrintOnError(maybeTarget);
+  const std::string &target = *maybeTarget;
 
+  // TODO create a temporary file in better way.
+  auto objectFileOutput = compileOnly ? outputFile : "/tmp/tmp";
+
+  // Determine action to use. For now just use EmitObjectFile action.
+  auto *action = new Frontend::Action::EmitObjectFile(objectFileOutput, target);
+
+  // Compiling.
   // For now, just run it on a single source file.
-  auto result = Frontend::Compiler::Compiler(action, inputFile);
+  ExitAndPrintOnError(Frontend::Compiler::Compile(action, inputFile));
 
-  if(!result.check()){
-    // print stack trace.
-
-    llvm::outs()  << "\nFailure:\n";
-    if (!result.failureDescription.empty()) {
-      llvm::outs()  << result.failureDescription.front() << "\n";
-    }
-    llvm::outs()  << result.codeSnippet << "\n";
-
-    llvm::outs()  << "\n\n";
-    return 1;
+  // Linking.
+  if (!compileOnly) {
+    // Call linker and pass the filepaths to:
+    // - Passed object files (start by just supporting single source file)
+    // - The created object files
+    ExitAndPrintOnError(Frontend::Linker::Link(
+        {objectFileOutput},
+        {.outputPath = outputFile, .executablePath = argv[0]}));
   }
 
   return 0;
