@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 #include <AST/ASTContext.h>
+#include <Support/IO/File.h>
 #include <Support/Result.h>
 
 // - GetAction defines what actions we can have and it returns which one we
@@ -39,14 +40,13 @@ public:
 
 class EmitObjectFile : public Action {
 public:
-  EmitObjectFile(const std::filesystem::path &outputFile,
-                 const std::string &targetTriple)
-      : outputFile(outputFile), targetTriple(targetTriple) {}
+  EmitObjectFile(Support::IO::Files &files, const std::string &targetTriple)
+      : files(files), targetTriple(targetTriple) {}
 
   virtual Error ActOn(AST::Context::ASTContext) override;
 
 private:
-  const std::filesystem::path &outputFile;
+  Support::IO::Files &files;
   const std::string &targetTriple;
 };
 

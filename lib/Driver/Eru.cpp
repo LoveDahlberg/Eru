@@ -1,5 +1,7 @@
 
 
+#include <filesystem>
+
 // llvm
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/raw_ostream.h>
@@ -7,6 +9,8 @@
 #include <Frontend/Actions.h>
 #include <Frontend/Compiler.h>
 #include <Frontend/Linker.h>
+#include <Support/Commandline.h>
+#include <Support/IO/File.h>
 #include <Support/Log.h>
 #include <Support/Triple.h>
 
@@ -19,12 +23,11 @@ static llvm::cl::OptionCategory compilerCategory("Compiler options");
 llvm::cl::opt<std::string>
     OutputFilename("o", llvm::cl::desc("Specify output filename."),
                    llvm::cl::value_desc("filename"),
-                   llvm::cl::cat(compilerCategory), llvm::cl::Required);
+                   llvm::cl::cat(compilerCategory));
 
-llvm::cl::opt<std::string> InputFilename(llvm::cl::Positional,
-                                         llvm::cl::desc("<input file>"),
-                                         llvm::cl::init("-"),
-                                         llvm::cl::Required);
+llvm::cl::list<std::string> InputFilename(llvm::cl::Positional,
+                                          llvm::cl::OneOrMore,
+                                          llvm::cl::desc("<input files>"));
 
 llvm::cl::opt<bool>
     CompileAndDontLink("c",
@@ -37,12 +40,6 @@ llvm::cl::opt<std::string>
 
 } // namespace Driver
 
-// - Handles parsing of arguments
-// - It also calls getAction based on the arguments.
-// - Then it calls compiler with the action on each source file.
-// - The compiler will compile and perform the action.
-// - Then, depending on the commandline arguments, it will call the
-//   Linker.cpp.
 int main(int argc, char *argv[]) {
 
   // Setup llvm commandline lib.
@@ -52,32 +49,39 @@ int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
   // Retrive the command line args.
-  const std::filesystem::path &inputFile = std::string(Driver::InputFilename);
-  const std::filesystem::path &outputFile = std::string(Driver::OutputFilename);
+  const auto inputFiles = []() {
+    std::vector<std::filesystem::path> paths;
+    for (auto file : Driver::InputFilename) {
+      paths.push_back(file);
+    }
+    return paths;
+  }();
+
+  const auto &outputFile = Driver::OutputFilename.getValue();
   const bool compileOnly = Driver::CompileAndDontLink;
 
+  // Verify that the commandline arguments are correct and setup temporary
+  // directory and file paths.
+  auto maybefiles = Support::VerifyCommandLineAndCreateFiles(
+      inputFiles, outputFile, compileOnly);
+  Support::ExitAndPrintOnError(maybefiles);
+  auto files = *maybefiles;
+
+  // Get a supported target triple to use.
   auto maybeTarget = Support::GetSupportedTriple(Driver::TargetTriple);
-  ExitAndPrintOnError(maybeTarget);
+  Support::ExitAndPrintOnError(maybeTarget);
   const std::string &target = *maybeTarget;
 
-  // TODO create a temporary file in better way.
-  auto objectFileOutput = compileOnly ? outputFile : "/tmp/tmp";
-
   // Determine action to use. For now just use EmitObjectFile action.
-  auto *action = new Frontend::Action::EmitObjectFile(objectFileOutput, target);
+  auto *action = new Frontend::Action::EmitObjectFile(files, target);
 
   // Compiling.
-  // For now, just run it on a single source file.
-  ExitAndPrintOnError(Frontend::Compiler::Compile(action, inputFile));
+  Support::ExitAndPrintOnError(Frontend::Compiler::Compile(action, files));
 
   // Linking.
   if (!compileOnly) {
-    // Call linker and pass the filepaths to:
-    // - Passed object files (start by just supporting single source file)
-    // - The created object files
-    ExitAndPrintOnError(Frontend::Linker::Link(
-        {objectFileOutput},
-        {.outputPath = outputFile, .executablePath = argv[0]}));
+    Support::ExitAndPrintOnError(
+        Frontend::Linker::Link(files, {.executablePath = argv[0]}));
   }
 
   return 0;

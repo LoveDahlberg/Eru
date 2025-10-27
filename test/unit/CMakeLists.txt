@@ -17,6 +17,6 @@ add_subdirectory(IR)
 # Add a custom target for running all unit tests
 add_custom_target(unittests
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-    DEPENDS testLexer testFileReader testParser testIR
+    DEPENDS testLexer testFile testParser testIR
     COMMENT "Running all unit tests"
 )

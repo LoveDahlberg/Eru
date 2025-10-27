@@ -1,3 +1,4 @@
+#include <Support/IO/File.h>
 #include <Support/Result.h>
 
 #include <filesystem>
@@ -6,10 +7,9 @@
 namespace Frontend::Linker {
 
 struct LinkerData {
-  const std::string& outputPath;
   const std::filesystem::path& executablePath; 
 };
 
-Error Link(const std::vector<std::string> objectFiles, const LinkerData data);
+Error Link(Support::IO::Files& files, const LinkerData data);
 
 } // namespace Frontend::Linker

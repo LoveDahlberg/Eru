@@ -87,12 +87,31 @@ Error EmitObjectFile::ActOn(AST::Context::ASTContext context) {
   // TODO verify that that there is no error here.
   generator.Walk(context);
 
+  // Cases
+  //  Compile only
+  //   - Single .arda -> use files.finalOutputPath
+  //   - Multiple .arda -> use <name>.o
+  //  Compile and link
+  //   - Single and multiple .arda -> use .eru/<name>.o
+
+  std::filesystem::path outputFile = [&]() {
+    if (files.isCompileOnly()) {
+      if (files.isSingleArda()) {
+        return files.getFinalOutputPath();
+      }
+      return context.inputFile.replace_extension(".o");
+    }
+    return files.CreateFileTmpPath(context.inputFile);
+  }();
+
   // For now just verify the module.
   RET_ON_FALSE(!llvm::verifyModule(module, &llvm::errs()),
                "EmitObjectFile: Failed to verify module.");
 
   RET_ON_FAILURE(emitObject(module, outputFile, targetTriple),
                  "EmitObjectFile: Failed to emit object file");
+
+  files.AddObjectFile(outputFile);
 
   return SUCCESS;
 }

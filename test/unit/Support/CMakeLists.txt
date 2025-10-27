@@ -1,8 +1,8 @@
 # Create the test executable
-add_executable(testFileReader IO/testFileReader.cpp)
+add_executable(testFile IO/testFile.cpp)
 
 # Link against local GTest installation
-target_link_libraries(testFileReader PRIVATE 
+target_link_libraries(testFile PRIVATE 
     GTest::GTest 
     GTest::Main
     Threads::Threads
@@ -10,7 +10,7 @@ target_link_libraries(testFileReader PRIVATE
     # Add linking agains the specific lib.
     Support
 )
-# target_include_directories(testFileReader PRIVATE ${CMAKE_SOURCE_DIR}/lib)
+# target_include_directories(testFile PRIVATE ${CMAKE_SOURCE_DIR}/lib)
 
 # Register the test with CTest
-add_test(NAME FileReader COMMAND testFileReader)
+add_test(NAME FileReader COMMAND testFile)

@@ -1,9 +1,10 @@
-#include "Support/Result.h"
+
 #include <AST/ASTContext.h>
 #include <Analyzer/Analyzer.h>
 #include <Frontend/Compiler.h>
 #include <Lexer/Lexer.h>
 #include <Parser/Parser.h>
+#include <Support/Result.h>
 
 // Gets called by the main with the action that should run.
 //  - It creats the ASTContext, the Analyzer and the parser objects.
@@ -16,28 +17,32 @@
 
 namespace Frontend::Compiler {
 
-Error Compile(Action::Action *action, const std::filesystem::path &fileInput) {
+Error Compile(Action::Action *action, Support::IO::Files &files) {
 
-  // Create ASTContext
-  auto astContext = AST::Context::ASTContext();
+  for (auto &file : files.getcompilableInputFiles()) {
 
-  // Create Analyzer with ASTContext
-  auto analyzer = Analyzer::Analyzer(astContext);
+    // Create ASTContext
+    auto astContext = AST::Context::ASTContext(file);
 
-  // Get fileInput content and create the Lexer with it.
-  auto fileContent = getFileContent(fileInput);
-  RET_ON_FAILURE(fileContent, "Failed to get file.");
+    // Create Analyzer with ASTContext
+    auto analyzer = Analyzer::Analyzer(astContext);
 
-  auto lexer = Lexing::Lexer(*fileContent);
+    // Get file content and create the Lexer with it.
+    auto fileContent = Support::IO::getFileContent(file);
+    RET_ON_FAILURE(fileContent, "Failed to get content of file.");
 
-  // Create Parser with ASTContext, Analyzer and lexer.
-  auto parser = Parser::Parser(astContext, analyzer, lexer);
+    auto lexer = Lexing::Lexer(*fileContent);
 
-  // Run Parser.Parse()
-  RET_ON_FAILURE(parser.Parse(), "Failed to parse.");
+    // Create Parser with ASTContext, Analyzer and lexer.
+    auto parser = Parser::Parser(astContext, analyzer, lexer);
 
-  // Run action.ActOn(ASTContext)
-  return action->ActOn(astContext);
+    // Run Parser.Parse()
+    RET_ON_FAILURE(parser.Parse(), "Failed to parse.");
+
+    // Run action.ActOn(ASTContext)
+    RET_ON_FAILURE(action->ActOn(astContext), "Failed to actOn.");
+  }
+  return SUCCESS;
 }
 
 } // namespace Frontend::Compiler

@@ -6,8 +6,9 @@ target_link_libraries(Lexer PRIVATE ${llvm_libs})
 
 # Create a library target for Support
 add_library(Support STATIC
-    Support/IO/FileReader.cpp
+    Support/IO/File.cpp
     Support/Triple.cpp
+    Support/Commandline.cpp
 )
 target_include_directories(Support PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(Support PRIVATE ${llvm_libs})

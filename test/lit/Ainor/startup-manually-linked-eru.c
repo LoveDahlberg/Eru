@@ -2,6 +2,7 @@
 // it with the Ainur standard library. Then it runs it to verify that it works
 // like expected.
 
+// RUN: rm -rf %t
 // RUN: %split-file %s %t
 
 // Compile test.arda

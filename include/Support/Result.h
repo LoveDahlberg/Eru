@@ -7,10 +7,10 @@
 #include <string>
 #include <vector>
 
-/// This file essentially reimplements llvm::Expected<> and llvm::Error.
-/// Difference is that this uses my custom formatter, stores a string based call
-/// chain with formatted descriptions and stores the code snippet of when the
-/// problem occured.
+// This file essentially reimplements llvm::Expected<> and llvm::Error.
+// Difference is that this uses my custom formatter, stores a string based call
+// chain with formatted descriptions and stores the code snippet of when the
+// problem occured.
 
 class Formatter {
   std::string result;

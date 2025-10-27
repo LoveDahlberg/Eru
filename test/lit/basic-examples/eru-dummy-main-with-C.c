@@ -1,11 +1,7 @@
-// TODO: Refactor once startup logic and parameter passing is correctly 
-// implemented. This works because we create a main function and externally 
-// link with a c program with libc. We should handle entry points fully in Eru,
-// and then this test should link with the c program using the -nostdlib flag.
+// Tests whether a simple object file can be created with Eru containing
+// a C like main function and that that object file can link with a valid C program. 
 
-// Tests whether a simple object file can be created with Eru and
-// that that object file can link with a valid C program. 
-
+// RUN: rm -rf %t
 // RUN: %split-file %s %t
 
 // Compile main.arda

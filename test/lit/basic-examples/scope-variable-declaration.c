@@ -1,37 +1,36 @@
-
 // Test that the scope of variables can be accessed correctly and that
 // shadowing of variables works.
 
+// RUN: rm -rf %t
 // RUN: %split-file %s %t
 
 // Compile test.arda
-// RUN: %processor %t/test.arda -o %t/test.o -c
-
-// Compile support program
-// RUN: clang %p/Input/main.c -o %t/main.o -c
-
-// Link C program with eru object
-// RUN: clang %t/main.o %t/test.o -o %t/program
+// RUN: %processor %t/main.arda -o %t/program
 
 // Run the program and test its output
-// RUN: %t/program 7 | FileCheck %s
+// RUN: %print-exit-code %t/program 1 | FileCheck %s
 
-// CHECK: Exit Code: 20
+// CHECK: Exit Code: 10
 
-//--- test.arda
+//--- main.arda
 
 int d = 0
 
 int Valinor(int a) [] {
+  // 5 = 3 + 2
   int g = 3 + a
 
   if(1) {
+    // 6 = 5 + 1
     d = g + 1
     int i = 1
     if(1) {
+      // 8 = 2 + 6
       int g = d + a
+      // 10 = 8 + 1 + 1
       d = g + 1 + i
     }
   }
+  // 10
   return d
 }

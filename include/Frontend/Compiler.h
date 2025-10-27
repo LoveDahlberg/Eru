@@ -1,13 +1,11 @@
 #pragma once
 
-#include <Support/Result.h>
 #include <Frontend/Actions.h>
-
-// stl
-#include <filesystem>
+#include <Support/IO/File.h>
+#include <Support/Result.h>
 
 namespace Frontend::Compiler {
 
-// TODO: Fileinput should represent all input files.
-Error Compile(Action::Action *action, const std::filesystem::path &fileInput);
-}
+Error Compile(Action::Action *action, Support::IO::Files &files);
+
+} // namespace Frontend::Compiler

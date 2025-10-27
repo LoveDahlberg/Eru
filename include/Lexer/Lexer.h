@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include <Support/IO/FileReader.h>
+#include <Support/IO/File.h>
 
 #include <Lexer/Tokens.h>
 
