@@ -1,4 +1,5 @@
 // include
+#include "Support/Scope.h"
 #include <AST/Function.h>
 #include <AST/Statement.h>
 #include <AST/Types.h>
@@ -65,8 +66,8 @@ Statement::Statement *CreateTestFunctionAndGetInsideStmnt(llvm::Module &module,
 
   // Create block
   auto block = new Function::Block(
-      statement,
-      CreateTestExpression(std::nullopt, Types::IntegerLiteral("1")));
+      statement, CreateTestExpression(std::nullopt, Types::IntegerLiteral("1")),
+      Support::Scope::scopeKind::FUNCTION);
 
   // Create function and add a block into it.
   auto function = new Function::Function(Types::Types::INT, name);
@@ -201,7 +202,8 @@ CreateSingleTestConditionalBranch(llvm::Module &module,
       statementIf,
       hasReturnValue
           ? CreateTestExpression(std::nullopt, Types::IntegerLiteral("42"))
-          : nullptr);
+          : nullptr,
+      Support::Scope::scopeKind::LOCAL);
 
   auto branchIf = new Controlflow::ConditionalBranch(&expressionIf, &blockIf);
   conditionalChain.push_back(branchIf);
@@ -229,7 +231,8 @@ TEST(IR, testConditionalBranch) {
 
   auto blockIf = new Function::Block(
       statementIf,
-      CreateTestExpression(std::nullopt, Types::IntegerLiteral("1")));
+      CreateTestExpression(std::nullopt, Types::IntegerLiteral("1")),
+      Support::Scope::scopeKind::LOCAL);
 
   auto branchIf = new Controlflow::ConditionalBranch(&expressionIf, &blockIf);
   conditionalChain.push_back(branchIf);
@@ -243,7 +246,8 @@ TEST(IR, testConditionalBranch) {
   statementElif->AddStatement(variableIf);
   statementElif->AddStatement(CreateSingleTestConditionalBranch(module));
 
-  auto blockElIf = new Function::Block(statementElif, nullptr);
+  auto blockElIf = new Function::Block(statementElif, nullptr,
+                                       Support::Scope::scopeKind::LOCAL);
 
   auto branchElif =
       new Controlflow::ConditionalBranch(&expressionElif, &blockElIf);
@@ -256,7 +260,8 @@ TEST(IR, testConditionalBranch) {
 
   auto blockElse = new Function::Block(
       statementElse,
-      CreateTestExpression(std::nullopt, Types::IntegerLiteral("3")));
+      CreateTestExpression(std::nullopt, Types::IntegerLiteral("3")),
+      Support::Scope::scopeKind::LOCAL);
 
   auto branchElse = new Controlflow::ConditionalBranch();
   branchElse->addBlock(&blockElse);

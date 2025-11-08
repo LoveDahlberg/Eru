@@ -47,7 +47,10 @@ TEST(Parser, TestSemanticExpressionSuccess) {
     int main(){
       int one = 4
       if(1 + 2 - 3 + one - something() - 1)
-      {}
+      {
+        return 2
+      }
+      return 1
     } 
   )"}); 
 
@@ -55,7 +58,7 @@ TEST(Parser, TestSemanticExpressionSuccess) {
   testCases.push_back({R"(
     string something()
     
-    int main(){
+    string main(){
       string one = "a"
       return "1" + "2" - "3" or "one" and something() - "1"
     } 
@@ -63,7 +66,9 @@ TEST(Parser, TestSemanticExpressionSuccess) {
 
   // Recursive function calls as parameters
   testCases.push_back({R"(
-    int something(int a, int b, int c) {}
+    int something(int a, int b, int c) {
+      return 1
+    }
     
     int main(){
       return something(something(something(something(1,2,3),something(4,something(5,6,something(7,8,9)),10),11),12,13),14,15)

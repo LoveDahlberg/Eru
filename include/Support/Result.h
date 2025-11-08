@@ -69,12 +69,7 @@ public:
   /// Constructor to use when the operation was a failure.
   /// \param format A format string that describes the reason for failure.
   Result(const Formatter description, const Formatter code = {})
-      : failureDescription({description}), codeSnippet(code), hasFailed(true) {
-    // auto codeString = code.get();
-    // if (!codeString.empty()) {
-    //   codeSnippet = codeString);
-    // }
-  }
+      : failureDescription({description}), codeSnippet(code), hasFailed(true) {}
 
   /// Checks if an error has occoured. If it has, store the incoming description
   /// and code and return false. Otherwise return true.
@@ -87,8 +82,7 @@ public:
     return true;
   }
 
-  bool check()
-  {
+  bool check() {
     checked = true;
     if (hasFailed) {
       return false;

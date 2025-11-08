@@ -29,9 +29,12 @@ public:
   Result<AST::Function::Function *>
   ActOnCall(AST::Function::FunctionCall *call);
 
-  /// Declare the parameters of the given function in the current scope.
-  Result<> ActOnParameters(AST::Function::Parameters parameters);
-  
+  /// Declare the parameters of the current function for the active scope.
+  Error ActOnParameters();
+
+  /// Verify that a return value from an arbirary block is correct.
+  Error ActOnReturnValue(AST::Types::Types returnValue);
+
   AST::Function::Function *getFunction(std::string name);
 };
 

@@ -1,4 +1,8 @@
+#include <AST/Types.h>
 #include <Analyzer/Analyzer.h>
+#include <Analyzer/AnalyzerTypes.h>
+#include <Support/Result.h>
+#include <Support/Scope.h>
 
 // stl
 #include <algorithm>
@@ -18,7 +22,11 @@ Error FunctionAnalyzer::addFunction(AST::Function::Function *function,
   auto maybeExistingFunction =
       globalScope.getFunctionDeclaration(function->name);
 
-  // Check if function does not exist, and if not, add it.
+  // TODO change to instead be an error on definition. We always scan the file
+  // for declarations first, so we should never find a definition that was not
+  // previously declared.
+
+  // Checks if function does not exist, and if not, add it.
   if (!maybeExistingFunction.has_value()) {
     function->definitionStatus = variant;
     globalScope.addFunctionDeclaration(function->name, function);
@@ -43,6 +51,9 @@ Error FunctionAnalyzer::addFunction(AST::Function::Function *function,
               "addFunction: Function defined multiple times in the same "
               "compilation unit.");
 
+  // TODO consider if this should be removed when implementing the include
+  // (link) system.
+
   // Could also just emit a warning and continue, the definition will take
   // prio.
   RET_ON_TRUE(existingFunction->definitionStatus ==
@@ -50,6 +61,9 @@ Error FunctionAnalyzer::addFunction(AST::Function::Function *function,
                   variant == AST::Function::FunctionStatus::DEFINITION,
               "addFunction: function was previously declared as an "
               "external, but is now also defined.");
+
+  // TODO consider if this should be removed when implementing the include
+  // (link) system.
 
   // Could also just emit a warning and continue, the definition will take
   // prio.
@@ -89,7 +103,7 @@ Error FunctionAnalyzer::addFunction(AST::Function::Function *function,
 Error FunctionAnalyzer::ActOnDeclaration(AST::Function::Function *function) {
 
   // Must be in global scope to declare a function
-  RET_ON_FALSE(analyzer.getCurrentScope().isGlobal(),
+  RET_ON_FALSE(analyzer.currentScopeIsGlobal(),
                "ActOnFunctionDeclaration: Function cannot be declared in other "
                "functions.");
 
@@ -103,7 +117,7 @@ Error FunctionAnalyzer::ActOnDeclaration(AST::Function::Function *function) {
 Error FunctionAnalyzer::ActOnDefinition(AST::Function::Function *function) {
 
   // Must be in global scope to define a new function
-  RET_ON_FALSE(analyzer.getCurrentScope().isGlobal(),
+  RET_ON_FALSE(analyzer.currentScopeIsGlobal(),
                "ActOnFunctionDefinition: Function cannot be defined in other "
                "functions.");
 
@@ -165,12 +179,54 @@ Error FunctionAnalyzer::ActOnCall(AST::Function::FunctionCall *call,
   return SUCCESS;
 }
 
-Result<>
-FunctionAnalyzer::ActOnParameters(AST::Function::Parameters parameters) {
-  for (auto parameter : parameters) {
-    RET_ON_FAILURE(analyzer.variable().ActOnLocalDeclaration(parameter),
-                   "ActOnParameters: Failed to declare parameter as local "
-                   "variable in scope.");
+Error FunctionAnalyzer::ActOnParameters() {
+
+  auto *currentLocalScope = analyzer.getLocalScope();
+  RET_ON_EQUAL(currentLocalScope, nullptr,
+               "ActOnParameters: current scope is not local.");
+
+  auto *contextData = currentLocalScope->getContextData();
+  RET_ON_EQUAL(contextData, nullptr, "ActOnParameters: context data not set.");
+
+  auto &declaration = contextData->declaration;
+
+  // Declare parameters when acting on a function.
+  if (currentLocalScope->getScopeKind() ==
+      Support::Scope::scopeKind::FUNCTION) {
+    for (auto parameter : declaration.parameters) {
+      RET_ON_FAILURE(analyzer.variable().ActOnLocalDeclaration(parameter),
+                     "ActOnParameters: Failed to declare parameter as local "
+                     "variable in scope.");
+    }
+  }
+
+  return SUCCESS;
+}
+
+Error FunctionAnalyzer::ActOnReturnValue(AST::Types::Types returnValue) {
+  auto *currentLocalScope = analyzer.getLocalScope();
+  RET_ON_EQUAL(currentLocalScope, nullptr,
+               "ActOnReturnValue: current scope is not local.");
+
+  auto *contextData = currentLocalScope->getContextData();
+  RET_ON_EQUAL(contextData, nullptr, "ActOnReturnValue: context data not set.");
+
+  auto &declaration = contextData->declaration;
+  auto errorMessage = "ActOnReturnValue: function " + declaration.name +
+                      " declared as " +
+                      AST::Types::typeToString.at(declaration.type) +
+                      " , but found return of "
+                      "type " +
+                      AST::Types::typeToString.at(returnValue);
+
+  // Check return type only when:
+  // 1. At the end of a function.
+  // 2. At the end of a local scope IF something is actually returned.
+  if (currentLocalScope->getScopeKind() ==
+          Support::Scope::scopeKind::FUNCTION ||
+      (currentLocalScope->getScopeKind() == Support::Scope::scopeKind::LOCAL &&
+       returnValue != AST::Types::Types::NONE)) {
+    RET_ON_NOT_EQUAL(declaration.type, returnValue, errorMessage);
   }
   return SUCCESS;
 }

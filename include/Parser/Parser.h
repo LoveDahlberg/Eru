@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "Support/Scope.h"
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 
@@ -96,9 +97,9 @@ private:
 
   // Function
   Error ParseFunction(AST::VariableDeclaration::Variable *variable);
-  Result<AST::Function::Block *> ParseBlock();
+  Result<AST::Function::Block *> ParseBlock(Support::Scope::scopeKind kind);
   Result<AST::Function::FunctionCall *> ParseFunctionCall(std::string name);
-  Result<AST::Function::FunctionBody *> ParseFunctionBody(AST::Function::Parameters parameters);
+  Result<AST::Function::FunctionBody *> ParseFunctionBody(AST::Function::Function declaration);
   Error SkipFunctionBody();
 
   /// This function is supposed to be used for parameter parsing for:

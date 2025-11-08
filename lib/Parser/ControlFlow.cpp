@@ -1,3 +1,4 @@
+#include "Support/Scope.h"
 #include <Parser/Parser.h>
 
 namespace Parser {
@@ -11,7 +12,8 @@ Parser::ParseConditionalBranch(bool start) {
   } else {
     if (lexer.getCurrentToken().type != TokenType::ELIF &&
         lexer.getCurrentToken().type != TokenType::ELSE) {
-      return FAILURE_CODE("ParseConditionalBranch: Expected elif or else", lexer);
+      return FAILURE_CODE("ParseConditionalBranch: Expected elif or else",
+                          lexer);
     }
   }
 
@@ -31,7 +33,8 @@ Parser::ParseConditionalBranch(bool start) {
     lexer.generateNextToken();
 
     auto expression = ParseExpression();
-    RET_ON_FAILURE_CODE(expression, "ParseConditionalBranch: failure in expression", lexer);
+    RET_ON_FAILURE_CODE(expression,
+                        "ParseConditionalBranch: failure in expression", lexer);
 
     RET_ON_WRONG_TOKEN(TokenType::RIGHT_PARENTHESIS,
                        "ParseConditionalBranch: Expected )");
@@ -44,9 +47,7 @@ Parser::ParseConditionalBranch(bool start) {
     branch->addExpression(&expr);
   }
 
-  analyzer.PushScope();
-  auto block = ParseBlock();
-  analyzer.PopScope();
+  auto block = ParseBlock(Support::Scope::scopeKind::LOCAL);
 
   RET_ON_FAILURE_CODE(block, "ParseConditionalBranch: failure in block", lexer);
 
@@ -68,7 +69,8 @@ Parser::ParseConditionalBranchingGroup() {
 
     RET_ON_FAILURE_CODE(
         ConditionalBranch,
-        "ParseConditionalBranchingGroup: Failed to get conditional branch", lexer);
+        "ParseConditionalBranchingGroup: Failed to get conditional branch",
+        lexer);
 
     start = false;
     conditionalChain.push_back(*ConditionalBranch);

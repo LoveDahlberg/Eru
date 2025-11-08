@@ -4,6 +4,7 @@
 #include <llvm/IR/Value.h>
 
 #include <Support/Scope.h>
+#include <vector>
 
 namespace IR {
 
@@ -33,8 +34,15 @@ struct ScopeVariable {
   llvm::Type *pointedToType;
 };
 
+/// Extra information needed in the scope.
+struct IRScopeContextData {
+  std::unordered_map<std::string, ScopeVariable> parameters;
+};
+
 using IRScopeHandler =
-    Support::Scope::ScopeHandler<ScopeVariable, llvm::Function *>;
+    Support::Scope::ScopeHandler<ScopeVariable, llvm::Function *,
+                                 IRScopeContextData>;
 using IRScope = Support::Scope::Scope<ScopeVariable>;
+using IRLocalScope = Support::Scope::LocalScope<ScopeVariable, IRScopeContextData>;
 
 } // namespace IR

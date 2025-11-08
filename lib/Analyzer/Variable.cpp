@@ -10,7 +10,8 @@ Result<bool> VariableAnalyzer::isTypeCheckedVariableDeclared(
   auto &scope = analyzer.getCurrentScope();
 
   auto declaredVariable =
-      checkParents ? scope.getDeclaredVariable(variable->name)
+      checkParents ? scope.getDeclaredVariableParentScope(
+                         variable->name, scope.getParentScope())
                    : scope.getDeclaredVariableCurrentScope(variable->name);
 
   if (!declaredVariable.has_value()) {
@@ -51,7 +52,7 @@ Error VariableAnalyzer::ActOnGlobalDeclaration(
     AST::VariableDeclaration::Variable *variable,
     std::optional<AST::Expression::ConstantOperand> constOperand) {
 
-  RET_ON_FALSE(analyzer.getCurrentScope().isGlobal(),
+  RET_ON_FALSE(analyzer.currentScopeIsGlobal(),
                "ActOnGlobalDeclaration: current scope is not global.");
 
   auto declaration = declareVariable(variable);
@@ -75,7 +76,7 @@ Result<AST::VariableDeclaration::VariableDeclaration *>
 VariableAnalyzer::ActOnLocalDeclaration(
     AST::VariableDeclaration::Variable *variable) {
 
-  RET_ON_TRUE(analyzer.getCurrentScope().isGlobal(),
+  RET_ON_TRUE(analyzer.currentScopeIsGlobal(),
               "ActOnLocalDeclaration: current scope is not local.");
 
   auto declaration = declareVariable(variable);
@@ -96,7 +97,7 @@ VariableAnalyzer::declareVariable(
                  "verifyVariableDeclaration: failed addVariableDeclaration");
 
   auto declaration = new AST::VariableDeclaration::VariableDeclaration(
-      variable, analyzer.getCurrentScope().isGlobal());
+      variable, analyzer.currentScopeIsGlobal());
 
   // Check if variable is declared in any of the parent scopes. If it is, set
   // variable as hidingParentDeclaration. For now allow redefining of type.
@@ -127,7 +128,7 @@ Error VariableAnalyzer::ActOnAssignment(
 
   } else if (std::holds_alternative<AST::Types::NamedIdentifier *>(target)) {
 
-    auto result = analyzer.getCurrentScope().getDeclaredVariable(
+    auto result = analyzer.getCurrentScope().getVisibleDeclaredVariable(
         std::get<AST::Types::NamedIdentifier *>(target)->value);
 
     // Verify that the identifier matches with something that was previously

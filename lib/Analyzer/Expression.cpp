@@ -42,7 +42,7 @@ ExpressionAnalyzer::getIdentifierType(AST::Types::NamedIdentifier identifier) {
 
   // Check if identifier is declared in current or any parent scope.
   auto variable =
-      analyser.getCurrentScope().getDeclaredVariable(identifier.value);
+      analyser.getCurrentScope().getVisibleDeclaredVariable(identifier.value);
 
   RET_ON_FALSE(variable.has_value(),
                "getIdentifierType: use of undeclared identifier.");

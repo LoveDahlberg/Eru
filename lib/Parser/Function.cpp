@@ -1,5 +1,6 @@
-#include "AST/Function.h"
 #include "Support/Result.h"
+#include "Support/Scope.h"
+#include <AST/Function.h>
 #include <Parser/Parser.h>
 
 namespace Parser {
@@ -40,9 +41,13 @@ Parser::ParseFunctionCall(std::string name) {
   return call;
 }
 
-Result<AST::Function::Block *> Parser::ParseBlock() {
-  // TODO refactor so that the push and pop of the Scope happens in here instead
-  // of before the call, like how its done for the IR.
+Result<AST::Function::Block *>
+Parser::ParseBlock(Support::Scope::scopeKind kind) {
+
+  analyzer.PushScope(kind);
+
+  RET_ON_FAILURE(analyzer.function().ActOnParameters(),
+                 "ParseBlock: failed to act on parameters.");
 
   skipUntilNotNewline();
 
@@ -57,8 +62,9 @@ Result<AST::Function::Block *> Parser::ParseBlock() {
   RET_ON_FAILURE_CODE(statement, "ParseBlock: Failed to parse statement",
                       lexer);
 
-  auto block = new AST::Function::Block(*statement);
+  auto block = new AST::Function::Block(*statement, kind);
 
+  auto returnType = AST::Types::NONE;
   if (lexer.getCurrentToken() == TokenType::RETURN) {
     // eat the return
     lexer.generateNextToken();
@@ -67,10 +73,13 @@ Result<AST::Function::Block *> Parser::ParseBlock() {
     RET_ON_FAILURE_CODE(expression, "ParseBlock: Failed to parse expression",
                         lexer);
 
+    returnType = (*expression)->evaluatedType;
+
     block->addReturn(*expression);
   }
 
-  // TODO Error if return is expected but not present..
+  RET_ON_FAILURE_CODE(analyzer.function().ActOnReturnValue(returnType),
+                      "ParseBlock: Failed to act on return value", lexer);
 
   skipUntilNotNewline();
 
@@ -79,21 +88,19 @@ Result<AST::Function::Block *> Parser::ParseBlock() {
   // eat the }
   lexer.generateNextToken();
 
+  analyzer.PopScope();
+
   return block;
 }
 
 Result<AST::Function::FunctionBody *>
-Parser::ParseFunctionBody(AST::Function::Parameters parameters) {
+Parser::ParseFunctionBody(AST::Function::Function declaration) {
 
-  analyzer.PushScope();
+  // Set new contextData for the upcoming function scope.
+  analyzer.PrepareFunctionScope(
+      new Analyzer::AnalyzerScopeContextData{.declaration = declaration});
 
-  // Declare the function parameters as local variables in the current scope.
-  RET_ON_FAILURE(analyzer.function().ActOnParameters(parameters),
-                 "ParseFunctionBody: failed to act on parameters.");
-
-  auto block = ParseBlock();
-  analyzer.PopScope();
-
+  auto block = ParseBlock(Support::Scope::scopeKind::FUNCTION);
   RET_ON_FAILURE_CODE(block, "ParseFunctionBody: Failed to parse block", lexer);
 
   return new AST::Function::FunctionBody(*block);

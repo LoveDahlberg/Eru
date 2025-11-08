@@ -31,7 +31,7 @@ llvm::Value *IRGenerator::handle(Assignment::Assignment &AST) {
 
     // Make sure the pointer of the variable is used here, it is needed for the
     // store.
-    auto variable = scopeHandler.getCurrent().getDeclaredVariable(name->value);
+    auto variable = scopeHandler.getCurrent().getVisibleDeclaredVariable(name->value);
 
     // Variable note declared.
     if (!variable.has_value()) {

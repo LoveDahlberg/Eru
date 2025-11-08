@@ -1,3 +1,4 @@
+#include "Support/Scope.h"
 #include <IR/IRGenerator.h>
 
 // llvm
@@ -28,7 +29,20 @@ llvm::Value *IRGenerator::handle(Function::FunctionCall &AST) {
 }
 
 llvm::Value *IRGenerator::handle(Function::Block &AST) {
-  scopeHandler.Push();
+  scopeHandler.Push(AST.scopeKind);
+
+  // Declare parameters as variables in current scope, if kind is function.
+  if (AST.scopeKind == Support::Scope::scopeKind::FUNCTION) {
+    auto *localScope =
+        scopeHandler.CastCurrentToLocalScope();
+
+    if (localScope == nullptr) {
+      return nullptr;
+    }
+    for (auto &[name, paramter] : localScope->getContextData()->parameters) {
+      localScope->addVariableDeclaration(name, paramter);
+    }
+  }
 
   auto statementResult = ASTTraversal::handle(*AST.statement);
 
@@ -64,10 +78,12 @@ llvm::Value *IRGenerator::handle(Function::FunctionBody &AST) {
 
   // TODO Generate directive
 
+  IRScopeContextData contextData;
   for (auto &parameter : currentFunction->args()) {
-    scopeHandler.AddParametersForNextPushedLocalScope(parameter.getName().str(),
-                                                      &parameter);
+    contextData.parameters.emplace(parameter.getName().str(), &parameter);
   }
+
+  scopeHandler.PrepareFunctionScope(&contextData);
 
   return AST.block == nullptr ? nullptr : handle(*AST.block);
 }

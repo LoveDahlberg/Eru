@@ -78,7 +78,7 @@ Error Parser::ParseFunctionBodies() {
     lexer.restartFromIndex(functionBodyToParse.startIndex);
 
     auto functionBody =
-        ParseFunctionBody(functionBodyToParse.function->parameters);
+        ParseFunctionBody(*functionBodyToParse.function);
 
     RET_ON_FAILURE_CODE(functionBody,
                         "ParseFunctionBodies: Failed to parse functionBody",

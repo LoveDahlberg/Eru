@@ -77,6 +77,7 @@ TEST(Parser, TestSemanticVariableSuccess) {
   testCases.push_back(R"(
     int main() {
       int something = 1
+      return 0
     }
   )");
 
@@ -85,14 +86,16 @@ TEST(Parser, TestSemanticVariableSuccess) {
     int main() {
       int something
       something = 1
+      return 0
     }
-  // )");
+   )");
 
   // Redeclaring the same global variable in a function.
   testCases.push_back(R"(
     int something = 0
     int main() {
       int something = 1
+      return 0
     }
   )");
 
@@ -102,7 +105,9 @@ TEST(Parser, TestSemanticVariableSuccess) {
     int main() {
       if(1){
         int something
+        return 0
       }
+      return 0
     }
   )");
 
@@ -116,6 +121,7 @@ TEST(Parser, TestSemanticVariableSuccess) {
       {
         int something
       }
+      return 0
     }
   )");
 
@@ -139,6 +145,7 @@ TEST(Parser, TestSemanticVariableSuccess) {
           }
         }
       }
+      return 0
     }
   )");
 
@@ -147,6 +154,7 @@ TEST(Parser, TestSemanticVariableSuccess) {
     int main() {
       int hello
       int world = hello
+      return 0
     }
   )"});
 
@@ -154,6 +162,7 @@ TEST(Parser, TestSemanticVariableSuccess) {
   testCases.push_back({R"(
     int main(int a) {
       a = 1
+      return 0
     }
   )"});
 
@@ -164,6 +173,7 @@ TEST(Parser, TestSemanticVariableSuccess) {
       string one = something()
       string two = "two"
       string three = two
+      return 0
     } 
   )"});
 

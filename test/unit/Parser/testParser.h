@@ -35,9 +35,12 @@ inline items RunParser(std::string &stream, bool expectSuccess = true) {
     }
     std::cout << result.codeSnippet << "\n";
 
-    std::cout << "\n\n";
+    
+    std::cout << "\n Failing code:\n";
 
-    // item.lexer.
+    std::cout << stream;
+
+    std::cout << "\n\n";
 
     item.success = false;
   }

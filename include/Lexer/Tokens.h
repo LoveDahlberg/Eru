@@ -40,8 +40,9 @@ enum class TokenType {
   MINUS,
   OR,
   AND,
-
-  EQUAL, // ?
+  EQUAL,
+  STAR,
+  AMPERSAND,
 
   // Literals,  numbers, logical, textual and refernce literals
   INTEGER_LITERAL,
@@ -80,10 +81,11 @@ const std::unordered_map<char, TokenType> separatorOperatorToToken = {
     {'[', TokenType::LEFT_BRACKET},
     {']', TokenType::RIGHT_BRACKET},
     {',', TokenType::COMMA},
-
     {'+', TokenType::PLUS},
     {'-', TokenType::MINUS},
     {'=', TokenType::EQUAL},
+    {'*', TokenType::STAR},
+    {'&', TokenType::AMPERSAND},
 };
 
 enum class TokenCategory {
@@ -127,6 +129,8 @@ const std::unordered_map<TokenType, TokenCategory> tokenTypeToCategory{
     {TokenType::EQUAL, TokenCategory::OPERATOR},
     {TokenType::OR, TokenCategory::OPERATOR},
     {TokenType::AND, TokenCategory::OPERATOR},
+    {TokenType::AMPERSAND, TokenCategory::OPERATOR},
+    {TokenType::STAR, TokenCategory::OPERATOR},
 
     {TokenType::INTEGER_LITERAL, TokenCategory::LITERAL},
     {TokenType::STRING_LITERAL, TokenCategory::LITERAL},

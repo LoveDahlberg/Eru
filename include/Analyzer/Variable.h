@@ -2,7 +2,7 @@
 
 #include <AST/Assignment.h>
 #include <Support/Result.h>
-#include <Support/Scope.h>
+#include <Analyzer/AnalyzerTypes.h>
 
 #include <memory>
 
@@ -10,7 +10,6 @@ using namespace Support::Scope;
 
 namespace Analyzer {
 
-using AnalyzerScope = Scope<AST::VariableDeclaration::Variable *>;
 class PrivateAnalyzer;
 
 class VariableAnalyzer {

@@ -2,16 +2,41 @@
 #pragma once
 
 #include <cassert>
-#include <memory>
 #include <optional>
+#include <string>
 #include <unordered_map>
-#include <vector>
 
 namespace Support::Scope {
+
+namespace {
+
+template <typename kind>
+static std::optional<kind>
+getFromMap(std::unordered_map<std::string, kind> &map, const std::string name) {
+  auto it = map.find(name);
+  if (it == map.end()) {
+    return std::nullopt;
+  }
+  return it->second;
+}
+
+} // namespace
+
+enum class scopeKind {
+  BASE,
+  LOCAL,
+  FUNCTION,
+  GLOBAL,
+};
 
 template <typename variableKind> class Scope {
 
 public:
+  Scope<variableKind>(Scope<variableKind> *parentScope)
+      : parentScope(parentScope) {}
+
+  virtual scopeKind getScopeKind() { return scopeKind::BASE; }
+
   Scope<variableKind> *getParentScope() { return parentScope; }
 
   void setParentScope(Scope<variableKind> *newParentScope) {
@@ -28,7 +53,8 @@ public:
     return getFromMap(variableDeclarations, name);
   }
 
-  std::optional<variableKind> getDeclaredVariable(const std::string &name) {
+  std::optional<variableKind>
+  getVisibleDeclaredVariable(const std::string &name) {
 
     // Check declarations in current scope.
     auto currentScopeVariable = getDeclaredVariableCurrentScope(name);
@@ -38,11 +64,6 @@ public:
                ? currentScopeVariable
                : getDeclaredVariableParentScope(name, parentScope);
   }
-
-  virtual bool isGlobal() const { return false; }
-
-protected:
-  virtual ~Scope() = default;
 
   std::optional<variableKind>
   getDeclaredVariableParentScope(const std::string &name,
@@ -62,96 +83,148 @@ protected:
                : getDeclaredVariableParentScope(name, parentScope->parentScope);
   }
 
-  template <typename kind>
-  static std::optional<kind>
-  getFromMap(std::unordered_map<std::string, kind> &map,
-             const std::string name) {
-    auto it = map.find(name);
-    if (it == map.end()) {
-      return std::nullopt;
-    }
-    return it->second;
-  }
+protected:
+  // virtual ~Scope() = default;
 
   std::unordered_map<std::string, variableKind> variableDeclarations;
   Scope<variableKind> *parentScope;
 };
 
-template <typename variableKind>
+template <typename variableKind, typename ContextKind>
 struct LocalScope : public Scope<variableKind> {
 
-  LocalScope(const std::unordered_map<std::string, variableKind> &parameters) {
-    Scope<variableKind>::variableDeclarations.insert(parameters.begin(),
-                                                     parameters.end());
-  }
+  LocalScope(ContextKind *contextData, Scope<variableKind> *parentScope)
+      : contextData(contextData), Scope<variableKind>(parentScope) {}
+
+  ContextKind *getContextData() { return contextData; }
+
+  virtual scopeKind getScopeKind() override { return scopeKind::LOCAL; }
+
+protected:
+  ContextKind *contextData;
 };
 
-template <typename variableKind, typename functionKind>
+template <typename variableKind, typename ContextKind>
+struct FunctionScope : public LocalScope<variableKind, ContextKind> {
+
+  FunctionScope<variableKind, ContextKind>(ContextKind *contextData,
+                                           Scope<variableKind> *parentScope)
+      : LocalScope<variableKind, ContextKind>(contextData, parentScope) {}
+
+  scopeKind getScopeKind() override { return scopeKind::FUNCTION; }
+};
+
+template <typename variableKind, typename declarationKind>
 class GlobalScope : public Scope<variableKind> {
 
 public:
-  // TODO: These are all functions, not only declarations (declarations are only
-  // externs techincally).
-  std::optional<functionKind> getFunctionDeclaration(const std::string &name) {
-    return Scope<variableKind>::getFromMap(functionDeclarations, name);
+  GlobalScope<variableKind, declarationKind>() : Scope<variableKind>(nullptr) {}
+
+  std::optional<declarationKind>
+  getFunctionDeclaration(const std::string &name) {
+    return getFromMap(functionDeclarations, name);
   }
 
-  void addFunctionDeclaration(const std::string &name, functionKind &variable) {
+  void addFunctionDeclaration(const std::string &name,
+                              declarationKind &variable) {
     functionDeclarations.emplace(name, variable);
   }
 
-  bool isGlobal() const override { return true; }
+  scopeKind getScopeKind() override { return scopeKind::GLOBAL; }
 
 private:
-  std::unordered_map<std::string, functionKind> functionDeclarations;
+  std::unordered_map<std::string, declarationKind> functionDeclarations;
 };
 
-template <typename variableKind, typename functionKind> struct ScopeHandler {
+template <typename variableKind, typename declarationKind, typename ContextKind>
+struct ScopeHandler {
 
-  ScopeHandler() : globalScope(), currentScope(&globalScope) {}
+  ScopeHandler()
+      : contextDataForNextLocalScope(nullptr), globalScope(),
+        currentScope(&globalScope) {}
 
-  Scope<variableKind> &getCurrent() { return *currentScope; }
-  GlobalScope<variableKind, functionKind> &getGlobal() { return globalScope; }
-
-  /// Adds to the parameters list for the next local scope that is pushed. It
-  /// solves the issue of not having access to the parameters when the actual
-  /// scope is pushed.
-  void AddParametersForNextPushedLocalScope(const std::string &name,
-                                            const variableKind &variable) {
-    if (!parametersForNextLocalScope.contains(name)) {
-      parametersForNextLocalScope.emplace(name, variable);
-    }
+  void PrepareFunctionScope(ContextKind *contextData) {
+    contextDataForNextLocalScope = contextData;
   }
 
   /// Call when going into a new scope
-  void Push() {
+  void Push(scopeKind kind) {
 
-    // New scope is always a local scope.
-    Scope<variableKind> *newChildScope =
-        new LocalScope<variableKind>(parametersForNextLocalScope);
+    Scope<variableKind> *newChildScope = [&]() -> Scope<variableKind> * {
+      switch (kind) {
+      case scopeKind::BASE:
+        return new Scope<variableKind>(currentScope);
+      case scopeKind::LOCAL:
+        return new LocalScope<variableKind, ContextKind>(
+            contextDataForNextLocalScope, currentScope);
+      case scopeKind::FUNCTION:
+        return new FunctionScope<variableKind, ContextKind>(
+            contextDataForNextLocalScope, currentScope);
+      case scopeKind::GLOBAL:
+        return new GlobalScope<variableKind, declarationKind>();
+      }
+    }();
 
-    parametersForNextLocalScope.clear();
-
-    newChildScope->setParentScope(std::move(currentScope));
-    currentScope = std::move(newChildScope);
+    // Set created scope as new current scope, previous scope is set as parent.
+    currentScope = newChildScope;
   }
 
   /// Call when going out of the current scope.
   void Pop() {
     // Nothing to pop.
-    if (currentScope == nullptr || currentScope->isGlobal() ||
-        currentScope->getParentScope() == nullptr) {
+    if (currentScope == nullptr || currentScope->getParentScope() == nullptr) {
+      return;
+    }
+
+    switch (currentScope->getScopeKind()) {
+    case scopeKind::BASE:
+    case scopeKind::LOCAL:
+      break;
+    case scopeKind::FUNCTION:
+      // End of function scope, clear context data so its not used for next
+      // function.
+      contextDataForNextLocalScope = nullptr;
+      break;
+    case scopeKind::GLOBAL:
+      // Cannot pop global scope
       return;
     }
 
     // Drop the current scope. Set current scope to the previous parent scope.
-    currentScope = std::move(currentScope->getParentScope());
+    currentScope = currentScope->getParentScope();
+  }
+
+  LocalScope<variableKind, ContextKind> *
+  CastCurrentToLocalScope() {
+    if (auto *newScope =
+            dynamic_cast<LocalScope<variableKind, ContextKind> *>(currentScope)) {
+      return newScope;
+    }
+    return nullptr;
+  }
+
+  Scope<variableKind> &getCurrent() { return *currentScope; }
+  GlobalScope<variableKind, declarationKind> &getGlobal() {
+    return globalScope;
+  }
+
+  FunctionScope<variableKind, ContextKind> *
+  findFunctionFrom(Scope<variableKind> *scope) {
+
+    if (auto *newScope =
+            dynamic_cast<FunctionScope<variableKind, ContextKind> *>(scope)) {
+      return newScope;
+    }
+
+    return scope == nullptr || scope->getParentScope() == nullptr
+               ? nullptr
+               : findFunctionFrom(scope->getParentScope());
   }
 
 private:
+  ContextKind *contextDataForNextLocalScope;
+  GlobalScope<variableKind, declarationKind> globalScope;
   std::unordered_map<std::string, variableKind> parametersForNextLocalScope;
-
-  GlobalScope<variableKind, functionKind> globalScope;
   Scope<variableKind> *currentScope;
 };
 

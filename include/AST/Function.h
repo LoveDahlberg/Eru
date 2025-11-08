@@ -1,5 +1,7 @@
 #pragma once
 
+#include "AST/Types.h"
+#include "Support/Scope.h"
 #include <AST/VariableDeclaration.h>
 
 // stl
@@ -21,10 +23,12 @@ namespace AST::Function {
 
 /// TODO this might be better to keep in another file/namespace.
 struct Block {
-  Block(Statement::Statement *statement) : statement(statement) {}
+  Block(Statement::Statement *statement, Support::Scope::scopeKind scopeKind)
+      : statement(statement), returnValue(nullptr), scopeKind(scopeKind) {}
 
-  Block(Statement::Statement *statement, Expression::Expression *returnValue)
-      : statement(statement), returnValue(returnValue) {}
+  Block(Statement::Statement *statement, Expression::Expression *returnValue,
+        Support::Scope::scopeKind scopeKind)
+      : statement(statement), returnValue(returnValue), scopeKind(scopeKind) {}
 
   void addReturn(Expression::Expression *returnValue) {
     this->returnValue = returnValue;
@@ -32,6 +36,7 @@ struct Block {
 
   Statement::Statement *statement;
   Expression::Expression *returnValue;
+  Support::Scope::scopeKind scopeKind;
 };
 
 struct FunctionBody {
@@ -47,7 +52,6 @@ enum FunctionStatus {
   DEFINITION,
 };
 
-
 struct FunctionCall {
   FunctionCall(std::string name,
                std::vector<Expression::Expression *> parameters)
@@ -61,20 +65,19 @@ struct FunctionCall {
 using Parameters = std::vector<VariableDeclaration::Variable *>;
 
 struct Function {
+  Function() {}
 
-  Function(Types::Types type, std::string name,
-    Parameters parameters)
-      : type(type), name(name), parameters(parameters)  {}
+  Function(Types::Types type, std::string name, Parameters parameters)
+      : type(type), name(name), parameters(parameters) {}
 
   Function(Types::Types type, std::string name) : type(type), name(name) {}
 
   void addFunctionBody(FunctionBody *body) { this->body = body; }
 
-  
-  Types::Types type;
   std::string name;
   Parameters parameters;
-  
+
+  Types::Types type = Types::NONE;
   FunctionBody *body = nullptr;
   FunctionStatus definitionStatus = NONE;
 };

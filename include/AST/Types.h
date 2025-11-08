@@ -20,7 +20,7 @@ enum Types {
 };
 
 static std::unordered_map<Types, std::string> typeToString{
-    {NONE, "none"}, {INT, "int"},   {SINT32, "sint32"},
+    {NONE, "void"}, {INT, "int"},   {SINT32, "sint32"},
     {BOOl, "bool"}, {CHAR, "char"}, {STRING, "string"},
 };
 struct NamedIdentifier {

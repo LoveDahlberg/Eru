@@ -25,7 +25,7 @@ _____
   [compilationUnitItem] → {globalVariableDeclaration} | {directive} | {function}
   
     [globalVariableDeclaration] → {type} (IDENTIFER) {initializer}
-      [type] → {data}
+      [type] → {data} | {data} (AMPERSAND)
         [data] → (INT) | (SIGNED_INT_32) | (UNSIGNED_INT_32) | (BOOl) | (STRING) | (CHAR)    
       [initializer] → (EQUAL) {literal} (NEWLINE) | e
         [literal] → (STRING_LITERAL) | (INTEGER_LITERAL) 
@@ -41,10 +41,12 @@ _____
           [statement] → {variableDeclaration} {statement} | {assignment} {statement} | {controlflow} {statement} | {functionCall} {statement} | e
             [variableDeclaration] → {type} (IDENTIFER)
             [assignment] → {assignmentTarget} (EQUAL) {expression} (NEWLINE)
-              [assignmentTarget] → {variableDeclaration} | (IDENTIFER) 
-              
+              [assignmentTarget] → {variableDeclaration} | {variableUsage}
+                [variableUsage] → (IDENTIFER) | {pointerOperator} (IDENTIFER)
+                  [pointerOperator] → (AMPERSAND) | (STAR)
+
               [expression] → {expression} {operator} {operand} | {operand} 
-                [operand] → (IDENTIFER) | {literal} | {functionCall}       
+                [operand] → {variableUsage} | {literal} | {functionCall}       
                   [functionCall] → (IDENTIFER) (LEFT_PARENTHESIS) {parametersCall} (RIGHT_PARENTHESIS)
                     [parametersCall] → {parametersCallList} | e
                       [parametersCallList] → {expression} | {expression} (COMMA) {parametersCallList}
@@ -91,6 +93,8 @@ _____
 (PLUS) → +
 (MINUS) → -
 (EQUAL) → =
+(AMPERSAND) → &
+(STAR) → *
 
 (INTEGER_LITERAL) → [0-9]+
 (STRING_LITERAL) → ".*"

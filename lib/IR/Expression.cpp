@@ -28,7 +28,7 @@ IRGenerator::getOperand(Expression::ExpressionUnit *expressionUnit) {
     // expression is done on the value itself.
     // TODO: If pointer arithmetic is added, extend this logic to handle it.
     auto result =
-        scopeHandler.getCurrent().getDeclaredVariable(identifier.value);
+        scopeHandler.getCurrent().getVisibleDeclaredVariable(identifier.value);
 
     return result.has_value() ? result->getValue(builder) : nullptr;
 

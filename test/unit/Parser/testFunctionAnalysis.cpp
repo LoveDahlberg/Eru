@@ -59,7 +59,7 @@ TEST(Parser, TestSemanticFunctionFailure) {
   // Calling something that is never declared later.
   testCases.push_back({R"(
     int main(int a) [] {
-      something(a)
+      return something(a)
     }
   )"});
 
@@ -68,14 +68,14 @@ TEST(Parser, TestSemanticFunctionFailure) {
     int something(bool a)
 
     int main(int a) [] {
-      something(a)
+      return something(a)
     }
   )"});
 
   // Calling something that is declared later with a wrong parameters.
   testCases.push_back({R"(
       int main(int a) [] {
-        something(a)
+        return something(a)
       }
       int something(bool a)
     )"});
@@ -84,8 +84,27 @@ TEST(Parser, TestSemanticFunctionFailure) {
   testCases.push_back({R"(
     int main(int a) [] {
       bool b = something(a)
+      return 1
     }
     int something(int a)
+  )"});
+
+
+  // Returning the wrong type in function scope
+  testCases.push_back({R"(
+    int Valinor(int a) [] {
+      return "1"
+    }
+  )"});
+
+  // Returning the wrong type in a local scope.
+  testCases.push_back({R"(
+    int Valinor(int a) [] {
+      if(1) {
+        return "1"
+      }
+      return 0
+    }
   )"});
 
   for (auto testCase : testCases) {
@@ -110,7 +129,7 @@ TEST(Parser, TestSemanticFunctionSuccess) {
   // Calling something that is declared later
   testCases.push_back(R"(
       int main(int a) [] {
-        something(1)
+        return something(1)
       }
       int something(int a)
     )");
@@ -118,21 +137,48 @@ TEST(Parser, TestSemanticFunctionSuccess) {
   // Calling something that is defined later
   testCases.push_back(R"(
       int main(int a) [] {
-        something(1)
+        return something(1)
       }
-      int something(int a) [] {}
+      int something(int a) [] {
+        return 2
+      }
     )");
 
   // Call function as parameter to other function. Once when we don't need the
   // return type, once when we do.
   testCases.push_back(R"(
-      int something(bool a) [] {}
-      bool somethingElse(int a) [] {}
-
+      int something(int a) [] {
+        return 1
+      }
+      int somethingElse(int a) [] {
+        return 2
+      }
 
       int main(int a) [] {
         something(somethingElse(a))
         return something(somethingElse(a))
+      }
+    )");
+
+  // Function with multiple returns that all have the correct type.
+  testCases.push_back(R"(
+      int Valinor() [] {
+        if(1) {
+        }
+        elif(2) {
+          return 3
+        }
+        return 1
+      }
+    )");
+
+    // Check that function parameters can be shadowed like normal variables
+    testCases.push_back(R"(
+      int Valinor(int a, bool b) [] {
+        if(1) {
+          int a = 2
+        }
+        return 1
       }
     )");
 

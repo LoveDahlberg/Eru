@@ -39,9 +39,6 @@ Parser::ParseVaribleAndMaybeAssignment() {
                         "act on assignment.",
                         lexer);
 
-    // TODO consider if we should add a declaration and a assignment
-    // statement on assignment, or if it is enough to just add a assignment
-    // (which then auto includes a declaration if ).
     statements.push_back(*assignment);
   }
 
