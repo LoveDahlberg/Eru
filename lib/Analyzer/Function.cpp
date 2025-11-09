@@ -9,8 +9,9 @@
 
 namespace Analyzer {
 
-Error FunctionAnalyzer::addFunction(AST::Function::Function *function,
-                                    AST::Function::FunctionStatus variant) {
+Error FunctionAnalyzer::addFunction(
+    AST::Function::FunctionDeclaration *function,
+    AST::Function::FunctionStatus variant) {
 
   // TODO make this a concept/template check, so that its not callable with
   // NONE.
@@ -100,7 +101,8 @@ Error FunctionAnalyzer::addFunction(AST::Function::Function *function,
   return SUCCESS;
 }
 
-Error FunctionAnalyzer::ActOnDeclaration(AST::Function::Function *function) {
+Error FunctionAnalyzer::ActOnDeclaration(
+    AST::Function::FunctionDeclaration *function) {
 
   // Must be in global scope to declare a function
   RET_ON_FALSE(analyzer.currentScopeIsGlobal(),
@@ -114,7 +116,8 @@ Error FunctionAnalyzer::ActOnDeclaration(AST::Function::Function *function) {
   return SUCCESS;
 }
 
-Error FunctionAnalyzer::ActOnDefinition(AST::Function::Function *function) {
+Error FunctionAnalyzer::ActOnDefinition(
+    AST::Function::FunctionDeclaration *function) {
 
   // Must be in global scope to define a new function
   RET_ON_FALSE(analyzer.currentScopeIsGlobal(),
@@ -128,7 +131,7 @@ Error FunctionAnalyzer::ActOnDefinition(AST::Function::Function *function) {
   return SUCCESS;
 }
 
-Result<AST::Function::Function *>
+Result<AST::Function::FunctionDeclaration *>
 FunctionAnalyzer::ActOnCall(AST::Function::FunctionCall *call) {
   auto maybeExistingFunction =
       analyzer.getGlobalScope().getFunctionDeclaration(call->name);
@@ -228,6 +231,19 @@ Error FunctionAnalyzer::ActOnReturnValue(AST::Types::Types returnValue) {
        returnValue != AST::Types::Types::NONE)) {
     RET_ON_NOT_EQUAL(declaration.type, returnValue, errorMessage);
   }
+  return SUCCESS;
+}
+
+Error FunctionAnalyzer::ActOnBody(AST::Function::FunctionBody *body) {
+  auto maybeExistingFunction =
+      analyzer.getGlobalScope().getFunctionDeclaration(body->functionName);
+
+  RET_ON_FALSE(maybeExistingFunction.has_value(), "ActOnBody: function '" +
+                                                      body->functionName +
+                                                      "' does not exist.");
+
+  analyzer.getASTContext().compilationUnit->AddCompilationUnitItems(body);
+
   return SUCCESS;
 }
 

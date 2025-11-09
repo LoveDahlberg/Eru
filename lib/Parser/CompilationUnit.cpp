@@ -12,7 +12,7 @@ Error Parser::ParseVariableDeclarationOrFunction() {
 
   if (lexer.getCurrentToken() == TokenType::LEFT_PARENTHESIS) {
     return ParseFunction(*variable);
-  } 
+  }
 
   std::optional<AST::Expression::ConstantOperand> constOperand;
 
@@ -24,10 +24,12 @@ Error Parser::ParseVariableDeclarationOrFunction() {
 
     auto operand = ParseConstantOperand();
 
-    RET_ON_FAILURE(operand, "ParseVariableDeclarationOrFunction: Faled to parse Constant Operand");
+    RET_ON_FAILURE(
+        operand,
+        "ParseVariableDeclarationOrFunction: Faled to parse Constant Operand");
 
     constOperand = *operand;
-  } 
+  }
 
   RET_ON_WRONG_TOKEN(TokenType::NEWLINE,
                      "ParseVariableDeclarationOrFunction: Expected newline "
@@ -77,14 +79,14 @@ Error Parser::ParseFunctionBodies() {
   for (auto functionBodyToParse : functionBodiesToParse) {
     lexer.restartFromIndex(functionBodyToParse.startIndex);
 
-    auto functionBody =
-        ParseFunctionBody(*functionBodyToParse.function);
+    auto functionBody = ParseFunctionBody(*functionBodyToParse.function);
 
     RET_ON_FAILURE_CODE(functionBody,
                         "ParseFunctionBodies: Failed to parse functionBody",
                         lexer);
 
-    functionBodyToParse.function->addFunctionBody(*functionBody);
+    RET_ON_FAILURE(analyzer.function().ActOnBody(*functionBody),
+                   "ParseFunctionBodies: Failed ActOnBody.");
   }
   return SUCCESS;
 }

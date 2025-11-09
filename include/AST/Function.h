@@ -40,10 +40,12 @@ struct Block {
 };
 
 struct FunctionBody {
-  FunctionBody(Block *block) : block(block) {}
+  FunctionBody(const std::string &functionName, Block *block)
+      : block(block), functionName(functionName) {}
 
   // TODO add directive
   Block *block;
+  const std::string functionName;
 };
 
 enum FunctionStatus {
@@ -64,21 +66,20 @@ struct FunctionCall {
 
 using Parameters = std::vector<VariableDeclaration::Variable *>;
 
-struct Function {
-  Function() {}
+struct FunctionDeclaration {
+  FunctionDeclaration() {}
 
-  Function(Types::Types type, std::string name, Parameters parameters)
+  FunctionDeclaration(Types::Types type, std::string name,
+                      Parameters parameters)
       : type(type), name(name), parameters(parameters) {}
 
-  Function(Types::Types type, std::string name) : type(type), name(name) {}
-
-  void addFunctionBody(FunctionBody *body) { this->body = body; }
+  FunctionDeclaration(Types::Types type, std::string name)
+      : type(type), name(name) {}
 
   std::string name;
   Parameters parameters;
 
   Types::Types type = Types::NONE;
-  FunctionBody *body = nullptr;
   FunctionStatus definitionStatus = NONE;
 };
 

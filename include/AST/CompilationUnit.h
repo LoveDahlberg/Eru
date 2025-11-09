@@ -11,7 +11,7 @@ namespace AST {
 // TODO add directive
 using CompilationUnitVariant =
     std::variant<VariableDeclaration::GlobalVariableInitialization *,
-                 Function::Function *>;
+                 Function::FunctionDeclaration *, Function::FunctionBody*>;
 
 /// Concept that the given CompilationUnit is:
 /// 1. A pointer.

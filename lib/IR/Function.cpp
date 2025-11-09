@@ -1,3 +1,4 @@
+#include "Support/Result.h"
 #include "Support/Scope.h"
 #include <IR/IRGenerator.h>
 
@@ -8,10 +9,8 @@
 
 namespace IR {
 
-llvm::Value *IRGenerator::handle(Function::FunctionCall &AST) {
-  if (builder == nullptr) {
-    return nullptr;
-  }
+Result<llvm::Value *> IRGenerator::handle(Function::FunctionCall &AST) {
+  RET_ON_TRUE(builder == nullptr, "IRGenerator: FunctionCall: builder is null");
 
   auto callingFunction =
       scopeHandler.getGlobal().getFunctionDeclaration(AST.name);
@@ -22,22 +21,26 @@ llvm::Value *IRGenerator::handle(Function::FunctionCall &AST) {
 
   std::vector<llvm::Value *> evaluatedParameters;
   for (auto paramter : AST.parameters) {
-    evaluatedParameters.push_back(handle(*paramter));
+    auto maybeParameter = handle(*paramter);
+    RET_ON_FAILURE(maybeParameter,
+                   "IRGenerator: FunctionCall: builder is null");
+
+    evaluatedParameters.push_back(*maybeParameter);
   }
 
   return builder->CreateCall(*callingFunction, evaluatedParameters);
 }
 
-llvm::Value *IRGenerator::handle(Function::Block &AST) {
+Result<llvm::Value *> IRGenerator::handle(Function::Block &AST) {
   scopeHandler.Push(AST.scopeKind);
 
   // Declare parameters as variables in current scope, if kind is function.
   if (AST.scopeKind == Support::Scope::scopeKind::FUNCTION) {
-    auto *localScope =
-        scopeHandler.CastCurrentToLocalScope();
+    auto *localScope = scopeHandler.CastCurrentToLocalScope();
 
     if (localScope == nullptr) {
-      return nullptr;
+      scopeHandler.Pop();
+      return {nullptr, "IRGenerator: Function::Block: no local scope"};
     }
     for (auto &[name, paramter] : localScope->getContextData()->parameters) {
       localScope->addVariableDeclaration(name, paramter);
@@ -50,8 +53,9 @@ llvm::Value *IRGenerator::handle(Function::Block &AST) {
   // empty, it either means that the block only contains a return or its empty
   // (valid case for function declaration).
   for (auto statement : statementResult) {
-    if (statement == nullptr) {
-      return nullptr;
+    if (!statement.isSuccessful()) {
+      scopeHandler.Pop();
+      return {nullptr, "IRGenerator: Function::Block: statement is null"};
     }
   }
 
@@ -59,52 +63,72 @@ llvm::Value *IRGenerator::handle(Function::Block &AST) {
   // is ok here. If it is a controlflow block, it will also be handled
   // correctly by the caller. Now just return the latest statement pointer.
   if (AST.returnValue == nullptr) {
-    return statementResult.back();
+    scopeHandler.Pop();
+    return statementResult.empty() ? nullptr : statementResult.back();
   }
 
   auto value = handle(*AST.returnValue);
-  if (value == nullptr) {
-    return nullptr;
+  if (!value.isSuccessful()) {
+    scopeHandler.Pop();
+    return {nullptr, "IRGenerator: Function::Block: return value null"};
   }
 
-  auto *returnValue = builder->CreateRet(value);
+  auto *returnValue = builder->CreateRet(*value);
 
   scopeHandler.Pop();
 
   return returnValue;
 }
 
-llvm::Value *IRGenerator::handle(Function::FunctionBody &AST) {
+Result<llvm::Value *> IRGenerator::handle(Function::FunctionBody &AST) {
 
   // TODO Generate directive
 
+  auto maybefunctionToAttachTo =
+      scopeHandler.getGlobal().getFunctionDeclaration(AST.functionName);
+
+  RET_ON_TRUE(!maybefunctionToAttachTo.has_value() || AST.block == nullptr,
+              "IRGenerator: FunctionBody: block is null "
+              "or function cannot be found is null");
+
+  auto functionToAttachTo = *maybefunctionToAttachTo;
+
+  auto &context = module.getContext();
+  auto *basicBlock =
+      llvm::BasicBlock::Create(context, "block", functionToAttachTo);
+  if (builder == nullptr) {
+    builder = new llvm::IRBuilder<llvm::NoFolder>(context);
+  }
+  builder->SetInsertPoint(basicBlock);
+
   IRScopeContextData contextData;
-  for (auto &parameter : currentFunction->args()) {
+  for (auto &parameter : functionToAttachTo->args()) {
     contextData.parameters.emplace(parameter.getName().str(), &parameter);
   }
 
+  contextData.currentFunction = functionToAttachTo;
+
   scopeHandler.PrepareFunctionScope(&contextData);
 
-  return AST.block == nullptr ? nullptr : handle(*AST.block);
+  return handle(*AST.block);
 }
 
-llvm::Value *IRGenerator::handle(Function::Function &AST) {
+Result<llvm::Value *> IRGenerator::handle(Function::FunctionDeclaration &AST) {
 
   std::vector<llvm::Type *> parameterTypes;
   for (auto parameter : AST.parameters) {
     auto type = GetType(parameter->type);
-    if (type == nullptr) {
-      return nullptr;
-    }
-    parameterTypes.emplace_back(type);
+    RET_ON_FAILURE(type,
+                "IRGenerator: FunctionDeclaration: Error to get parameter type.");
+
+    parameterTypes.emplace_back(*type);
   }
 
   auto type = GetType(AST.type);
-  if (type == nullptr) {
-    return nullptr;
-  }
+  RET_ON_FAILURE(type,
+              "IRGenerator: FunctionDeclaration: Error to get return type.");
 
-  auto *functionType = llvm::FunctionType::get(type, parameterTypes, false);
+  auto *functionType = llvm::FunctionType::get(*type, parameterTypes, false);
 
   auto function = llvm::Function::Create(
       functionType, llvm::GlobalValue::ExternalLinkage, AST.name, &module);
@@ -117,23 +141,6 @@ llvm::Value *IRGenerator::handle(Function::Function &AST) {
 
   // Save reference to function so that it can be called later.
   scopeHandler.getGlobal().addFunctionDeclaration(AST.name, function);
-
-  // If the function has no body, it is a declaration.
-  if (AST.body != nullptr) {
-    auto &context = module.getContext();
-    auto *basicBlock = llvm::BasicBlock::Create(context, "block", function);
-    if (builder == nullptr) {
-      builder = new llvm::IRBuilder<llvm::NoFolder>(context);
-    }
-    builder->SetInsertPoint(basicBlock);
-
-    currentFunction = function;
-    if (handle(*AST.body) == nullptr) {
-      return nullptr;
-    }
-  }
-
-  currentFunction = nullptr;
 
   return function;
 }

@@ -37,6 +37,7 @@ struct ScopeVariable {
 /// Extra information needed in the scope.
 struct IRScopeContextData {
   std::unordered_map<std::string, ScopeVariable> parameters;
+  llvm::Function *currentFunction = nullptr;
 };
 
 using IRScopeHandler =

@@ -85,7 +85,10 @@ Error EmitObjectFile::ActOn(AST::Context::ASTContext context) {
   auto generator = IR::IRGenerator(module);
 
   // TODO verify that that there is no error here.
-  generator.Walk(context);
+
+  for (auto result : generator.Walk(context)) {
+    RET_ON_FAILURE(result, "EmitObjectFile: ActOn: failed to walk AST");
+  }
 
   // Cases
   //  Compile only

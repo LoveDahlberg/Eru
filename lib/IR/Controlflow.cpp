@@ -8,7 +8,7 @@
 
 namespace IR {
 
-llvm::Value *IRGenerator::GenerateComparison(
+Result<llvm::Value *> IRGenerator::GenerateComparison(
     Controlflow::ConditionalBranch *conditionalBranch) {
 
   // If no expression, then we are in an else branch
@@ -17,22 +17,37 @@ llvm::Value *IRGenerator::GenerateComparison(
                                   1);
   }
 
-  auto result = handle(*conditionalBranch->expression);
+  auto maybeResult = handle(*conditionalBranch->expression);
 
-  llvm::Value *branchResult = nullptr;
+  RET_ON_FAILURE(
+      maybeResult,
+      "IRGenerator: GenerateComparison: failure to handle expression");
+
+  auto result = (*maybeResult);
+
   if (result->getType()->isIntegerTy(32)) {
     // If result != 0, then expression is true else its false.
     return builder->CreateICmpNE(
         result,
         llvm::ConstantInt::get(llvm::Type::getInt32Ty(module.getContext()), 0));
   }
-  return nullptr;
+  llvm::report_fatal_error(
+      &"IR Generator GenerateComparison: encountered unimplemented type '"
+          [result->getType()->getTypeID()]);
 }
 
-llvm::Value *IRGenerator::handle(Controlflow::ConditionalBranchingGroup &AST) {
-  if (builder == nullptr || currentFunction == nullptr) {
-    return nullptr;
-  }
+Result<llvm::Value *>
+IRGenerator::handle(Controlflow::ConditionalBranchingGroup &AST) {
+
+  auto *localScope = scopeHandler.CastCurrentToLocalScope();
+
+  RET_ON_TRUE(builder == nullptr || localScope == nullptr ||
+                  localScope->getContextData() == nullptr ||
+                  localScope->getContextData()->currentFunction == nullptr,
+              "IRGenerator: conditional branching group: builder, scope, "
+              "context data or current function missing");
+
+  auto currentFunction = localScope->getContextData()->currentFunction;
 
   auto &context = module.getContext();
 
@@ -46,21 +61,21 @@ llvm::Value *IRGenerator::handle(Controlflow::ConditionalBranchingGroup &AST) {
 
     auto currentComparisonResult =
         GenerateComparison(AST.conditionalChain.at(branchNumber));
-    if (currentComparisonResult == nullptr) {
-      return nullptr;
-    }
+    RET_ON_FAILURE(
+        currentComparisonResult,
+        "IRGenerator: conditional branching group: generate comparison failed");
 
     auto trueBlock = llvm::BasicBlock::Create(context, "then", currentFunction);
     auto falseBlock =
         llvm::BasicBlock::Create(context, "else", currentFunction);
 
-    builder->CreateCondBr(currentComparisonResult, trueBlock, falseBlock);
+    builder->CreateCondBr(*currentComparisonResult, trueBlock, falseBlock);
 
     // Create the content of the true basic block.
     builder->SetInsertPoint(trueBlock);
-    if (handle(*AST.conditionalChain.at(branchNumber)->block) == nullptr) {
-      return nullptr;
-    }
+    RET_ON_FAILURE(
+        handle(*AST.conditionalChain.at(branchNumber)->block),
+        "IRGenerator: conditional branching group: handle of block failed.");
 
     // Check if the current basic block has generated a return.
     // If so, don't create a branch to the merge block.

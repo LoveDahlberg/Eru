@@ -38,7 +38,7 @@ concept ValidParameterType = std::is_pointer_v<T> &&
 
 struct FunctionBodyToParse {
   indexType startIndex;
-  AST::Function::Function* function;
+  AST::Function::FunctionDeclaration* function;
 };
 class Parser {
 
@@ -99,7 +99,7 @@ private:
   Error ParseFunction(AST::VariableDeclaration::Variable *variable);
   Result<AST::Function::Block *> ParseBlock(Support::Scope::scopeKind kind);
   Result<AST::Function::FunctionCall *> ParseFunctionCall(std::string name);
-  Result<AST::Function::FunctionBody *> ParseFunctionBody(AST::Function::Function declaration);
+  Result<AST::Function::FunctionBody *> ParseFunctionBody(AST::Function::FunctionDeclaration declaration);
   Error SkipFunctionBody();
 
   /// This function is supposed to be used for parameter parsing for:

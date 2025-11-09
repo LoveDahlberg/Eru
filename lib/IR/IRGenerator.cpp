@@ -2,7 +2,7 @@
 
 namespace IR {
 
-llvm::Type *IRGenerator::GetType(Types::Types type) {
+Result<llvm::Type *> IRGenerator::GetType(Types::Types type) {
   switch (type) {
   case Types::Types::INT:
     return llvm::Type::getInt32Ty(module.getContext());
@@ -20,7 +20,7 @@ llvm::Type *IRGenerator::GetType(Types::Types type) {
     return llvm::StructType::create(module.getContext(), "string");
   default:
     // err
-    return nullptr;
+    return {nullptr, "IRGenerator: GetType: invalid type."};
   }
 }
 } // namespace IR

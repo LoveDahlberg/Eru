@@ -11,17 +11,17 @@ namespace Analyzer {
 
 /// Extra information needed in the scope.
 struct AnalyzerScopeContextData {
-  AST::Function::Function declaration;
+  AST::Function::FunctionDeclaration declaration;
 };
 
 using AnalyzerScopeHandler =
     ScopeHandler<AST::VariableDeclaration::Variable *,
-                 AST::Function::Function *, AnalyzerScopeContextData>;
+                 AST::Function::FunctionDeclaration *, AnalyzerScopeContextData>;
 using AnalyzerScope = Scope<AST::VariableDeclaration::Variable *>;
 using AnalyzerLocalScope =
     LocalScope<AST::VariableDeclaration::Variable *, AnalyzerScopeContextData>;
 using AnalyzerGlobalScope = GlobalScope<AST::VariableDeclaration::Variable *,
-                                        AST::Function::Function *>;
+                                        AST::Function::FunctionDeclaration *>;
 using AnalyzerFunctionScope =
     FunctionScope<AST::VariableDeclaration::Variable *,
                   AnalyzerScopeContextData>;

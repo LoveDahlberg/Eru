@@ -1,3 +1,4 @@
+#include "Support/Result.h"
 #include <IR/IRGenerator.h>
 
 // llvm
@@ -5,7 +6,7 @@
 
 namespace IR {
 
-llvm::Value *IRGenerator::handle(Assignment::Assignment &AST) {
+Result<llvm::Value *> IRGenerator::handle(Assignment::Assignment &AST) {
 
   if (builder == nullptr) {
     return nullptr;
@@ -19,7 +20,12 @@ llvm::Value *IRGenerator::handle(Assignment::Assignment &AST) {
     // done beforehand?
     auto *variableDeclaration =
         std::get<VariableDeclaration::VariableDeclaration *>(AST.target);
-    assignmentTarget = handle(*variableDeclaration);
+    auto result = handle(*variableDeclaration);
+
+    RET_ON_FAILURE(result,
+                   "IRGenerator: Assignment: variable declaration error");
+
+    assignmentTarget = *result;
 
   } else if (std::holds_alternative<Types::NamedIdentifier *>(AST.target)) {
 
@@ -31,19 +37,22 @@ llvm::Value *IRGenerator::handle(Assignment::Assignment &AST) {
 
     // Make sure the pointer of the variable is used here, it is needed for the
     // store.
-    auto variable = scopeHandler.getCurrent().getVisibleDeclaredVariable(name->value);
+    auto variable =
+        scopeHandler.getCurrent().getVisibleDeclaredVariable(name->value);
 
-    // Variable note declared.
-    if (!variable.has_value()) {
-      return nullptr;
-    }
+    // Variable not declared.
+    RET_ON_FALSE(
+        variable.has_value(),
+        "IRGenerator: Assignment: name identifier, variable note delcared");
 
     assignmentTarget = variable->getHighestOrderValue(builder);
   }
 
   auto exp = handle(*AST.expression);
 
-  return builder->CreateStore(exp, assignmentTarget);
+  RET_ON_FAILURE(exp, "IRGenerator: Assignment: expression failure");
+
+  return builder->CreateStore(*exp, assignmentTarget);
 }
 
 } // namespace IR

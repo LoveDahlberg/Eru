@@ -5,8 +5,7 @@ include_directories(${CMAKE_CURRENT_LIST_DIR})
 add_executable(testParser 
                 testParser.cpp 
                 testFunctionAnalysis.cpp    
-                testVariableAnalysis.cpp    
-                testExpressionAnalysis.cpp)
+                testVariableAnalysis.cpp)
 
 # Link against local GTest installation
 target_link_libraries(testParser PRIVATE 

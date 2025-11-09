@@ -12,21 +12,24 @@ class FunctionAnalyzer {
   PrivateAnalyzer &analyzer;
 
   /// Attempt to add a function. Returns an error if not successful.
-  Error addFunction(AST::Function::Function *function,
+  Error addFunction(AST::Function::FunctionDeclaration *function,
                     AST::Function::FunctionStatus status);
 
 public:
   FunctionAnalyzer(PrivateAnalyzer &analyser) : analyzer(analyser) {}
 
-  Error ActOnDeclaration(AST::Function::Function *function);
-  Error ActOnDefinition(AST::Function::Function *function);
+  Error ActOnDeclaration(AST::Function::FunctionDeclaration *function);
+  Error ActOnDefinition(AST::Function::FunctionDeclaration *function);
 
-  /// Checks the call, its return type has to match with expectedReturnValue.
+  Error ActOnBody(AST::Function::FunctionBody *body);
+
+  /// Checks the call, its return type has to match with
+  /// expectedReturnValue.
   Error ActOnCall(AST::Function::FunctionCall *call,
                   AST::Types::Types expectedReturnValue);
 
   /// Check the call, don't verify return value.
-  Result<AST::Function::Function *>
+  Result<AST::Function::FunctionDeclaration *>
   ActOnCall(AST::Function::FunctionCall *call);
 
   /// Declare the parameters of the current function for the active scope.
@@ -35,7 +38,7 @@ public:
   /// Verify that a return value from an arbirary block is correct.
   Error ActOnReturnValue(AST::Types::Types returnValue);
 
-  AST::Function::Function *getFunction(std::string name);
+  AST::Function::FunctionDeclaration *getFunction(std::string name);
 };
 
 } // namespace Analyzer

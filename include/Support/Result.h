@@ -73,7 +73,7 @@ public:
 
   /// Checks if an error has occoured. If it has, store the incoming description
   /// and code and return false. Otherwise return true.
-  bool check(const Formatter description, const Formatter code = {}) {
+  bool isSuccessful(const Formatter description, const Formatter code = {}) {
     checked = true;
     if (hasFailed) {
       storeNewStackTrace(description, code);
@@ -82,7 +82,7 @@ public:
     return true;
   }
 
-  bool check() {
+  bool isSuccessful() {
     checked = true;
     if (hasFailed) {
       return false;
@@ -144,7 +144,7 @@ namespace {
 #define RET_ON_FAILURE_FULL(obj, desc, code)                                   \
   do {                                                                         \
     auto evaluatedObj = obj;                                                   \
-    if (!evaluatedObj.check(desc, code)) {                                     \
+    if (!evaluatedObj.isSuccessful(desc, code)) {                                     \
       return std::move(evaluatedObj);                                          \
     }                                                                          \
   } while (0)

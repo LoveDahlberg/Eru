@@ -94,7 +94,7 @@ Parser::ParseBlock(Support::Scope::scopeKind kind) {
 }
 
 Result<AST::Function::FunctionBody *>
-Parser::ParseFunctionBody(AST::Function::Function declaration) {
+Parser::ParseFunctionBody(AST::Function::FunctionDeclaration declaration) {
 
   // Set new contextData for the upcoming function scope.
   analyzer.PrepareFunctionScope(
@@ -103,7 +103,7 @@ Parser::ParseFunctionBody(AST::Function::Function declaration) {
   auto block = ParseBlock(Support::Scope::scopeKind::FUNCTION);
   RET_ON_FAILURE_CODE(block, "ParseFunctionBody: Failed to parse block", lexer);
 
-  return new AST::Function::FunctionBody(*block);
+  return new AST::Function::FunctionBody(declaration.name, *block);
 }
 
 Error Parser::SkipFunctionBody() {
@@ -159,8 +159,8 @@ Error Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {
 
   auto directive = ParseDirective();
 
-  auto function =
-      new AST::Function::Function(variable->type, variable->name, *paramaters);
+  auto function = new AST::Function::FunctionDeclaration(
+      variable->type, variable->name, *paramaters);
 
   // Lookahead and get the next non newline token.
   auto lookaheadToken = lexer.lookaheadTokenNotNewline();

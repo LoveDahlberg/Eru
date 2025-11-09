@@ -17,27 +17,28 @@ namespace IR {
 class IRGenerator : public ASTTraversal<llvm::Value *> {
   llvm::Module &module;
   llvm::IRBuilder<llvm::NoFolder> *builder = nullptr;
-  llvm::Function *currentFunction = nullptr;
 
   // Handle functions
-  llvm::Value *handle(Assignment::Assignment &AST) override;
-  llvm::Value *handle(VariableDeclaration::VariableDeclaration &AST) override;
-  llvm::Value *handle(Function::FunctionCall &AST) override;
-  llvm::Value *handle(Function::Block &AST) override;
-  llvm::Value *handle(Function::FunctionBody &AST) override;
-  llvm::Value *handle(Function::Function &AST) override;
-  llvm::Value *
+  Result<llvm::Value *> handle(Assignment::Assignment &AST) override;
+  Result<llvm::Value *>
+  handle(VariableDeclaration::VariableDeclaration &AST) override;
+  Result<llvm::Value *> handle(Function::FunctionCall &AST) override;
+  Result<llvm::Value *> handle(Function::Block &AST) override;
+  Result<llvm::Value *> handle(Function::FunctionBody &AST) override;
+  Result<llvm::Value *> handle(Function::FunctionDeclaration &AST) override;
+  Result<llvm::Value *>
   handle(VariableDeclaration::GlobalVariableInitialization &AST) override;
 
-  llvm::Value *handle(Controlflow::ConditionalBranchingGroup &AST) override;
-  llvm::Value *
+  Result<llvm::Value *>
+  handle(Controlflow::ConditionalBranchingGroup &AST) override;
+  Result<llvm::Value *>
   GenerateComparison(Controlflow::ConditionalBranch *conditionalBranch);
 
-  llvm::Value *handle(Expression::Expression &AST) override;
-  llvm::Value *getOperand(Expression::ExpressionUnit *expressionUnit);
+  Result<llvm::Value *> handle(Expression::Expression &AST) override;
+  Result<llvm::Value *> getOperand(Expression::ExpressionUnit *expressionUnit);
 
   // Support
-  llvm::Type *GetType(Types::Types type);
+  Result<llvm::Type *> GetType(Types::Types type);
 
   IRScopeHandler scopeHandler;
 

@@ -1,4 +1,5 @@
 #include <IR/IRGenerator.h>
+#include <Support/Result.h>
 
 // llvm
 #include <llvm/IR/Constant.h>
@@ -10,32 +11,30 @@
 
 namespace IR {
 
-llvm::Value *
+Result<llvm::Value *>
 IRGenerator::handle(VariableDeclaration::VariableDeclaration &AST) {
 
-  auto *type = GetType(AST.variable->type);
-  if (type == nullptr || builder == nullptr) {
-    return nullptr;
-  }
+  auto type = GetType(AST.variable->type);
 
-  auto *variable = builder->CreateAlloca(type, nullptr, AST.variable->name);
+  RET_ON_TRUE(!type.isSuccessful() || builder == nullptr,
+              "IRGenerator VariableDeclaration: type or builder null");
+
+  auto *variable = builder->CreateAlloca(*type, nullptr, AST.variable->name);
 
   scopeHandler.getCurrent().addVariableDeclaration(
-      AST.variable->name, ScopeVariable{variable, type});
+      AST.variable->name, ScopeVariable{variable, *type});
 
   return variable;
 }
 
-llvm::Value *
+Result<llvm::Value *>
 IRGenerator::handle(VariableDeclaration::GlobalVariableInitialization &AST) {
 
   auto *variableDeclaration = AST.variableDeclaration->variable;
 
-  auto *type = GetType(variableDeclaration->type);
-
-  if (type == nullptr) {
-    return nullptr;
-  }
+  auto type = GetType(variableDeclaration->type);
+  RET_ON_FAILURE(
+      type, "IRGenerator: GlobalVariableInitialization: Error to get type.");
 
   llvm::Constant *operand = nullptr;
 
@@ -53,12 +52,12 @@ IRGenerator::handle(VariableDeclaration::GlobalVariableInitialization &AST) {
   }
 
   auto variable = new llvm::GlobalVariable(
-      module, type, false, llvm::GlobalValue::ExternalLinkage, operand,
+      module, *type, false, llvm::GlobalValue::ExternalLinkage, operand,
       variableDeclaration->name, nullptr,
       llvm::GlobalValue::ThreadLocalMode::NotThreadLocal, std::nullopt, false);
 
   scopeHandler.getGlobal().addVariableDeclaration(
-      variableDeclaration->name, ScopeVariable{variable, type});
+      variableDeclaration->name, ScopeVariable{variable, *type});
 
   return variable;
 }

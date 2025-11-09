@@ -40,7 +40,9 @@ TEST(IR, testGlobalVarialbe) {
   auto generator = IRGenerator(module);
   auto context = Context::ASTContext(&compilationUnit);
 
-  EXPECT_THAT(generator.Walk(context), testing::Each(testing::NotNull()));
+  for (auto result : generator.Walk(context)) {
+    EXPECT_TRUE(result.isSuccessful());
+  }
 
   auto generatedVariable = module.getGlobalVariable(variableName, true);
   EXPECT_NE(generatedVariable, nullptr);
@@ -70,11 +72,11 @@ Statement::Statement *CreateTestFunctionAndGetInsideStmnt(llvm::Module &module,
       Support::Scope::scopeKind::FUNCTION);
 
   // Create function and add a block into it.
-  auto function = new Function::Function(Types::Types::INT, name);
-  auto body = new Function::FunctionBody(block);
-  function->addFunctionBody(body);
+  auto function = new Function::FunctionDeclaration(Types::Types::INT, name);
+  auto body = new Function::FunctionBody(name, block);
 
   cu.AddCompilationUnitItems(function);
+  cu.AddCompilationUnitItems(body);
 
   return statement;
 }
@@ -89,7 +91,9 @@ TEST(IR, testFunction) {
   auto generator = IRGenerator(module);
   auto context = Context::ASTContext(&compilationUnit);
 
-  EXPECT_THAT(generator.Walk(context), testing::Each(testing::NotNull()));
+  for (auto result : generator.Walk(context)) {
+    EXPECT_TRUE(result.isSuccessful());
+  }
 
   EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
@@ -109,7 +113,9 @@ TEST(IR, testFunctionVariable) {
   auto generator = IRGenerator(module);
   auto context = Context::ASTContext(&compilationUnit);
 
-  EXPECT_THAT(generator.Walk(context), testing::Each(testing::NotNull()));
+  for (auto result : generator.Walk(context)) {
+    EXPECT_TRUE(result.isSuccessful());
+  }
 
   EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
@@ -151,7 +157,9 @@ TEST(IR, testDeclarationAssignment) {
   auto generator = IRGenerator(module);
   auto context = Context::ASTContext(&compilationUnit);
 
-  EXPECT_THAT(generator.Walk(context), testing::Each(testing::NotNull()));
+  for (auto result : generator.Walk(context)) {
+    EXPECT_TRUE(result.isSuccessful());
+  }
   EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
 
@@ -165,7 +173,7 @@ TEST(IR, testFunctionCall) {
 
   auto parametersDeclaration =
       new VariableDeclaration::Variable(AST::Types::Types::INT, parameterName);
-  auto functionDeclaration = new Function::Function(
+  auto functionDeclaration = new Function::FunctionDeclaration(
       AST::Types::Types::INT, functionToCall, {parametersDeclaration});
   compilationUnit.AddCompilationUnitItems(functionDeclaration);
 
@@ -180,7 +188,9 @@ TEST(IR, testFunctionCall) {
   auto generator = IRGenerator(module);
   auto context = Context::ASTContext(&compilationUnit);
 
-  EXPECT_THAT(generator.Walk(context), testing::Each(testing::NotNull()));
+  for (auto result : generator.Walk(context)) {
+    EXPECT_TRUE(result.isSuccessful());
+  }
   EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }
 
@@ -274,6 +284,9 @@ TEST(IR, testConditionalBranch) {
   auto generator = IRGenerator(module);
   auto context = Context::ASTContext(&compilationUnit);
 
-  EXPECT_THAT(generator.Walk(context), testing::Each(testing::NotNull()));
+  for (auto result : generator.Walk(context)) {
+    EXPECT_TRUE(result.isSuccessful());
+  }
+
   EXPECT_FALSE(llvm::verifyModule(module, &llvm::errs()));
 }

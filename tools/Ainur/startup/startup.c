@@ -1,5 +1,9 @@
 
 
+// TODO: Right now this will try to call any symbol called valinor regardless of parameters. 
+// Change this to instead be handled by the compiler itself. It should recognize and generate 
+// the correct startup code calling the correct Valinor.
+
 int Valinor(int argc);
 
 // Set as naked so that clang doesn't add a proluge (or epilogue) which makes it
