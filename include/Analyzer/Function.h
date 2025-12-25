@@ -26,7 +26,7 @@ public:
   /// Checks the call, its return type has to match with
   /// expectedReturnValue.
   Error ActOnCall(AST::Function::FunctionCall *call,
-                  AST::Types::Types expectedReturnValue);
+                  AST::Types::Type expectedReturnValue);
 
   /// Check the call, don't verify return value.
   Result<AST::Function::FunctionDeclaration *>
@@ -36,7 +36,7 @@ public:
   Error ActOnParameters();
 
   /// Verify that a return value from an arbirary block is correct.
-  Error ActOnReturnValue(AST::Types::Types returnValue);
+  Error ActOnReturnValue(AST::Types::Type returnValue);
 
   AST::Function::FunctionDeclaration *getFunction(std::string name);
 };

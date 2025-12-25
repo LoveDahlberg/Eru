@@ -27,7 +27,7 @@ TEST(IR, testGlobalVarialbe) {
 
   constexpr const char *variableName = "firstVariable";
   auto variable = new VariableDeclaration::VariableDeclaration(
-      AST::Types::Types::INT, variableName);
+      AST::Types::DataType::INT, variableName);
   variable->isGlobal = true;
 
   auto initializer =
@@ -72,7 +72,7 @@ Statement::Statement *CreateTestFunctionAndGetInsideStmnt(llvm::Module &module,
       Support::Scope::scopeKind::FUNCTION);
 
   // Create function and add a block into it.
-  auto function = new Function::FunctionDeclaration(Types::Types::INT, name);
+  auto function = new Function::FunctionDeclaration(Types::DataType::INT, name);
   auto body = new Function::FunctionBody(name, block);
 
   cu.AddCompilationUnitItems(function);
@@ -107,7 +107,7 @@ TEST(IR, testFunctionVariable) {
 
   constexpr const char *variableName = "firstVariable";
   auto variable = new VariableDeclaration::VariableDeclaration(
-      AST::Types::Types::INT, variableName);
+      AST::Types::DataType::INT, variableName);
   statement->AddStatement(variable);
 
   auto generator = IRGenerator(module);
@@ -129,7 +129,7 @@ TEST(IR, testDeclarationAssignment) {
 
   constexpr const char *variableName = "firstVariable";
   auto variable = new VariableDeclaration::VariableDeclaration(
-      AST::Types::Types::INT, variableName);
+      AST::Types::DataType::INT, variableName);
 
   auto assignment = new Assignment::Assignment(variable);
 
@@ -172,9 +172,9 @@ TEST(IR, testFunctionCall) {
   constexpr const auto parameterName = "firstParameter";
 
   auto parametersDeclaration =
-      new VariableDeclaration::Variable(AST::Types::Types::INT, parameterName);
+      new VariableDeclaration::Variable(AST::Types::DataType::INT, parameterName);
   auto functionDeclaration = new Function::FunctionDeclaration(
-      AST::Types::Types::INT, functionToCall, {parametersDeclaration});
+      AST::Types::DataType::INT, functionToCall, {parametersDeclaration});
   compilationUnit.AddCompilationUnitItems(functionDeclaration);
 
   auto statement = CreateTestFunctionAndGetInsideStmnt(module, compilationUnit);
@@ -205,7 +205,7 @@ CreateSingleTestConditionalBranch(llvm::Module &module,
   // The body of the first if statement
   auto statementIf = new Statement::Statement();
   auto variableIf = new VariableDeclaration::VariableDeclaration(
-      AST::Types::Types::INT, "testIfVariable");
+      AST::Types::DataType::INT, "testIfVariable");
   statementIf->AddStatement(variableIf);
 
   auto blockIf = new Function::Block(
@@ -236,7 +236,7 @@ TEST(IR, testConditionalBranch) {
   // The body of the first if statement
   auto statementIf = new Statement::Statement();
   auto variableIf = new VariableDeclaration::VariableDeclaration(
-      AST::Types::Types::INT, "ifVariable");
+      AST::Types::DataType::INT, "ifVariable");
   statementIf->AddStatement(variableIf);
 
   auto blockIf = new Function::Block(

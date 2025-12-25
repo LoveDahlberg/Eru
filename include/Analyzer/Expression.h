@@ -5,25 +5,23 @@ namespace Analyzer {
 
 class PrivateAnalyzer;
 
+using namespace AST::Types;
+
 class ExpressionAnalyzer {
 
   PrivateAnalyzer &analyser;
 
-  Error evaluateInteger(AST::Types::IntegerLiteral integer,
-                        AST::Types::Types expectedType);
+  Error evaluateInteger(IntegerLiteral integer, Type expectedType);
 
-  Error evaluateString(AST::Types::StringLiteral string,
-                       AST::Types::Types expectedType);
+  Error evaluateString(StringLiteral string, Type expectedType);
 
   /// Use when we know the type from before.
-  Error evaluateIdentifier(AST::Types::NamedIdentifier identifier,
-                           AST::Types::Types expectedType);
+  Error evaluateIdentifier(NamedIdentifier identifier, Type expectedType);
 
   /// Use when we need to figure out the type.
-  Result<AST::Types::Types> getIdentifierType(AST::Types::NamedIdentifier identifier);
+  Result<Type> getIdentifierType(NamedIdentifier identifier);
 
-  bool isOperatorAllowed(Lexing::Operator operatorToCheck,
-                         AST::Types::Types type);
+  bool isOperatorAllowed(Lexing::Operator operatorToCheck, Type type);
 
 public:
   ExpressionAnalyzer(PrivateAnalyzer &analyser) : analyser(analyser) {}

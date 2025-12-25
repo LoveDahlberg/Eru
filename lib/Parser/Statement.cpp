@@ -107,7 +107,7 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
       case TokenType::EQUAL: {
         auto assignment =
             ParseAssignment(new AST::VariableDeclaration::Variable(
-                AST::Types::Types::NONE, *identifier));
+                AST::Types::DataType::NONE, *identifier));
         RET_ON_FAILURE_CODE(
             assignment, "ParseStatement: identifier: equal: failed assignment",
             lexer);

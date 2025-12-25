@@ -1,8 +1,8 @@
 #include <Parser/Parser.h>
 
-namespace Parser {
+using namespace AST::Types;
 
-using Type = AST::Types::Types;
+namespace Parser {
 
 Result<Type> Parser::ParseType() {
   Type type;
@@ -10,23 +10,23 @@ Result<Type> Parser::ParseType() {
   // TODO utilize Analyzer when types can be custom.
   switch (lexer.getCurrentToken().type) {
   case TokenType::INT:
-    type = Type::INT;
+    type.dataType = DataType::INT;
     break;
   case TokenType::SIGNED_INT_32:
-    type = Type::SINT32;
+    type.dataType = DataType::SINT32;
     break;
   case TokenType::UNSIGNED_INT_32:
-    type = Type::UINT32;
+    type.dataType = DataType::UINT32;
     break;
   case TokenType::BOOl:
-    type = Type::BOOl;
+    type.dataType = DataType::BOOl;
     break;
   case TokenType::CHAR:
-    type = Type::CHAR;
+    type.dataType = DataType::CHAR;
     break;
   case TokenType::STRING:
     // TODO implement string handling
-    type = Type::STRING;
+    type.dataType = DataType::STRING;
     break;
   default:
     return FAILURE_CODE(Formatter("ParseType: invalid type '",
@@ -34,8 +34,14 @@ Result<Type> Parser::ParseType() {
                         lexer);
   }
 
-  // Get next, current type saved.
   lexer.generateNextToken();
+
+  if(lexer.getCurrentToken().type == TokenType::AMPERSAND)
+  {
+    type.isPointer = true;
+    lexer.generateNextToken();
+  }
+
   return type;
 }
 

@@ -8,12 +8,12 @@ namespace Analyzer {
 // Also rewrite Parser/Expression.cpp to not care about what kind of operator it
 // is using to connect operands, this is what the analyzer should do.
 
-Error ExpressionAnalyzer::evaluateInteger(AST::Types::IntegerLiteral integer,
-                                          AST::Types::Types expectedType) {
+Error ExpressionAnalyzer::evaluateInteger(IntegerLiteral integer,
+                                          Type expectedType) {
 
-  RET_ON_FALSE(expectedType == AST::Types::Types::INT ||
-                   expectedType == AST::Types::Types::UINT32 ||
-                   expectedType == AST::Types::Types::SINT32,
+  RET_ON_FALSE(expectedType.dataType == INT ||
+                   expectedType == UINT32 ||
+                   expectedType == SINT32,
                "evaluateInteger: expected int uint32 sint32.");
 
   auto value = integer.value;
@@ -25,11 +25,11 @@ Error ExpressionAnalyzer::evaluateInteger(AST::Types::IntegerLiteral integer,
   return SUCCESS;
 }
 
-Error ExpressionAnalyzer::evaluateString(AST::Types::StringLiteral string,
-                                         AST::Types::Types expectedType) {
+Error ExpressionAnalyzer::evaluateString(StringLiteral string,
+                                         Type expectedType) {
 
-  RET_ON_FALSE(expectedType == AST::Types::Types::CHAR ||
-                   expectedType == AST::Types::Types::STRING,
+  RET_ON_FALSE(expectedType == DataType::CHAR ||
+                   expectedType == DataType::STRING,
                "evaluateInteger: expected string or character.");
 
   // TODO evaluate that this contains legal characters (?)
@@ -37,8 +37,8 @@ Error ExpressionAnalyzer::evaluateString(AST::Types::StringLiteral string,
   return SUCCESS;
 }
 
-Result<AST::Types::Types>
-ExpressionAnalyzer::getIdentifierType(AST::Types::NamedIdentifier identifier) {
+Result<Type>
+ExpressionAnalyzer::getIdentifierType(NamedIdentifier identifier) {
 
   // Check if identifier is declared in current or any parent scope.
   auto variable =
@@ -51,7 +51,7 @@ ExpressionAnalyzer::getIdentifierType(AST::Types::NamedIdentifier identifier) {
 }
 
 Error ExpressionAnalyzer::evaluateIdentifier(
-    AST::Types::NamedIdentifier identifier, AST::Types::Types expectedType) {
+    NamedIdentifier identifier, Type expectedType) {
 
   // Get the type of the identifier
   auto type = getIdentifierType(identifier);
@@ -68,7 +68,7 @@ Error ExpressionAnalyzer::evaluateIdentifier(
 // TODO expand this if we need to restrict usages of certain operators and
 // types. Like string OR string.
 bool ExpressionAnalyzer::isOperatorAllowed(Lexing::Operator operatorToCheck,
-                                           AST::Types::Types type) {
+                                           Type type) {
   switch (operatorToCheck) {
   case Lexing::Operator::MINUS:
   case Lexing::Operator::OR:
@@ -87,7 +87,7 @@ Error ExpressionAnalyzer::ActOn(AST::Expression::Expression *expression) {
 
   // We don't know the type before parsing. For now, all types in the expression
   // much match. Assume that this type is the first seen.
-  AST::Types::Types evaluatedType = AST::Types::NONE;
+  Type evaluatedType = NONE;
 
   bool first = true;
   for (auto unit : expression->ExpressionUnits) {
@@ -102,29 +102,29 @@ Error ExpressionAnalyzer::ActOn(AST::Expression::Expression *expression) {
 
     auto operand = unit->operand;
 
-    if (std::holds_alternative<AST::Types::IntegerLiteral>(operand)) {
+    if (std::holds_alternative<IntegerLiteral>(operand)) {
 
       if (first) {
-        evaluatedType = AST::Types::Types::INT;
+        evaluatedType = DataType::INT;
       }
 
-      auto integer = std::get<AST::Types::IntegerLiteral>(operand);
+      auto integer = std::get<IntegerLiteral>(operand);
       RET_ON_FAILURE(evaluateInteger(integer, evaluatedType),
                      "ActOnExpression: failed to evaluate integer.");
 
-    } else if (std::holds_alternative<AST::Types::StringLiteral>(operand)) {
+    } else if (std::holds_alternative<StringLiteral>(operand)) {
 
       if (first) {
-        evaluatedType = AST::Types::Types::STRING;
+        evaluatedType = DataType::STRING;
       }
 
-      auto string = std::get<AST::Types::StringLiteral>(operand);
+      auto string = std::get<StringLiteral>(operand);
       RET_ON_FAILURE(evaluateString(string, evaluatedType),
                      "ActOnExpression: failed to evaluate string.");
 
-    } else if (std::holds_alternative<AST::Types::NamedIdentifier>(operand)) {
+    } else if (std::holds_alternative<NamedIdentifier>(operand)) {
 
-      auto identifier = std::get<AST::Types::NamedIdentifier>(operand);
+      auto identifier = std::get<NamedIdentifier>(operand);
 
       // Get the actual type of the identifer to use in next iteration.
       if (first) {

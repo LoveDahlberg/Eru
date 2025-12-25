@@ -69,17 +69,17 @@ using Parameters = std::vector<VariableDeclaration::Variable *>;
 struct FunctionDeclaration {
   FunctionDeclaration() {}
 
-  FunctionDeclaration(Types::Types type, std::string name,
+  FunctionDeclaration(Types::Type type, std::string name,
                       Parameters parameters)
       : type(type), name(name), parameters(parameters) {}
 
-  FunctionDeclaration(Types::Types type, std::string name)
+  FunctionDeclaration(Types::DataType type, std::string name)
       : type(type), name(name) {}
 
   std::string name;
   Parameters parameters;
 
-  Types::Types type = Types::NONE;
+  Types::Type type = Types::NONE;
   FunctionStatus definitionStatus = NONE;
 };
 

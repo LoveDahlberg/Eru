@@ -2,20 +2,20 @@
 
 namespace IR {
 
-Result<llvm::Type *> IRGenerator::GetType(Types::Types type) {
-  switch (type) {
-  case Types::Types::INT:
+Result<llvm::Type *> IRGenerator::GetType(Types::Type type) {
+  switch (type.dataType) {
+  case Types::DataType::INT:
     return llvm::Type::getInt32Ty(module.getContext());
-  case Types::Types::SINT32:
+  case Types::DataType::SINT32:
     return llvm::Type::getInt32Ty(module.getContext());
-  case Types::Types::UINT32:
+  case Types::DataType::UINT32:
     return llvm::Type::getInt32Ty(module.getContext());
-  case Types::Types::BOOl:
+  case Types::DataType::BOOl:
     return llvm::Type::getInt1Ty(module.getContext());
     break;
-  case Types::Types::CHAR:
+  case Types::DataType::CHAR:
     return llvm::Type::getInt8Ty(module.getContext());
-  case Types::Types::STRING:
+  case Types::DataType::STRING:
     // TODO implement string handling
     return llvm::StructType::create(module.getContext(), "string");
   default:

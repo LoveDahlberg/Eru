@@ -27,7 +27,7 @@ struct Expression {
   }
 
   std::vector<ExpressionUnit *> ExpressionUnits;
-  AST::Types::Types evaluatedType = AST::Types::NONE;
+  AST::Types::Type evaluatedType;
 };
 
 // a + b + c + d

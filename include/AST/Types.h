@@ -9,7 +9,7 @@ namespace AST::Types {
 // TODO Types might not be the best way to name this. Its a collection of
 // targets to be used with std::variant.
 
-enum Types {
+enum DataType {
   NONE,
   INT,
   SINT32,
@@ -19,10 +19,29 @@ enum Types {
   STRING,
 };
 
-static std::unordered_map<Types, std::string> typeToString{
+namespace {
+
+static std::unordered_map<DataType, std::string> typeToString{
     {NONE, "void"}, {INT, "int"},   {SINT32, "sint32"},
     {BOOl, "bool"}, {CHAR, "char"}, {STRING, "string"},
 };
+
+}
+
+struct Type {
+  Type() : dataType(NONE), isPointer(false) {}
+
+  Type(DataType dataType) : dataType(dataType), isPointer(false) {}
+
+  DataType dataType;
+  bool isPointer = false;
+
+  bool operator==(const Type &compare) const = default;
+  bool operator!=(const Type &compare) const = default;
+
+  const std::string &toString() const { return typeToString.at(dataType); }
+};
+
 struct NamedIdentifier {
   std::string value;
 };

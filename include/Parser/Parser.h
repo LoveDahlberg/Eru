@@ -8,12 +8,12 @@
 #include <Lexer/Lexer.h>
 #include <Lexer/Tokens.h>
 
-#include <AST/Statement.h>
 #include <AST/ASTContext.h>
 #include <AST/Assignment.h>
 #include <AST/CompilationUnit.h>
 #include <AST/Controlflow.h>
 #include <AST/Expression.h>
+#include <AST/Statement.h>
 #include <AST/Types.h>
 #include <AST/VariableDeclaration.h>
 
@@ -27,7 +27,7 @@ using namespace Lexing;
 namespace Parser {
 
 #define RET_ON_WRONG_TOKEN(expectedTokenType, fmt, ...)                        \
-  RET_ON_NOT_EQUAL(lexer.getCurrentToken(), expectedTokenType,            \
+  RET_ON_NOT_EQUAL(lexer.getCurrentToken(), expectedTokenType,                 \
                    fmt __VA_OPT__(, ) __VA_ARGS__)
 
 template <typename T>
@@ -38,13 +38,13 @@ concept ValidParameterType = std::is_pointer_v<T> &&
 
 struct FunctionBodyToParse {
   indexType startIndex;
-  AST::Function::FunctionDeclaration* function;
+  AST::Function::FunctionDeclaration *function;
 };
 class Parser {
 
 public:
-  Parser(AST::Context::ASTContext &astContext, Analyzer::PublicAnalyzer &analyzer,
-         Lexer &lexer)
+  Parser(AST::Context::ASTContext &astContext,
+         Analyzer::PublicAnalyzer &analyzer, Lexer &lexer)
       : astContext(astContext), analyzer(analyzer), lexer(lexer) {}
 
   Error Parse();
@@ -67,7 +67,7 @@ private:
   Result<AST::VariableDeclaration::Variable *> ParseVariable();
 
   // Type
-  Result<AST::Types::Types> ParseType();
+  Result<AST::Types::Type> ParseType();
 
   // Identifier
   Result<std::string> ParseIdentifier();
@@ -87,7 +87,8 @@ private:
 
   // Statement
   Result<AST::Statement::Statement *> ParseStatement();
-  Result<std::vector<AST::Statement::StatementVariant>> ParseVaribleAndMaybeAssignment();
+  Result<std::vector<AST::Statement::StatementVariant>>
+  ParseVaribleAndMaybeAssignment();
 
   // Controlflow
   Result<AST::Controlflow::ConditionalBranchingGroup *>
@@ -99,7 +100,8 @@ private:
   Error ParseFunction(AST::VariableDeclaration::Variable *variable);
   Result<AST::Function::Block *> ParseBlock(Support::Scope::scopeKind kind);
   Result<AST::Function::FunctionCall *> ParseFunctionCall(std::string name);
-  Result<AST::Function::FunctionBody *> ParseFunctionBody(AST::Function::FunctionDeclaration declaration);
+  Result<AST::Function::FunctionBody *>
+  ParseFunctionBody(AST::Function::FunctionDeclaration declaration);
   Error SkipFunctionBody();
 
   /// This function is supposed to be used for parameter parsing for:

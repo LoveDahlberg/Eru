@@ -88,15 +88,23 @@ const std::unordered_map<char, TokenType> separatorOperatorToToken = {
     {'&', TokenType::AMPERSAND},
 };
 
-enum class TokenCategory {
-  NONE,
-  IDENTIFER,
-  KEYWORD,
-  SEPARATOR,
-  DATA_TYPE,
-  OPERATOR,
-  LITERAL,
+enum class TokenCategory : int {
+  NONE = 0,
+  IDENTIFER = 1,
+  KEYWORD = 2,
+  SEPARATOR = 3,
+  DATA_TYPE = 4,
+  OPERATOR = 5,
+  LITERAL = 6,
 };
+
+static TokenCategory operator|(TokenCategory lhs, TokenCategory rhs) {
+  return TokenCategory(static_cast<int>(lhs) | static_cast<int>(rhs));
+}
+
+static TokenCategory operator&(TokenCategory lhs, TokenCategory rhs) {
+  return TokenCategory(static_cast<int>(lhs) & static_cast<int>(rhs));
+}
 
 const std::unordered_map<TokenType, TokenCategory> tokenTypeToCategory{
     {TokenType::NONE, TokenCategory::NONE},
@@ -129,8 +137,8 @@ const std::unordered_map<TokenType, TokenCategory> tokenTypeToCategory{
     {TokenType::EQUAL, TokenCategory::OPERATOR},
     {TokenType::OR, TokenCategory::OPERATOR},
     {TokenType::AND, TokenCategory::OPERATOR},
-    {TokenType::AMPERSAND, TokenCategory::OPERATOR},
-    {TokenType::STAR, TokenCategory::OPERATOR},
+    {TokenType::AMPERSAND, TokenCategory::OPERATOR | TokenCategory::DATA_TYPE},
+    {TokenType::STAR, TokenCategory::OPERATOR | TokenCategory::DATA_TYPE},
 
     {TokenType::INTEGER_LITERAL, TokenCategory::LITERAL},
     {TokenType::STRING_LITERAL, TokenCategory::LITERAL},

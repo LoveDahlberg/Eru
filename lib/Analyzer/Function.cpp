@@ -97,7 +97,6 @@ Error FunctionAnalyzer::addFunction(
   RET_ON_NOT_EQUAL(existingFunction->type, function->type,
                    "addFunction: Function with the same name but with "
                    "a different type already declared.");
-
   return SUCCESS;
 }
 
@@ -151,20 +150,18 @@ FunctionAnalyzer::ActOnCall(AST::Function::FunctionCall *call) {
     RET_ON_NOT_EQUAL(
         call->parameters[i]->evaluatedType,
         existingFunction->parameters[i]->type,
-        Formatter(
-            "ActOnCall: parameter '", i, ":",
-            AST::Types::typeToString.at(call->parameters[i]->evaluatedType),
-            "' for '", call->name,
-            "' does not match with the resulting type from expression '", i,
-            ":",
-            AST::Types::typeToString.at(existingFunction->parameters[i]->type),
-            "' for '", existingFunction->name, "'."));
+        Formatter("ActOnCall: parameter '", i, ":",
+                  call->parameters[i]->evaluatedType.toString(), "' for '",
+                  call->name,
+                  "' does not match with the resulting type from expression '",
+                  i, ":", existingFunction->parameters[i]->type.toString(),
+                  "' for '", existingFunction->name, "'."));
   }
   return existingFunction;
 }
 
 Error FunctionAnalyzer::ActOnCall(AST::Function::FunctionCall *call,
-                                  AST::Types::Types expectedReturnValue) {
+                                  AST::Types::Type expectedReturnValue) {
 
   RET_ON_TRUE(expectedReturnValue == AST::Types::NONE,
               "ActOnCall: expected return value cannot be NONE.");
@@ -206,7 +203,7 @@ Error FunctionAnalyzer::ActOnParameters() {
   return SUCCESS;
 }
 
-Error FunctionAnalyzer::ActOnReturnValue(AST::Types::Types returnValue) {
+Error FunctionAnalyzer::ActOnReturnValue(AST::Types::Type returnValue) {
   auto *currentLocalScope = analyzer.getLocalScope();
   RET_ON_EQUAL(currentLocalScope, nullptr,
                "ActOnReturnValue: current scope is not local.");
@@ -216,11 +213,10 @@ Error FunctionAnalyzer::ActOnReturnValue(AST::Types::Types returnValue) {
 
   auto &declaration = contextData->declaration;
   auto errorMessage = "ActOnReturnValue: function " + declaration.name +
-                      " declared as " +
-                      AST::Types::typeToString.at(declaration.type) +
+                      " declared as " + declaration.type.toString() +
                       " , but found return of "
                       "type " +
-                      AST::Types::typeToString.at(returnValue);
+                      returnValue.toString();
 
   // Check return type only when:
   // 1. At the end of a function.
@@ -228,7 +224,7 @@ Error FunctionAnalyzer::ActOnReturnValue(AST::Types::Types returnValue) {
   if (currentLocalScope->getScopeKind() ==
           Support::Scope::scopeKind::FUNCTION ||
       (currentLocalScope->getScopeKind() == Support::Scope::scopeKind::LOCAL &&
-       returnValue != AST::Types::Types::NONE)) {
+       returnValue != AST::Types::DataType::NONE)) {
     RET_ON_NOT_EQUAL(declaration.type, returnValue, errorMessage);
   }
   return SUCCESS;
