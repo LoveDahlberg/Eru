@@ -9,21 +9,21 @@ namespace IR {
 
 Result<llvm::Value *>
 IRGenerator::getOperand(Expression::ExpressionUnit *expressionUnit) {
-  if (std::holds_alternative<Types::IntegerLiteral>(expressionUnit->operand)) {
+  if (std::holds_alternative<Types::IntegerLiteral>(expressionUnit->operand.operandKind)) {
     auto integerLiteral =
-        std::get<Types::IntegerLiteral>(expressionUnit->operand);
+        std::get<Types::IntegerLiteral>(expressionUnit->operand.operandKind);
 
     return llvm::ConstantInt::get(llvm::Type::getInt32Ty(module.getContext()),
                                   stoi(integerLiteral.value));
   }
   if (std::holds_alternative<Function::FunctionCall *>(
-          expressionUnit->operand)) {
-    auto call = std::get<Function::FunctionCall *>(expressionUnit->operand);
+          expressionUnit->operand.operandKind)) {
+    auto call = std::get<Function::FunctionCall *>(expressionUnit->operand.operandKind);
 
     return handle(*call);
   }
-  if (std::holds_alternative<Types::NamedIdentifier>(expressionUnit->operand)) {
-    auto identifier = std::get<Types::NamedIdentifier>(expressionUnit->operand);
+  if (std::holds_alternative<Types::NamedIdentifier>(expressionUnit->operand.operandKind)) {
+    auto identifier = std::get<Types::NamedIdentifier>(expressionUnit->operand.operandKind);
 
     // Make sure the variable value being pointed to is used here, as the
     // expression is done on the value itself.
@@ -33,7 +33,7 @@ IRGenerator::getOperand(Expression::ExpressionUnit *expressionUnit) {
 
     return result.has_value() ? result->getValue(builder) : nullptr;
   }
-  if (std::holds_alternative<Types::StringLiteral>(expressionUnit->operand)) {
+  if (std::holds_alternative<Types::StringLiteral>(expressionUnit->operand.operandKind)) {
     llvm::report_fatal_error(
         "IRExpression: getOperand: strings are not implemented yet.");
   }

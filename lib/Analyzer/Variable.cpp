@@ -139,10 +139,24 @@ Error VariableAnalyzer::ActOnAssignment(
     variable = *result;
   }
 
+  // TODO add failure case.
+  auto &evaluatedType = assignment->expression->evaluatedType;
+  if (variable->type.isPointer) {
+    RET_ON_FALSE(evaluatedType.dataType == INT,
+                 "Cannot assign '" + variable->name + "' of type" +
+                     variable->type.toPrintableString() +
+                     "to an expression of type " + evaluatedType.toPrintableString() +
+                     ".");
+    evaluatedType.isPointer = true;
+    return SUCCESS;
+  }
+
   // Check that the type of the expression matches the type of the variable.
-  RET_ON_NOT_EQUAL(assignment->expression->evaluatedType, variable->type,
-                   "ActOnAssignment: type mismatch between declared variable "
-                   "and assignment expression.");
+  RET_ON_NOT_EQUAL(
+      evaluatedType, variable->type,
+      "ActOnAssignment: type mismatch between declared variable " +
+          variable->type.toPrintableString()+ " and assignment expression " +
+          evaluatedType.toPrintableString() + ".");
 
   return SUCCESS;
 }

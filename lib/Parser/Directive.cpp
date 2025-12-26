@@ -4,7 +4,7 @@ namespace Parser {
 
 Error Parser::ParseDirective() {
 
-  if (lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
+  if (lexer.getCurrentToken() != TokenType::LEFT_BRACKET) {
     return SUCCESS;
   }
 

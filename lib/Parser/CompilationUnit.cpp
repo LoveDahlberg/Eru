@@ -46,7 +46,7 @@ Error Parser::ParseTopLevelItems() {
     switch (tokenCategory) {
     case TokenCategory::SEPARATOR: {
 
-      if (lexer.getCurrentToken().type != TokenType::LEFT_BRACKET) {
+      if (lexer.getCurrentToken() != TokenType::LEFT_BRACKET) {
         continue;
       }
 

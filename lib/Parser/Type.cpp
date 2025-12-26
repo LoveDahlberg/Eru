@@ -4,6 +4,7 @@ using namespace AST::Types;
 
 namespace Parser {
 
+
 Result<Type> Parser::ParseType() {
   Type type;
 
@@ -36,10 +37,18 @@ Result<Type> Parser::ParseType() {
 
   lexer.generateNextToken();
 
-  if(lexer.getCurrentToken().type == TokenType::AMPERSAND)
-  {
+  if (lexer.getCurrentToken() == TokenType::AMPERSAND) {
+    // Type is pointer if it contains at least one &.
     type.isPointer = true;
-    lexer.generateNextToken();
+
+    // Can contain any number of &, go through them all.
+    type.pointerDepth = 1;
+    do {
+      lexer.generateNextToken();
+      if (lexer.getCurrentToken() != TokenType::AMPERSAND) {
+        break;
+      }
+    } while (++type.pointerDepth < loopLimit);
   }
 
   return type;

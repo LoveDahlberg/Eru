@@ -3,13 +3,13 @@
 namespace Parser {
 
 void Parser::skipUntilNotNewline() {
-  if (lexer.getCurrentToken().type != TokenType::NEWLINE) {
+  if (lexer.getCurrentToken() != TokenType::NEWLINE) {
     return;
   }
 
   int loopCounter = 0;
   while (lexer.generateNextToken().type == TokenType::NEWLINE) {
-    if (lexer.getCurrentToken().type == TokenType::END_OF_FILE) {
+    if (lexer.getCurrentToken() == TokenType::END_OF_FILE) {
       return;
     }
     if (loopCounter++ > loopLimit) {

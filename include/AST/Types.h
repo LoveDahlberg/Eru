@@ -29,17 +29,22 @@ static std::unordered_map<DataType, std::string> typeToString{
 }
 
 struct Type {
-  Type() : dataType(NONE), isPointer(false) {}
+  Type() : dataType(NONE), isPointer(false), pointerDepth(0) {}
 
-  Type(DataType dataType) : dataType(dataType), isPointer(false) {}
+  Type(DataType dataType, bool isPointer = false, int pointerDepth = 0)
+      : dataType(dataType), isPointer(isPointer), pointerDepth(pointerDepth) {}
 
   DataType dataType;
-  bool isPointer = false;
+  bool isPointer;
+  int pointerDepth;
 
   bool operator==(const Type &compare) const = default;
   bool operator!=(const Type &compare) const = default;
 
-  const std::string &toString() const { return typeToString.at(dataType); }
+  const std::string toPrintableString() const {
+    return " '" + typeToString.at(dataType) + std::string(pointerDepth, '&') +
+           "' ";
+  }
 };
 
 struct NamedIdentifier {

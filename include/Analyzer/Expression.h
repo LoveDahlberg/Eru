@@ -15,13 +15,13 @@ class ExpressionAnalyzer {
 
   Error evaluateString(StringLiteral string, Type expectedType);
 
-  /// Use when we know the type from before.
-  Error evaluateIdentifier(NamedIdentifier identifier, Type expectedType);
-
   /// Use when we need to figure out the type.
   Result<Type> getIdentifierType(NamedIdentifier identifier);
 
   bool isOperatorAllowed(Lexing::Operator operatorToCheck, Type type);
+
+  Result<Type> EvaluateIndirectionType(const AST::Expression::Operand &operand,
+                            const NamedIdentifier identifier, const Type &type);
 
 public:
   ExpressionAnalyzer(PrivateAnalyzer &analyser) : analyser(analyser) {}

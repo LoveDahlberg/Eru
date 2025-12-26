@@ -1,4 +1,10 @@
+// lib
 #include <Analyzer/Analyzer.h>
+
+// stdlib
+#include <string>
+
+using namespace AST::Expression;
 
 namespace Analyzer {
 
@@ -11,8 +17,7 @@ namespace Analyzer {
 Error ExpressionAnalyzer::evaluateInteger(IntegerLiteral integer,
                                           Type expectedType) {
 
-  RET_ON_FALSE(expectedType.dataType == INT ||
-                   expectedType == UINT32 ||
+  RET_ON_FALSE(expectedType.dataType == INT || expectedType == UINT32 ||
                    expectedType == SINT32,
                "evaluateInteger: expected int uint32 sint32.");
 
@@ -37,8 +42,7 @@ Error ExpressionAnalyzer::evaluateString(StringLiteral string,
   return SUCCESS;
 }
 
-Result<Type>
-ExpressionAnalyzer::getIdentifierType(NamedIdentifier identifier) {
+Result<Type> ExpressionAnalyzer::getIdentifierType(NamedIdentifier identifier) {
 
   // Check if identifier is declared in current or any parent scope.
   auto variable =
@@ -48,21 +52,6 @@ ExpressionAnalyzer::getIdentifierType(NamedIdentifier identifier) {
                "getIdentifierType: use of undeclared identifier.");
 
   return (*variable)->type;
-}
-
-Error ExpressionAnalyzer::evaluateIdentifier(
-    NamedIdentifier identifier, Type expectedType) {
-
-  // Get the type of the identifier
-  auto type = getIdentifierType(identifier);
-
-  RET_ON_FAILURE(type, "evaluateIdentifier: failed to get identifier type");
-
-  // Check that declared variable has the correct type
-  RET_ON_NOT_EQUAL(*type, expectedType,
-                   "evaluateIdentifier: types do not match.");
-
-  return SUCCESS;
 }
 
 // TODO expand this if we need to restrict usages of certain operators and
@@ -75,6 +64,53 @@ bool ExpressionAnalyzer::isOperatorAllowed(Lexing::Operator operatorToCheck,
   case Lexing::Operator::AND:
   case Lexing::Operator::PLUS: {
     return true;
+  }
+  }
+}
+
+Result<Type> ExpressionAnalyzer::EvaluateIndirectionType(
+    const AST::Expression::Operand &operand, const NamedIdentifier identifier,
+    const Type &type) {
+
+  // This now sees a trimmed down indirection, with only one direction. It can
+  // only be one of the following:
+  // - No indirection at all.
+  // - A single reference &.
+  // - One or several dereferences.
+
+  switch (operand.indirection) {
+
+  case OperandIndirection::NONE:
+    return Type(type);
+
+  case OperandIndirection::GET_ADDRESS: {
+    // Type should be a pointer with depth one above the current depth.
+    // If not, something probably went wrong during parsing.
+    RET_ON_NOT_EQUAL(operand.steps, 1,
+                     "EvaluateIndirectionType: reference step in operand "
+                     "exceeds 1, equal to '" +
+                         std::to_string(operand.steps) + "'");
+
+    return Type(DataType::INT, true, type.pointerDepth + 1);
+  }
+
+  case OperandIndirection::GET_VALUE: {
+    RET_ON_FALSE(type.isPointer, "Cannot dereference '" + identifier.value +
+                                     "' of type" + type.toPrintableString() +
+                                     ".");
+
+    int stepsToTake = type.pointerDepth - operand.steps;
+    RET_ON_TRUE(stepsToTake < 0,
+                "EvaluateIndirectionType: dereference steps to take '" +
+                    std::to_string(operand.steps) +
+                    "' exceeds the total pointer depth of" +
+                    type.toPrintableString() + ", which has '" +
+                    std::to_string(type.pointerDepth) + "' available.");
+
+    bool newTypeIsPointer = stepsToTake != 0;
+
+    return Type(newTypeIsPointer ? DataType::INT : type.dataType,
+                newTypeIsPointer, stepsToTake);
   }
   }
 }
@@ -100,52 +136,57 @@ Error ExpressionAnalyzer::ActOn(AST::Expression::Expression *expression) {
       isOperatorAllowed(*unit->operation, evaluatedType);
     }
 
-    auto operand = unit->operand;
+    const auto &operand = unit->operand;
 
-    if (std::holds_alternative<IntegerLiteral>(operand)) {
+    if (std::holds_alternative<IntegerLiteral>(operand.operandKind)) {
 
       if (first) {
         evaluatedType = DataType::INT;
       }
 
-      auto integer = std::get<IntegerLiteral>(operand);
+      const auto &integer = std::get<IntegerLiteral>(operand.operandKind);
       RET_ON_FAILURE(evaluateInteger(integer, evaluatedType),
                      "ActOnExpression: failed to evaluate integer.");
 
-    } else if (std::holds_alternative<StringLiteral>(operand)) {
+    } else if (std::holds_alternative<StringLiteral>(operand.operandKind)) {
 
       if (first) {
         evaluatedType = DataType::STRING;
       }
 
-      auto string = std::get<StringLiteral>(operand);
+      const auto &string = std::get<StringLiteral>(operand.operandKind);
       RET_ON_FAILURE(evaluateString(string, evaluatedType),
                      "ActOnExpression: failed to evaluate string.");
 
-    } else if (std::holds_alternative<NamedIdentifier>(operand)) {
+    } else if (std::holds_alternative<NamedIdentifier>(operand.operandKind)) {
 
-      auto identifier = std::get<NamedIdentifier>(operand);
+      const auto &identifier = std::get<NamedIdentifier>(operand.operandKind);
+      auto type = getIdentifierType(identifier);
+
+      RET_ON_FAILURE(type, "ActOnExpression: failed to get identifier type");
 
       // Get the actual type of the identifer to use in next iteration.
       if (first) {
-        auto type = getIdentifierType(identifier);
 
-        RET_ON_FAILURE(type,
-                       "evaluateIdentifier: failed to get identifier type");
-        evaluatedType = *type;
+        auto typeOrError = EvaluateIndirectionType(operand, identifier, *type);
+        RET_ON_FAILURE(typeOrError, "ActOnExpression: failed to evaluate indirection type.");
+
+        evaluatedType = *typeOrError;
+
       } else {
-        RET_ON_FAILURE(evaluateIdentifier(identifier, evaluatedType),
-                       "ActOnExpression: failed to evaluate identifer.");
+        RET_ON_NOT_EQUAL(*type, evaluatedType,
+                         "ActOnExpression: types do not match.");
       }
 
-    } else if (std::holds_alternative<AST::Function::FunctionCall *>(operand)) {
+    } else if (std::holds_alternative<AST::Function::FunctionCall *>(
+                   operand.operandKind)) {
 
-      auto call = std::get<AST::Function::FunctionCall *>(operand);
+      auto call = std::get<AST::Function::FunctionCall *>(operand.operandKind);
 
       // Get the actual type of the function to be called to use in the next
       // iteration.
       if (first) {
-        auto function =
+        const auto &function =
             analyser.getGlobalScope().getFunctionDeclaration(call->name);
 
         RET_ON_FALSE(function.has_value(),

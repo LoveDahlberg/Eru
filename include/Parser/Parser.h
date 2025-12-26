@@ -75,6 +75,7 @@ private:
   // Expression
   Result<AST::Expression::Expression *> ParseExpression();
   Result<AST::Expression::ExpressionUnit *> ParseExpressionUnit(bool firstUnit);
+  Result<AST::Expression::Operand> ParseIndirection();
 
   // Assignment
   Result<AST::Assignment::Assignment *>
