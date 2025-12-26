@@ -31,10 +31,6 @@ Result<llvm::Value *> IRGenerator::handle(Assignment::Assignment &AST) {
 
     auto *name = std::get<Types::NamedIdentifier *>(AST.target);
 
-    // TODO: move the getDeclaredVariableParentScope functionality to common
-    // Scope. Because now this can only get variables that are in the current
-    // scope.
-
     // Make sure the pointer of the variable is used here, it is needed for the
     // store.
     auto variable =
@@ -45,14 +41,23 @@ Result<llvm::Value *> IRGenerator::handle(Assignment::Assignment &AST) {
         variable.has_value(),
         "IRGenerator: Assignment: name identifier, variable note delcared");
 
-    assignmentTarget = variable->getHighestOrderValue(builder);
+    assignmentTarget = (*variable)->getAddress(builder);
   }
 
-  auto exp = handle(*AST.expression);
+  auto maybeExp = handle(*AST.expression);
 
-  RET_ON_FAILURE(exp, "IRGenerator: Assignment: expression failure");
+  RET_ON_FAILURE(maybeExp, "IRGenerator: Assignment: expression failure");
 
-  return builder->CreateStore(*exp, assignmentTarget);
+  // Need to create inttoptr to tell llvm that this expression is casted to a
+  // pointer.
+  auto exp = [&]() {
+    if (AST.expression->evaluatedType.isPointer) {
+      return builder->CreateIntToPtr(*maybeExp, builder->getPtrTy());
+    }
+    return *maybeExp;
+  }();
+
+  return builder->CreateStore(exp, assignmentTarget);
 }
 
 } // namespace IR

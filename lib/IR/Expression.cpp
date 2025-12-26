@@ -9,31 +9,43 @@ namespace IR {
 
 Result<llvm::Value *>
 IRGenerator::getOperand(Expression::ExpressionUnit *expressionUnit) {
-  if (std::holds_alternative<Types::IntegerLiteral>(expressionUnit->operand.operandKind)) {
-    auto integerLiteral =
-        std::get<Types::IntegerLiteral>(expressionUnit->operand.operandKind);
+  const auto &operand = expressionUnit->operand;
+
+  if (std::holds_alternative<Types::IntegerLiteral>(operand.operandKind)) {
+    auto integerLiteral = std::get<Types::IntegerLiteral>(operand.operandKind);
 
     return llvm::ConstantInt::get(llvm::Type::getInt32Ty(module.getContext()),
                                   stoi(integerLiteral.value));
   }
-  if (std::holds_alternative<Function::FunctionCall *>(
-          expressionUnit->operand.operandKind)) {
-    auto call = std::get<Function::FunctionCall *>(expressionUnit->operand.operandKind);
+  if (std::holds_alternative<Function::FunctionCall *>(operand.operandKind)) {
+    auto call = std::get<Function::FunctionCall *>(operand.operandKind);
 
     return handle(*call);
   }
-  if (std::holds_alternative<Types::NamedIdentifier>(expressionUnit->operand.operandKind)) {
-    auto identifier = std::get<Types::NamedIdentifier>(expressionUnit->operand.operandKind);
+  if (std::holds_alternative<Types::NamedIdentifier>(operand.operandKind)) {
+    auto identifier = std::get<Types::NamedIdentifier>(operand.operandKind);
 
-    // Make sure the variable value being pointed to is used here, as the
-    // expression is done on the value itself.
     // TODO: If pointer arithmetic is added, extend this logic to handle it.
-    auto result =
+    auto maybeScopeVariable =
         scopeHandler.getCurrent().getVisibleDeclaredVariable(identifier.value);
 
-    return result.has_value() ? result->getValue(builder) : nullptr;
+    if (!maybeScopeVariable.has_value()) {
+      return nullptr;
+    }
+
+    auto* scopeVariable = *maybeScopeVariable;
+    
+    switch (operand.indirection) {
+    case AST::Expression::OperandIndirection::NONE:
+      return scopeVariable->getValue(builder);
+    case AST::Expression::OperandIndirection::GET_ADDRESS: {
+      return scopeVariable->getAddress(builder);
+    }
+    case AST::Expression::OperandIndirection::GET_VALUE:
+      return scopeVariable->dereference(builder, operand.steps);
+    }
   }
-  if (std::holds_alternative<Types::StringLiteral>(expressionUnit->operand.operandKind)) {
+  if (std::holds_alternative<Types::StringLiteral>(operand.operandKind)) {
     llvm::report_fatal_error(
         "IRExpression: getOperand: strings are not implemented yet.");
   }

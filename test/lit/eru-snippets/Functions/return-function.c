@@ -12,7 +12,7 @@
 
 //--- main.arda
 
-int Valinor() [] {
+int Valinor(int argc) [] {
   if(1) {
     int b = 1
     return b
@@ -23,5 +23,6 @@ int Valinor() [] {
   elif(3) {
     // No return
   }
-  return 4
+  argc = 4
+  return argc
 }

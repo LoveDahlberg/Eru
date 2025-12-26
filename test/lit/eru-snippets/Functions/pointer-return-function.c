@@ -1,0 +1,1 @@
+// Check that functions can return any level of indirection pointers.

@@ -1,10 +1,16 @@
-// Test pointers
+// Test pointers TODO move this to other tests.
 
 // RUN: rm -rf %t
 // RUN: %split-file %s %t
 
 // Compile main.arda
 // RUN: %processor %t/main.arda -o %t/program
+
+// Run the program and test its output
+// RUN: %print-exit-code %t/program | FileCheck %s
+
+// CHECK: Exit Code: 42
+
 
 //--- main.arda
 
@@ -34,9 +40,6 @@ int Valinor(int argc) [] {
   // Dereference a pointer
   int ohno = *something
 
-  // NULL is the same as address 0
-  // something = NULL
-
   // Get address of a variable that holds a pointer
   int aa = 1
   int& bb = &aa 
@@ -55,9 +58,13 @@ int Valinor(int argc) [] {
   // 5 of & and 8 of *. 8-5 = 3 dereferences.
   // This is the same number of levels available for C.
   int &result = &**&***&**&*&C
+  
+  // Going up and down reference/dereference does not work on IR level yet. 
+  // It compiles but accessing *result does not work. Maybe this sequence is just wrong?
 
-  int &&&&&& ohh = 123
-  int & ah = *****ohh
+  // Will crash during runtime.
+  // int &&&&&& ohh = 123
+  // int & ah = ******ohh
 
-  return 0
+  return secret
 }

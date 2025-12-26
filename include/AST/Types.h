@@ -41,9 +41,9 @@ struct Type {
   bool operator==(const Type &compare) const = default;
   bool operator!=(const Type &compare) const = default;
 
-  const std::string toPrintableString() const {
-    return " '" + typeToString.at(dataType) + std::string(pointerDepth, '&') +
-           "' ";
+  const std::string toPrintableString(bool showIndirection = true) const {
+    return " '" + typeToString.at(dataType) +
+           (showIndirection ? std::string(pointerDepth, '&') : "") + "' ";
   }
 };
 

@@ -1,4 +1,5 @@
 // lib
+#include "Support/Result.h"
 #include <Analyzer/Analyzer.h>
 
 // stdlib
@@ -50,8 +51,8 @@ Result<Type> ExpressionAnalyzer::getIdentifierType(NamedIdentifier identifier) {
 
   RET_ON_FALSE(variable.has_value(),
                "getIdentifierType: use of undeclared identifier.");
-
-  return (*variable)->type;
+  auto aa = variable.value();
+  return aa->type;
 }
 
 // TODO expand this if we need to restrict usages of certain operators and
@@ -68,6 +69,8 @@ bool ExpressionAnalyzer::isOperatorAllowed(Lexing::Operator operatorToCheck,
   }
 }
 
+/// TODO: This works very naively. It will let through more tricky expressions
+/// that will end up crashing the binary. Look more closely in to this.
 Result<Type> ExpressionAnalyzer::EvaluateIndirectionType(
     const AST::Expression::Operand &operand, const NamedIdentifier identifier,
     const Type &type) {
@@ -161,23 +164,49 @@ Error ExpressionAnalyzer::ActOn(AST::Expression::Expression *expression) {
     } else if (std::holds_alternative<NamedIdentifier>(operand.operandKind)) {
 
       const auto &identifier = std::get<NamedIdentifier>(operand.operandKind);
-      auto type = getIdentifierType(identifier);
+      auto maybeType = getIdentifierType(identifier);
 
-      RET_ON_FAILURE(type, "ActOnExpression: failed to get identifier type");
+      RET_ON_FAILURE(maybeType,
+                     "ActOnExpression: failed to get identifier type");
+
+      auto type = *maybeType;
 
       // Get the actual type of the identifer to use in next iteration.
       if (first) {
 
-        auto typeOrError = EvaluateIndirectionType(operand, identifier, *type);
-        RET_ON_FAILURE(typeOrError, "ActOnExpression: failed to evaluate indirection type.");
+        auto typeOrError = EvaluateIndirectionType(operand, identifier, type);
+        RET_ON_FAILURE(typeOrError,
+                       "ActOnExpression: failed to evaluate indirection type.");
 
         evaluatedType = *typeOrError;
 
       } else {
-        RET_ON_NOT_EQUAL(*type, evaluatedType,
-                         "ActOnExpression: types do not match.");
-      }
 
+        // Type check must consider indirection steps.
+        if (type.isPointer && operand.steps != 0) {
+          auto stepsLeft = type.pointerDepth - operand.steps;
+          if (stepsLeft != 0) {
+            RET_ON_NOT_EQUAL(
+                type.pointerDepth - stepsLeft, evaluatedType.pointerDepth,
+                "ActOnExpression: indirection level do not match. Have '" +
+                    identifier.value + "' with '" +
+                    std::to_string(type.pointerDepth - stepsLeft) +
+                    "'. Expected '" +
+                    std::to_string(evaluatedType.pointerDepth) + "'");
+          }
+          RET_ON_NOT_EQUAL(type.dataType, evaluatedType.dataType,
+                           "ActOnExpression: types do not match. Have" +
+                               type.toPrintableString(false) +
+                               "which does not match with expected" +
+                               evaluatedType.toPrintableString(false));
+        } else {
+          RET_ON_NOT_EQUAL(type, evaluatedType,
+                           "ActOnExpression: types do not match. Have" +
+                               type.toPrintableString() +
+                               "which does not match with expected" +
+                               evaluatedType.toPrintableString());
+        }
+      }
     } else if (std::holds_alternative<AST::Function::FunctionCall *>(
                    operand.operandKind)) {
 
@@ -196,7 +225,6 @@ Error ExpressionAnalyzer::ActOn(AST::Expression::Expression *expression) {
         RET_ON_FAILURE(analyser.function().ActOnCall(call, evaluatedType),
                        "ActOnExpression: failed to evaluate function call.");
       }
-
     } else {
       return FAILURE("ActOnExpression: unexpected operand type");
     }
