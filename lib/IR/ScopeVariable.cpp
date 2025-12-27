@@ -66,37 +66,6 @@ ScopeVariable::dereference(llvm::IRBuilder<llvm::NoFolder> *builder,
   // The current variable is of type pointer. The value of this pointer is a
   // pointer to somewhere else. We want to read what is at the pointed to
   // location. This should be repeated indirectionStepsToTake times.
-  // - In order dereference correctly, we have to consider the fact that we
-  //   have to load the last pointer we end up at an additional time to get
-  //   the value being pointed to.
-  // - So we actually need to dereference the 'pointed to' pointer to
-  //   get the actual value to return in the end.
-  //
-  // clang-format off
-    // Example:
-    //
-    // .arda:
-    //  int a = 42
-    //  int &b = &a
-    //  int &&c = &b
-    //  return **c
-    //
-    // .llvm
-    //  %a = alloca i32, align 4         ; Declare as %a pointer to an i32.
-    //  store i32 42, ptr %a, align 4    ; Store 42 into in to %a.
-    //  %b = alloca ptr, align 8         ; Declare %b as a pointer to a pointer.
-    //  store ptr %a, ptr %b, align 8    ; Store the pointer %a as value in %b
-    //  %c = alloca ptr, align 8         ; Declare %c as a pointer to a pointer.
-    //  store ptr %b, ptr %c, align 8    ; Store the pointer %b as value in %c
-    //  ...
-    //  ; Now we want to return the stored 42 through the pointer %c.
-    //  ...
-    //  %0 = load ptr, ptr %b, align 8   ; Load the value of %c into %0, this is pointer %b. 
-    //  %1 = load ptr, ptr %0, align 8   ; Load the value of %0 into %1, this is pointer %a.
-    //  %2 = load i32, ptr %2, align 4   ; Now, load the i32 content of %1 into %2, this is 42. 
-    //  ret i32 %2
-    //
-  // clang-format on
 
   auto variableToLoad = variable;
 
@@ -107,23 +76,89 @@ ScopeVariable::dereference(llvm::IRBuilder<llvm::NoFolder> *builder,
     // Get the value of current pointer and store it as the next variable to
     // load. This is always another pointer.
     variableToLoad = builder->CreateLoad(builder->getPtrTy(), variableToLoad);
-
-    // If we are at the last indireciton step, it means we have reached the
-    // value to return.
-    if (indirectionStep == indirectionStepsToTake) {
-
-      // Determine the type of the value to return. If we are at the last
-      // indirection step possible, then it means we've arrived to the actual
-      // value.
-      auto typeToLoad = indirectionStep == pointerIndirectionCount
-                            ? underlyingType
-                            : builder->getPtrTy();
-
-      // Load the value to return from the value of the last pointer.
-      variableToLoad = builder->CreateLoad(typeToLoad, variableToLoad);
-    }
   }
   return variableToLoad;
+}
+
+llvm::Value *
+ScopeVariable::dereferenceAssignment(llvm::IRBuilder<llvm::NoFolder> *builder,
+                                     int indirectionStepsToTake) {
+  // The variable we have after the dereference call is a pointer. We are either
+  // at a pointer that points to:
+  //  1. another pointer.
+  //  2. the actual value.
+  // Regardless of which, we need to use the current pointer itself in order to
+  // use it in an assignment.
+  return dereference(builder, indirectionStepsToTake);
+}
+
+llvm::Value *
+ScopeVariable::dereferenceExpression(llvm::IRBuilder<llvm::NoFolder> *builder,
+                                     int indirectionStepsToTake) {
+
+  // The variable we have after the dereference call is a pointer. We are either
+  // at a pointer that points to:
+  //  1. another pointer.
+  //  2. the actual value.
+  // Regardless of which, we need to get the value of the current pointer in
+  // order to use it in an expression.
+  //
+  // If we have the following example:
+  //
+  // clang-format off
+  //
+  // .arda:
+  //  int a = 42
+  //  int &b = &a
+  //  int &&c = &b
+  //  return **c
+  //
+  // The below IR is generated before this function is called.
+  //
+  // .llvm
+  //  %a = alloca i32, align 4         ; Declare as %a pointer to an i32.
+  //  store i32 42, ptr %a, align 4    ; Store 42 into in to %a.
+  //  %b = alloca ptr, align 8         ; Declare %b as a pointer to a pointer.
+  //  store ptr %a, ptr %b, align 8    ; Store the pointer %a as value in %b
+  //  %c = alloca ptr, align 8         ; Declare %c as a pointer to a pointer.
+  //  store ptr %b, ptr %c, align 8    ; Store the pointer %b as value in %c
+  //
+  // clang-format on
+
+  auto variableToLoad = dereference(builder, indirectionStepsToTake);
+
+  // The above call creates the following.
+  //
+  // clang-format off
+  //
+  // .llvm
+  //  %0 = load ptr, ptr %b, align 8   ; Load the value of %c into %0, this is pointer %b. 
+  //  %1 = load ptr, ptr %0, align 8   ; Load the value of %0 into %1, this is pointer %a.
+  //  %2 = load i32, ptr %2, align 4   ; Now, load the i32 content of %1 into %2, this is 42. 
+  //
+  // clang-format on
+
+  // The type to load depends on if the current pointer points to another
+  // pointer or the underlying value.
+  auto typeToLoad = indirectionStepsToTake == pointerIndirectionCount
+                        ? underlyingType
+                        : builder->getPtrTy();
+
+  // Perform the load.
+  return variableToLoad = builder->CreateLoad(typeToLoad, variableToLoad);
+
+  // The above call creates the following.
+  //
+  // clang-format off
+  //
+  // .llvm
+  //  %2 = load i32, ptr %2, align 4   ; Now, load the i32 content of %1 into %2, this is 42. 
+  //
+  // Afterwards, the following is created.
+  //
+  //  ret i32 %2
+  //
+  // clang-format on
 }
 
 } // namespace IR

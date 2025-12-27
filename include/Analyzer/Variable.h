@@ -48,6 +48,6 @@ public:
       std::optional<AST::Expression::ConstantOperand> constOperand);
   Result<AST::VariableDeclaration::VariableDeclaration *>
   ActOnLocalDeclaration(AST::VariableDeclaration::Variable *variable);
-  Error ActOnAssignment(AST::Assignment::Assignment *assignment);
+  Error ActOnAssignment(AST::Assignment::Assignment *assignment, int indirection = 0);
 };
 } // namespace Analyzer

@@ -1,6 +1,7 @@
 #include <AST/Statement.h>
 #include <Analyzer/Analyzer.h>
 #include <Support/Result.h>
+#include <string>
 
 namespace Analyzer {
 
@@ -108,22 +109,24 @@ VariableAnalyzer::declareVariable(
   return declaration;
 }
 
-Error VariableAnalyzer::ActOnAssignment(
-    AST::Assignment::Assignment *assignment) {
+Error VariableAnalyzer::ActOnAssignment(AST::Assignment::Assignment *assignment,
+                                        int indirection) {
 
   auto target = assignment->target;
+  auto &expressionType = assignment->expression->evaluatedType;
 
-  AST::VariableDeclaration::Variable *variable;
+  AST::VariableDeclaration::Variable *assignmentTarget;
 
   // If variable declaration is the target of the assignment.
   if (std::holds_alternative<AST::VariableDeclaration::VariableDeclaration *>(
           target)) {
 
-    variable = std::get<AST::VariableDeclaration::VariableDeclaration *>(target)
-                   ->variable;
+    assignmentTarget =
+        std::get<AST::VariableDeclaration::VariableDeclaration *>(target)
+            ->variable;
 
     // Verify that the target variable actually was declared previously.
-    RET_ON_FALSE(isVariableDeclaredGlobally(variable),
+    RET_ON_FALSE(isVariableDeclaredGlobally(assignmentTarget),
                  "ActOnAssignment: variable not previously declared.");
 
   } else if (std::holds_alternative<AST::Types::NamedIdentifier *>(target)) {
@@ -136,27 +139,63 @@ Error VariableAnalyzer::ActOnAssignment(
     RET_ON_FALSE(result.has_value(),
                  "ActOnAssignment: identifier not previously declared.");
 
-    variable = *result;
+    assignmentTarget = *result;
   }
 
-  // TODO add failure case.
-  auto &evaluatedType = assignment->expression->evaluatedType;
-  if (variable->type.isPointer) {
-    RET_ON_FALSE(evaluatedType.dataType == INT,
-                 "Cannot assign '" + variable->name + "' of type" +
-                     variable->type.toPrintableString() +
-                     "to an expression of type " + evaluatedType.toPrintableString() +
-                     ".");
-    evaluatedType.isPointer = true;
+  // Evaluate pointer indirection correctness.
+  if (assignmentTarget->type.isPointer) {
+
+    // There is indirection.
+    if (indirection != 0) {
+      // Save indirection steps for IR generation.
+      assignment->indirectionSteps = indirection;
+
+      const auto &remaningSteps =
+          assignmentTarget->type.pointerDepth - indirection;
+
+      // TODO add failure case.
+      RET_ON_TRUE(remaningSteps < 0,
+                  "Cannot dereference '" + assignmentTarget->name + "' " +
+                      std::to_string(indirection) + " times, only " +
+                      std::to_string(assignmentTarget->type.pointerDepth) +
+                      " times is possible for type" +
+                      assignmentTarget->type.toPrintableString());
+
+      // TODO add failure case.
+      // Inidrection is all the way down, we need to typecheck the
+      // varaible->type.dataType and evaluatedType.dataType
+      if (remaningSteps == 0) {
+        RET_ON_NOT_EQUAL(
+            assignmentTarget->type.dataType, expressionType.dataType,
+            "Cannot assign '" + assignmentTarget->name + "' of type" +
+                assignmentTarget->type.toPrintableString(false) +
+                "to an expression of type " +
+                expressionType.toPrintableString() + ".");
+        return SUCCESS;
+      }
+
+      // Else indirection is not all the way down to the type, so we need to
+      // typecheck the expression pointer.
+    }
+
+    // TODO add failure case.
+    // Assignment target is a pointer, veryify that expression is an int. We
+    // currently do not see any difference between ints and pointer type wise.
+    RET_ON_FALSE(expressionType.dataType == INT,
+                 "Cannot assign '" + assignmentTarget->name + "' of type" +
+                     assignmentTarget->type.toPrintableString() +
+                     "to an expression of type " +
+                     expressionType.toPrintableString() + ".");
+    expressionType.isPointer = true;
     return SUCCESS;
   }
 
   // Check that the type of the expression matches the type of the variable.
-  RET_ON_NOT_EQUAL(
-      evaluatedType, variable->type,
-      "ActOnAssignment: type mismatch between declared variable " +
-          variable->type.toPrintableString()+ " and assignment expression " +
-          evaluatedType.toPrintableString() + ".");
+  RET_ON_NOT_EQUAL(expressionType, assignmentTarget->type,
+                   "ActOnAssignment: type mismatch between declared variable " +
+                       assignmentTarget->type.toPrintableString() +
+                       " and assignment expression " +
+                       expressionType.toPrintableString() + ".");
 
   return SUCCESS;
 }

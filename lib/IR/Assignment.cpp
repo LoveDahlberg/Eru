@@ -33,15 +33,16 @@ Result<llvm::Value *> IRGenerator::handle(Assignment::Assignment &AST) {
 
     // Make sure the pointer of the variable is used here, it is needed for the
     // store.
-    auto variable =
+    auto maybeVariable =
         scopeHandler.getCurrent().getVisibleDeclaredVariable(name->value);
 
     // Variable not declared.
     RET_ON_FALSE(
-        variable.has_value(),
+        maybeVariable.has_value(),
         "IRGenerator: Assignment: name identifier, variable note delcared");
+    auto variable = *maybeVariable;
 
-    assignmentTarget = (*variable)->getAddress(builder);
+    assignmentTarget = variable->dereferenceAssignment(builder, AST.indirectionSteps);
   }
 
   auto maybeExp = handle(*AST.expression);

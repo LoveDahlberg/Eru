@@ -88,28 +88,16 @@ const std::unordered_map<char, TokenType> separatorOperatorToToken = {
     {'&', TokenType::AMPERSAND},
 };
 
-// Token category bitset, make sure each enum value is a unique power of 2.
-// Tokens can belong to several categories.
-enum class TokenCategory : uint32_t {
-  NONE = 0,
-  IDENTIFER = 1,
-  KEYWORD = 1U << 2,
-  SEPARATOR = 1U << 3,
-  DATA_TYPE = 1U << 4,
-  OPERATOR = 1U << 5,
-  LITERAL = 1U << 6,
+enum class TokenCategory {
+  NONE,
+  IDENTIFER,
+  KEYWORD,
+  SEPARATOR,
+  DATA_TYPE,
+  OPERATOR,
+  LITERAL,
+  MULTI_PURPOSE,
 };
-
-static TokenCategory operator|(TokenCategory lhs, TokenCategory rhs) {
-  return TokenCategory(static_cast<int>(lhs) | static_cast<int>(rhs));
-}
-
-static TokenCategory operator&(TokenCategory lhs, TokenCategory rhs) {
-  return TokenCategory(static_cast<int>(lhs) & static_cast<int>(rhs));
-}
-
-bool isTokenTypePartOfCategory(const TokenType &type,
-                               const TokenCategory &category);
 
 const std::unordered_map<TokenType, TokenCategory> tokenTypeToCategory{
     {TokenType::NONE, TokenCategory::NONE},
@@ -142,12 +130,13 @@ const std::unordered_map<TokenType, TokenCategory> tokenTypeToCategory{
     {TokenType::EQUAL, TokenCategory::OPERATOR},
     {TokenType::OR, TokenCategory::OPERATOR},
     {TokenType::AND, TokenCategory::OPERATOR},
-    {TokenType::AMPERSAND, TokenCategory::OPERATOR | TokenCategory::DATA_TYPE},
-    {TokenType::STAR, TokenCategory::OPERATOR | TokenCategory::DATA_TYPE},
 
     {TokenType::INTEGER_LITERAL, TokenCategory::LITERAL},
     {TokenType::STRING_LITERAL, TokenCategory::LITERAL},
     {TokenType::END_OF_FILE, TokenCategory::NONE},
+
+    {TokenType::AMPERSAND, TokenCategory::MULTI_PURPOSE},
+    {TokenType::STAR, TokenCategory::MULTI_PURPOSE},
 };
 
 // TODO statically assert that maps contains all types.

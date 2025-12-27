@@ -1,7 +1,6 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/NoFolder.h>
 
-
 namespace IR {
 struct ScopeVariable {
   ScopeVariable()
@@ -17,19 +16,26 @@ struct ScopeVariable {
   llvm::Value *variable;
   llvm::Type *underlyingType;
 
-  /// Get the value of the stored variable. 
+  /// Get the value of the stored variable.
   llvm::Value *getValue(llvm::IRBuilder<llvm::NoFolder> *builder);
+
+  /// Dereference the variable to be used in an assignment.
+  llvm::Value *dereferenceAssignment(llvm::IRBuilder<llvm::NoFolder> *builder,
+                                     int indirectionStepsToTake);
+
+  /// Dereference the variable to be used in an expression.
+  llvm::Value *dereferenceExpression(llvm::IRBuilder<llvm::NoFolder> *builder,
+                                     int indirectionStepsToTake);
 
   /// Get address of the variable.
   llvm::Value *getAddress(llvm::IRBuilder<llvm::NoFolder> *builder);
 
+private:
   /// Dereference the variable down indirectionStepsToTake levels down.
   llvm::Value *dereference(llvm::IRBuilder<llvm::NoFolder> *builder,
                            int indirectionStepsToTake);
-
-private:
   bool isAllocaValue;
   int pointerIndirectionCount;
 };
 
-}
+} // namespace IR

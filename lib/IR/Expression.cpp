@@ -42,7 +42,7 @@ IRGenerator::getOperand(Expression::ExpressionUnit *expressionUnit) {
       return scopeVariable->getAddress(builder);
     }
     case AST::Expression::OperandIndirection::GET_VALUE:
-      return scopeVariable->dereference(builder, operand.steps);
+      return scopeVariable->dereferenceExpression(builder, operand.steps);
     }
   }
   if (std::holds_alternative<Types::StringLiteral>(operand.operandKind)) {

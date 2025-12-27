@@ -163,8 +163,8 @@ Parser::ParseExpressionUnit(bool firstUnit) {
   auto unit = new AST::Expression::ExpressionUnit();
 
   if (!firstUnit) {
-    RET_ON_FALSE_CODE(isTokenTypePartOfCategory(lexer.getCurrentToken().type,
-                                                TokenCategory::OPERATOR),
+    RET_ON_FALSE_CODE(tokenTypeToCategory.at(lexer.getCurrentToken().type) ==
+                          TokenCategory::OPERATOR,
                       "ParseExpressionUnit: unexpected token category.", lexer);
 
     RET_ON_FALSE_CODE(
@@ -198,8 +198,8 @@ Result<AST::Expression::Expression *> Parser::ParseExpression() {
 
     expression->addExpressionUnit(*target);
 
-    if (!isTokenTypePartOfCategory(lexer.getCurrentToken().type,
-                                   TokenCategory::OPERATOR)) {
+    if (tokenTypeToCategory.at(lexer.getCurrentToken().type) !=
+        TokenCategory::OPERATOR) {
       break;
     }
   } while (loopCounter++ < loopLimit);

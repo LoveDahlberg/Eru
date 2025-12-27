@@ -1,7 +1,52 @@
+#include "Lexer/Tokens.h"
 #include "Support/Result.h"
 #include <Parser/Parser.h>
 
 namespace Parser {
+
+Result<AST::Statement::StatementVariant>
+Parser::ParseFunctionCallOrAssignment(int indirection) {
+
+  // Both start with an identifier.
+  auto identifier = ParseIdentifier();
+  RET_ON_FAILURE_CODE(identifier,
+                      "ParseStatement: identifier: failed identifier", lexer);
+
+  // TODO move this switch case to getter function.
+  switch (lexer.getCurrentToken().type) {
+
+  // Assignment
+  case TokenType::EQUAL: {
+    auto assignment = ParseAssignment(new AST::VariableDeclaration::Variable(
+        AST::Types::DataType::NONE, *identifier));
+    RET_ON_FAILURE_CODE(assignment,
+                        "ParseStatement: identifier: equal: failed assignment",
+                        lexer);
+
+    // Run the assignment through the analyzer.
+    RET_ON_FAILURE_CODE(
+        analyzer.variable().ActOnAssignment(*assignment, indirection),
+        "ParseStatement: identifier: equal: failed to act on assignment.",
+        lexer);
+
+    return (AST::Statement::StatementVariant)*assignment;
+  }
+
+  // Function call.
+  case TokenType::LEFT_PARENTHESIS: {
+    auto assignment = ParseFunctionCall(*identifier);
+    RET_ON_FAILURE_CODE(
+        assignment, "ParseStatement: identifier: left paran: failed assignment",
+        lexer);
+
+    return (AST::Statement::StatementVariant)*assignment;
+  }
+  default: {
+    return FAILURE_CODE("ParseStatement: identifier: unexpected token", lexer);
+  }
+  }
+  return SUCCESS;
+}
 
 Result<std::vector<AST::Statement::StatementVariant>>
 Parser::ParseVaribleAndMaybeAssignment() {
@@ -53,7 +98,7 @@ Parser::ParseVaribleAndMaybeAssignment() {
 }
 
 Result<AST::Statement::Statement *> Parser::ParseStatement() {
-  auto statement = new AST::Statement::Statement();
+  auto *statement = new AST::Statement::Statement();
 
   if (lexer.getCurrentToken() == TokenType::RETURN ||
       lexer.getCurrentToken() == TokenType::RIGHT_CURLY_BRACE) {
@@ -65,6 +110,29 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
   do {
     auto tokenCategory = tokenTypeToCategory.at(lexer.getCurrentToken().type);
     switch (tokenCategory) {
+
+    case TokenCategory::MULTI_PURPOSE: {
+      RET_ON_WRONG_TOKEN(TokenType::STAR, "ParseStatement: expected * got &");
+      
+      int indirectionStep = 0;
+      int loopCounter = 0;
+      do {
+         if (lexer.getCurrentToken() == TokenType::STAR) {
+          ++indirectionStep;
+        } else {
+          break;
+        }
+        lexer.generateNextToken();
+      } while (loopCounter++ < loopLimit);
+      
+      auto maybeStatement = ParseFunctionCallOrAssignment(indirectionStep);
+      RET_ON_FAILURE_CODE(maybeStatement,
+                          "ParseStatement: failed function call or assignment.",
+                          lexer);
+
+      statement->AddStatement(*maybeStatement);
+      break;
+    }
 
     // Variable declaration or assignment.
     case TokenCategory::DATA_TYPE: {
@@ -95,49 +163,12 @@ Result<AST::Statement::Statement *> Parser::ParseStatement() {
     // Function call or assignment.
     case TokenCategory::IDENTIFER: {
 
-      // Both start with an identifier.
-      auto identifier = ParseIdentifier();
-      RET_ON_FAILURE_CODE(
-          identifier, "ParseStatement: identifier: failed identifier", lexer);
+      auto maybeStatement = ParseFunctionCallOrAssignment();
+      RET_ON_FAILURE_CODE(maybeStatement,
+                          "ParseStatement: failed function call or assignment.",
+                          lexer);
 
-      // TODO move this switch case to getter function.
-      switch (lexer.getCurrentToken().type) {
-
-      // Assignment
-      case TokenType::EQUAL: {
-        auto assignment =
-            ParseAssignment(new AST::VariableDeclaration::Variable(
-                AST::Types::DataType::NONE, *identifier));
-        RET_ON_FAILURE_CODE(
-            assignment, "ParseStatement: identifier: equal: failed assignment",
-            lexer);
-
-        // Run the assignment through the analyzer.
-        RET_ON_FAILURE_CODE(
-            analyzer.variable().ActOnAssignment(*assignment),
-            "ParseStatement: identifier: equal: failed to act on assignment.",
-            lexer);
-
-        statement->AddStatement(*assignment);
-        break;
-      }
-
-      // Function call.
-      case TokenType::LEFT_PARENTHESIS: {
-        auto assignment = ParseFunctionCall(*identifier);
-        RET_ON_FAILURE_CODE(
-            assignment,
-            "ParseStatement: identifier: left paran: failed assignment", lexer);
-
-        statement->AddStatement(*assignment);
-        break;
-      }
-
-      default: {
-        return FAILURE_CODE("ParseStatement: identifier: unexpected token",
-                            lexer);
-      }
-      }
+      statement->AddStatement(*maybeStatement);
       break;
     }
     default: {

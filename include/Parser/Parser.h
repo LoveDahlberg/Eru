@@ -90,6 +90,7 @@ private:
   Result<AST::Statement::Statement *> ParseStatement();
   Result<std::vector<AST::Statement::StatementVariant>>
   ParseVaribleAndMaybeAssignment();
+  Result<AST::Statement::StatementVariant> ParseFunctionCallOrAssignment(int indirection = 0);
 
   // Controlflow
   Result<AST::Controlflow::ConditionalBranchingGroup *>
