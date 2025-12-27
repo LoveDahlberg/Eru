@@ -1,10 +1,5 @@
-// #include <llvm/IR/Argument.h>
-// #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/IRBuilder.h>
-// #include <llvm/IR/Instructions.h>
 #include <llvm/IR/NoFolder.h>
-// #include <llvm/IR/Type.h>
-// #include <llvm/IR/Value.h>
 
 
 namespace IR {
@@ -22,7 +17,7 @@ struct ScopeVariable {
   llvm::Value *variable;
   llvm::Type *underlyingType;
 
-  /// Get the value of the stored variable.
+  /// Get the value of the stored variable. 
   llvm::Value *getValue(llvm::IRBuilder<llvm::NoFolder> *builder);
 
   /// Get address of the variable.

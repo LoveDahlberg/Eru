@@ -69,6 +69,13 @@ int Valinor(int argc) [] {
   int &&&twentyfour = &twentythree
   int &bigBoy = &*&**&*&**twentyfour
   result = result + *bigBoy
+
+  // 9. Assignment to dereferenced variables.
+  // TODO
+  // int twentyFive = 0
+  // int& twentySix = &twentyFive
+  // *twentySix = 1
+  // result = result + twentyFive
   
   return result
 }

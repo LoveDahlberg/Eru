@@ -6,7 +6,8 @@ llvm::Value *ScopeVariable::getValue(llvm::IRBuilder<llvm::NoFolder> *builder) {
 
   // If the variable is created by an 'alloca' instruction, then it is
   // actually a pointer to the underlying type. In order to get this value, we
-  // need to load it.
+  // need to load it. The same applies if the 'alloca' was used to create a
+  // pointer.
   //
   // clang-format off
     // Example:
@@ -20,7 +21,9 @@ llvm::Value *ScopeVariable::getValue(llvm::IRBuilder<llvm::NoFolder> *builder) {
     //
   // clang-format on
   if (isAllocaValue) {
-    return builder->CreateLoad(underlyingType, variable);
+    return builder->CreateLoad(
+        pointerIndirectionCount == 0 ? underlyingType : builder->getPtrTy(),
+        variable);
   }
 
   // Otherwise, the value is already directly stored in the variable. This is
@@ -40,7 +43,7 @@ ScopeVariable::getAddress(llvm::IRBuilder<llvm::NoFolder> *builder) {
   // Otherwise, variable is the value itself. To get the pointer, we
   // have to actually allocate it, store the variable inside of it and then
   // return that.
-  auto *valuePointer = builder->CreateAlloca(underlyingType, nullptr);
+  auto *valuePointer = builder->CreateAlloca(variable->getType(), nullptr);
   builder->CreateStore(variable, valuePointer);
 
   // Set this variable as the new pointer that was created. This way changes
@@ -54,6 +57,11 @@ ScopeVariable::getAddress(llvm::IRBuilder<llvm::NoFolder> *builder) {
 llvm::Value *
 ScopeVariable::dereference(llvm::IRBuilder<llvm::NoFolder> *builder,
                            int indirectionStepsToTake) {
+
+  // When dereferencing, we need the target to be allocated. Call getAddress to
+  // create it if needed. If this is not done, parameters cannot be dereferenced
+  // correctly.
+  getAddress(builder);
 
   // The current variable is of type pointer. The value of this pointer is a
   // pointer to somewhere else. We want to read what is at the pointed to

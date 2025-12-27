@@ -75,6 +75,28 @@ Error emitObject(llvm::Module &module, const std::filesystem::path &outputFile,
   return SUCCESS;
 }
 
+void writeIRToFile(llvm::Module &module, std::string &errorMsg) {
+
+  auto path = [&]() {
+    if (auto envPath = std::getenv(tmpDirectoryPath)) {
+      return std::filesystem::path(envPath);
+    }
+    return std::filesystem::current_path();
+  }() / "IR";
+
+  std::error_code EC;
+  llvm::raw_fd_ostream out(path.string(), EC, llvm::sys::fs::OF_Text);
+  if (EC) {
+    errorMsg += " and failed to define output file '" + EC.message() + "'.";
+    return;
+  }
+
+  module.print(out, nullptr);
+  out.flush();
+
+  llvm::outs() << "\nWrote IR to '" << path.string() << "'.";
+}
+
 } // namespace
 
 Error EmitObjectFile::ActOn(AST::Context::ASTContext context) {
@@ -87,7 +109,12 @@ Error EmitObjectFile::ActOn(AST::Context::ASTContext context) {
   // TODO verify that that there is no error here.
 
   for (auto result : generator.Walk(context)) {
-    RET_ON_FAILURE(result, "EmitObjectFile: ActOn: failed to walk AST");
+    if (result.hasFailed) {
+      std::string errorMsg = "EmitObjectFile: ActOn: failed to walk AST";
+      writeIRToFile(module, errorMsg);
+
+      return FAILURE(errorMsg);
+    }
   }
 
   // Cases
@@ -108,8 +135,13 @@ Error EmitObjectFile::ActOn(AST::Context::ASTContext context) {
   }();
 
   // For now just verify the module.
-  RET_ON_FALSE(!llvm::verifyModule(module, &llvm::errs()),
-               "EmitObjectFile: Failed to verify module.");
+  auto verification = llvm::verifyModule(module, &llvm::errs());
+  if (verification || emitLLVM) {
+    std::string errorMsg = "EmitObjectFile: Failed to verify module";
+    writeIRToFile(module, errorMsg);
+
+    RET_ON_TRUE(verification, errorMsg);
+  }
 
   RET_ON_FAILURE(emitObject(module, outputFile, targetTriple),
                  "EmitObjectFile: Failed to emit object file");

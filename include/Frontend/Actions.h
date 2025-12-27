@@ -40,14 +40,15 @@ public:
 
 class EmitObjectFile : public Action {
 public:
-  EmitObjectFile(Support::IO::Files &files, const std::string &targetTriple)
-      : files(files), targetTriple(targetTriple) {}
+  EmitObjectFile(Support::IO::Files &files, const std::string &targetTriple, bool emitLLVM)
+      : files(files), targetTriple(targetTriple), emitLLVM(emitLLVM) {}
 
   virtual Error ActOn(AST::Context::ASTContext) override;
 
 private:
   Support::IO::Files &files;
   const std::string &targetTriple;
+  const bool emitLLVM;
 };
 
 Action *GetAction(const std::string &relevantArgument);
