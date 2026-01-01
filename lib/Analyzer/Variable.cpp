@@ -142,10 +142,15 @@ Error VariableAnalyzer::ActOnAssignment(AST::Assignment::Assignment *assignment,
     assignmentTarget = *result;
   }
 
+  const auto assignmentError =
+      "Cannot assign '" + assignmentTarget->name + "' of type" +
+      assignmentTarget->type.toPrintableString(true, indirection) +
+      "to an expression of type " + expressionType.toPrintableString() + ".";
+
   // Evaluate pointer indirection correctness.
   if (assignmentTarget->type.isPointer) {
 
-    // There is indirection.
+    // There is indirection on the taret being assigned.
     if (indirection != 0) {
       // Save indirection steps for IR generation.
       assignment->indirectionSteps = indirection;
@@ -153,7 +158,6 @@ Error VariableAnalyzer::ActOnAssignment(AST::Assignment::Assignment *assignment,
       const auto &remaningSteps =
           assignmentTarget->type.pointerDepth - indirection;
 
-      // TODO add failure case.
       RET_ON_TRUE(remaningSteps < 0,
                   "Cannot dereference '" + assignmentTarget->name + "' " +
                       std::to_string(indirection) + " times, only " +
@@ -161,14 +165,14 @@ Error VariableAnalyzer::ActOnAssignment(AST::Assignment::Assignment *assignment,
                       " times is possible for type" +
                       assignmentTarget->type.toPrintableString());
 
-      // TODO add failure case.
       // Inidrection is all the way down, we need to typecheck the
       // varaible->type.dataType and evaluatedType.dataType
       if (remaningSteps == 0) {
         RET_ON_NOT_EQUAL(
             assignmentTarget->type.dataType, expressionType.dataType,
-            "Cannot assign '" + assignmentTarget->name + "' of type" +
-                assignmentTarget->type.toPrintableString(false) +
+            "Cannot assign dereferenced '" + assignmentTarget->name +
+                "' of type" +
+                assignmentTarget->type.toPrintableString(true, indirection) +
                 "to an expression of type " +
                 expressionType.toPrintableString() + ".");
         return SUCCESS;
@@ -178,24 +182,15 @@ Error VariableAnalyzer::ActOnAssignment(AST::Assignment::Assignment *assignment,
       // typecheck the expression pointer.
     }
 
-    // TODO add failure case.
     // Assignment target is a pointer, veryify that expression is an int. We
     // currently do not see any difference between ints and pointer type wise.
-    RET_ON_FALSE(expressionType.dataType == INT,
-                 "Cannot assign '" + assignmentTarget->name + "' of type" +
-                     assignmentTarget->type.toPrintableString() +
-                     "to an expression of type " +
-                     expressionType.toPrintableString() + ".");
+    RET_ON_FALSE(expressionType.dataType == INT, assignmentError);
     expressionType.isPointer = true;
     return SUCCESS;
   }
 
   // Check that the type of the expression matches the type of the variable.
-  RET_ON_NOT_EQUAL(expressionType, assignmentTarget->type,
-                   "ActOnAssignment: type mismatch between declared variable " +
-                       assignmentTarget->type.toPrintableString() +
-                       " and assignment expression " +
-                       expressionType.toPrintableString() + ".");
+  RET_ON_NOT_EQUAL(expressionType, assignmentTarget->type, assignmentError);
 
   return SUCCESS;
 }

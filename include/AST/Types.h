@@ -41,9 +41,16 @@ struct Type {
   bool operator==(const Type &compare) const = default;
   bool operator!=(const Type &compare) const = default;
 
-  const std::string toPrintableString(bool showIndirection = true) const {
-    return " '" + typeToString.at(dataType) +
-           (showIndirection ? std::string(pointerDepth, '&') : "") + "' ";
+  const std::string toPrintableString(bool showIndirection = true,
+                                      int appliedIndirection = 0) const {
+    int steps = pointerDepth - appliedIndirection;
+    if (steps < 0) {
+      steps = 0;
+    }
+
+    const auto indirectionPrint =
+        (showIndirection ? std::string(steps, '&') : "");
+    return " '" + typeToString.at(dataType) + indirectionPrint + "' ";
   }
 };
 

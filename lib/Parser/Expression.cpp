@@ -106,11 +106,10 @@ Result<AST::Expression::Operand> Parser::ParseOperand() {
       RET_ON_FAILURE_CODE(functionCall, "ParseOperand: failed function call",
                           lexer);
 
-      // TODO add failure case.
       RET_ON_NOT_EQUAL_CODE(operand.indirection,
                             AST::Expression::OperandIndirection::NONE,
                             "Cannot perform pointer indirection on values "
-                            "directly being returned from function calls '" +
+                            "directly being returned from function calls. Called function: '" +
                                 (*functionCall)->name + "'.",
                             lexer);
 
@@ -125,10 +124,9 @@ Result<AST::Expression::Operand> Parser::ParseOperand() {
 
     RET_ON_FAILURE_CODE(literal, "ParseOperand: failed string literal", lexer);
 
-    // TODO add failure case.
     RET_ON_NOT_EQUAL_CODE(
         operand.indirection, AST::Expression::OperandIndirection::NONE,
-        "Cannot perform pointer indirection on string literals '" +
+        "Cannot perform pointer indirection on string literals. Value: '" +
             *literal.value + "'.",
         lexer);
 
@@ -140,10 +138,9 @@ Result<AST::Expression::Operand> Parser::ParseOperand() {
 
     RET_ON_FAILURE_CODE(literal, "ParseOperand: failed integer literal", lexer);
 
-    // TODO add failure case.
     RET_ON_NOT_EQUAL_CODE(
         operand.indirection, AST::Expression::OperandIndirection::NONE,
-        "Cannot perform pointer indirection on integer literals '" +
+        "Cannot perform pointer indirection on integer literals. Value: '" +
             *literal.value + "'.",
         lexer);
 

@@ -4,7 +4,7 @@
 TEST(Parser, TestSemanticVariableFailure) {
 
   std::vector<failureTestCase> testCases;
-  
+
   // Redeclaring the same variable multiple times different types
   testCases.push_back({R"(
     int hello
@@ -186,5 +186,62 @@ TEST(Parser, TestSemanticVariableSuccess) {
 
     ASSERT_TRUE(item.success);
     ++order;
+  }
+}
+
+TEST(Parser, TestSemanticPointerFailure) {
+
+  std::vector<failureTestCase> testCases;
+
+  testCases.push_back({R"(
+    int Valinor(){
+      int hello = 1
+      int& world = &hello
+      **world = 2
+
+      return 1
+    }
+   )",
+                       "Cannot dereference 'world' 2 times, only 1 times is "
+                       "possible for type 'int&' "});
+
+  testCases.push_back({R"(
+    int Valinor(){
+      int hello = 1
+      int& world = &hello
+      char yes
+      *world = yes
+      return 1
+    }
+   )",
+                       "Cannot assign dereferenced 'world' of type 'int' to an "
+                       "expression of type  'char' ."});
+
+  testCases.push_back({R"(
+    int Valinor(){
+      int hello = 1
+      int& world = &hello
+      char yes
+      world = yes
+      
+      return 1
+    }
+   )",
+                       "Cannot assign 'world' of type 'int&' to an expression "
+                       "of type  'char' ."});
+
+  int order = 0;
+  for (auto testCase : testCases) {
+    auto item = RunParser(testCase.code, false);
+
+    if (!item.success) {
+      std::cout << "Failed for case " << std::to_string(order) << "\n";
+    }
+
+    ASSERT_TRUE(item.success);
+    if (!testCase.expectedFailure.empty()) {
+      EXPECT_EQ(item.result->failureDescription.front(),
+                testCase.expectedFailure);
+    }
   }
 }
