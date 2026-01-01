@@ -2,7 +2,7 @@
 #include <IR/IRGenerator.h>
 
 // llvm
-#include <llvm-20/llvm/Support/Error.h>
+#include <llvm/Support/Error.h>
 #include <llvm/IR/Constants.h>
 
 namespace IR {

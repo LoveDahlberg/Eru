@@ -1,6 +1,6 @@
 #include <IR/IRGenerator.h>
-#include <llvm-20/llvm/IR/DerivedTypes.h>
-#include <llvm-20/llvm/IR/Type.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Type.h>
 
 namespace IR {
 
