@@ -27,7 +27,7 @@ TEST(IR, testGlobalVarialbe) {
 
   constexpr const char *variableName = "firstVariable";
   auto variable = new VariableDeclaration::VariableDeclaration(
-      AST::Types::Types::INT, variableName);
+      AST::Types::DataType::INT, variableName);
   variable->isGlobal = true;
 
   auto initializer =
@@ -68,11 +68,12 @@ Statement::Statement *CreateTestFunctionAndGetInsideStmnt(llvm::Module &module,
 
   // Create block
   auto block = new Function::Block(
-      statement, CreateTestExpression(std::nullopt, Types::IntegerLiteral("1")),
+      statement,
+      CreateTestExpression(std::nullopt, {Types::IntegerLiteral("1")}),
       Support::Scope::scopeKind::FUNCTION);
 
   // Create function and add a block into it.
-  auto function = new Function::FunctionDeclaration(Types::Types::INT, name);
+  auto function = new Function::FunctionDeclaration(Types::DataType::INT, name);
   auto body = new Function::FunctionBody(name, block);
 
   cu.AddCompilationUnitItems(function);
@@ -107,7 +108,7 @@ TEST(IR, testFunctionVariable) {
 
   constexpr const char *variableName = "firstVariable";
   auto variable = new VariableDeclaration::VariableDeclaration(
-      AST::Types::Types::INT, variableName);
+      AST::Types::DataType::INT, variableName);
   statement->AddStatement(variable);
 
   auto generator = IRGenerator(module);
@@ -129,25 +130,25 @@ TEST(IR, testDeclarationAssignment) {
 
   constexpr const char *variableName = "firstVariable";
   auto variable = new VariableDeclaration::VariableDeclaration(
-      AST::Types::Types::INT, variableName);
+      AST::Types::DataType::INT, variableName);
 
   auto assignment = new Assignment::Assignment(variable);
 
   auto expression = new Expression::Expression();
-  auto unit1 =
-      new Expression::ExpressionUnit(std::nullopt, Types::IntegerLiteral("1"));
+  auto unit1 = new Expression::ExpressionUnit(std::nullopt,
+                                              {Types::IntegerLiteral("1")});
   expression->addExpressionUnit(unit1);
 
   auto unit2 = new Expression::ExpressionUnit(Lexing::Operator::PLUS,
-                                              Types::IntegerLiteral("2"));
+                                              {Types::IntegerLiteral("2")});
   expression->addExpressionUnit(unit2);
 
   auto unit3 = new Expression::ExpressionUnit(Lexing::Operator::PLUS,
-                                              Types::IntegerLiteral("6"));
+                                              {Types::IntegerLiteral("6")});
   expression->addExpressionUnit(unit3);
 
   auto unit4 = new Expression::ExpressionUnit(Lexing::Operator::MINUS,
-                                              Types::IntegerLiteral("4"));
+                                              {Types::IntegerLiteral("4")});
   expression->addExpressionUnit(unit4);
 
   assignment->setExpression(&expression);
@@ -171,17 +172,17 @@ TEST(IR, testFunctionCall) {
   constexpr const auto functionToCall = "functionToCall";
   constexpr const auto parameterName = "firstParameter";
 
-  auto parametersDeclaration =
-      new VariableDeclaration::Variable(AST::Types::Types::INT, parameterName);
+  auto parametersDeclaration = new VariableDeclaration::Variable(
+      AST::Types::DataType::INT, parameterName);
   auto functionDeclaration = new Function::FunctionDeclaration(
-      AST::Types::Types::INT, functionToCall, {parametersDeclaration});
+      AST::Types::DataType::INT, functionToCall, {parametersDeclaration});
   compilationUnit.AddCompilationUnitItems(functionDeclaration);
 
   auto statement = CreateTestFunctionAndGetInsideStmnt(module, compilationUnit);
 
   auto call = new Function::FunctionCall(
       functionToCall,
-      {CreateTestExpression(std::nullopt, Types::IntegerLiteral("1"))});
+      {CreateTestExpression(std::nullopt, {Types::IntegerLiteral("1")})});
 
   statement->AddStatement(call);
 
@@ -200,18 +201,18 @@ CreateSingleTestConditionalBranch(llvm::Module &module,
   std::vector<Controlflow::ConditionalBranch *> conditionalChain;
   // The first if condition
   auto expressionIf =
-      CreateTestExpression(std::nullopt, Types::IntegerLiteral("1"));
+      CreateTestExpression(std::nullopt, {Types::IntegerLiteral("1")});
 
   // The body of the first if statement
   auto statementIf = new Statement::Statement();
   auto variableIf = new VariableDeclaration::VariableDeclaration(
-      AST::Types::Types::INT, "testIfVariable");
+      AST::Types::DataType::INT, "testIfVariable");
   statementIf->AddStatement(variableIf);
 
   auto blockIf = new Function::Block(
       statementIf,
       hasReturnValue
-          ? CreateTestExpression(std::nullopt, Types::IntegerLiteral("42"))
+          ? CreateTestExpression(std::nullopt, {Types::IntegerLiteral("42")})
           : nullptr,
       Support::Scope::scopeKind::LOCAL);
 
@@ -231,17 +232,17 @@ TEST(IR, testConditionalBranch) {
 
   // The first if condition
   auto expressionIf =
-      CreateTestExpression(std::nullopt, Types::IntegerLiteral("1"));
+      CreateTestExpression(std::nullopt, {Types::IntegerLiteral("1")});
 
   // The body of the first if statement
   auto statementIf = new Statement::Statement();
   auto variableIf = new VariableDeclaration::VariableDeclaration(
-      AST::Types::Types::INT, "ifVariable");
+      AST::Types::DataType::INT, "ifVariable");
   statementIf->AddStatement(variableIf);
 
   auto blockIf = new Function::Block(
       statementIf,
-      CreateTestExpression(std::nullopt, Types::IntegerLiteral("1")),
+      CreateTestExpression(std::nullopt, {Types::IntegerLiteral("1")}),
       Support::Scope::scopeKind::LOCAL);
 
   auto branchIf = new Controlflow::ConditionalBranch(&expressionIf, &blockIf);
@@ -249,7 +250,7 @@ TEST(IR, testConditionalBranch) {
 
   // The elif condition
   auto expressionElif =
-      CreateTestExpression(std::nullopt, Types::IntegerLiteral("2"));
+      CreateTestExpression(std::nullopt, {Types::IntegerLiteral("2")});
 
   // The body of the elif statement
   auto statementElif = new Statement::Statement();
@@ -270,7 +271,7 @@ TEST(IR, testConditionalBranch) {
 
   auto blockElse = new Function::Block(
       statementElse,
-      CreateTestExpression(std::nullopt, Types::IntegerLiteral("3")),
+      CreateTestExpression(std::nullopt, {Types::IntegerLiteral("3")}),
       Support::Scope::scopeKind::LOCAL);
 
   auto branchElse = new Controlflow::ConditionalBranch();

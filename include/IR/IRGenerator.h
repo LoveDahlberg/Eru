@@ -38,7 +38,7 @@ class IRGenerator : public ASTTraversal<llvm::Value *> {
   Result<llvm::Value *> getOperand(Expression::ExpressionUnit *expressionUnit);
 
   // Support
-  Result<llvm::Type *> GetType(Types::Types type);
+  Result<llvm::Type *> GetType(Types::Type type);
 
   IRScopeHandler scopeHandler;
 

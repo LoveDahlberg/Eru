@@ -34,6 +34,12 @@ llvm::cl::opt<bool>
                        llvm::cl::desc("Only compile to object file, dont link"),
                        llvm::cl::cat(compilerCategory));
 
+llvm::cl::opt<bool> EmitLLVM(
+    "emit-llvm",
+    llvm::cl::desc(
+        "Emit llvm IR in current working directory or in ERU_TMP_PATH if set."),
+    llvm::cl::cat(compilerCategory));
+
 llvm::cl::opt<std::string>
     TargetTriple("target", llvm::cl::desc("Specify target triple."),
                  llvm::cl::cat(compilerCategory));
@@ -59,6 +65,7 @@ int main(int argc, char *argv[]) {
 
   const auto &outputFile = Driver::OutputFilename.getValue();
   const bool compileOnly = Driver::CompileAndDontLink;
+  const bool emitLLVM = Driver::EmitLLVM;
 
   // Verify that the commandline arguments are correct and setup temporary
   // directory and file paths.
@@ -73,7 +80,7 @@ int main(int argc, char *argv[]) {
   const std::string &target = *maybeTarget;
 
   // Determine action to use. For now just use EmitObjectFile action.
-  auto *action = new Frontend::Action::EmitObjectFile(files, target);
+  auto *action = new Frontend::Action::EmitObjectFile(files, target, emitLLVM);
 
   // Compiling.
   Support::ExitAndPrintOnError(Frontend::Compiler::Compile(action, files));

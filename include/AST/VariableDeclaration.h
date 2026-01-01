@@ -14,12 +14,12 @@ using ConstantOperand =
 namespace AST::VariableDeclaration {
 
 struct Variable {
-  AST::Types::Types type;
+  AST::Types::Type type;
   std::string name;
 };
 
 struct VariableDeclaration {
-  VariableDeclaration(AST::Types::Types type, std::string name)
+  VariableDeclaration(AST::Types::Type type, std::string name)
       : variable(new Variable{type, name}) {}
 
   VariableDeclaration(Variable *variable, bool isGlobal = false)

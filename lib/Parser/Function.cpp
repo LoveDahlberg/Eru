@@ -64,7 +64,7 @@ Parser::ParseBlock(Support::Scope::scopeKind kind) {
 
   auto block = new AST::Function::Block(*statement, kind);
 
-  auto returnType = AST::Types::NONE;
+  AST::Types::Type returnType = AST::Types::NONE;
   if (lexer.getCurrentToken() == TokenType::RETURN) {
     // eat the return
     lexer.generateNextToken();

@@ -1,6 +1,7 @@
 # Create a library target for Lexer
 add_library(Lexer STATIC
-    Lexer/Lexer.cpp)
+    Lexer/Lexer.cpp
+    Lexer/Tokens.cpp)
 target_include_directories(Lexer PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(Lexer PRIVATE ${llvm_libs})
 
@@ -21,6 +22,7 @@ add_library(IR STATIC
     IR/Function.cpp
     IR/VariableDeclaration.cpp
     IR/IRGenerator.cpp
+    IR/ScopeVariable.cpp
 )
 target_include_directories(IR PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(IR PRIVATE ${llvm_libs} Support)

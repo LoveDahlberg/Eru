@@ -1,5 +1,5 @@
 
-#pragma  once
+#pragma once
 
 // Enivronment variable overrides
 

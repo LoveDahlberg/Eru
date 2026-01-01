@@ -4,8 +4,8 @@
 namespace Parser {
 
 Result<std::string> Parser::ParseLiteral() {
-  if (lexer.getCurrentToken().type != TokenType::INTEGER_LITERAL &&
-      lexer.getCurrentToken().type != TokenType::STRING_LITERAL) {
+  if (lexer.getCurrentToken() != TokenType::INTEGER_LITERAL &&
+      lexer.getCurrentToken() != TokenType::STRING_LITERAL) {
     return FAILURE_CODE("ParseLiteral: expecetd integer or string literal", lexer);
   }
 

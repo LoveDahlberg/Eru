@@ -20,7 +20,7 @@ using StatementVariant =
 /// 1. A pointer.
 /// 2. One of the variants in StatementVariant.
 template <typename T>
-concept ValidStatementType =
+concept ValidStatementType = IsVariant<StatementVariant> ||
     std::is_pointer_v<T> && is_one_of_variant<T, StatementVariant>::value;
 
 struct Statement {

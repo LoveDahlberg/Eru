@@ -10,14 +10,14 @@ Parser::ParseConditionalBranch(bool start) {
   if (start) {
     RET_ON_WRONG_TOKEN(TokenType::IF, "ParseConditionalBranch: Expected if");
   } else {
-    if (lexer.getCurrentToken().type != TokenType::ELIF &&
-        lexer.getCurrentToken().type != TokenType::ELSE) {
+    if (lexer.getCurrentToken() != TokenType::ELIF &&
+        lexer.getCurrentToken() != TokenType::ELSE) {
       return FAILURE_CODE("ParseConditionalBranch: Expected elif or else",
                           lexer);
     }
   }
 
-  bool isNotElse = lexer.getCurrentToken().type != TokenType::ELSE;
+  bool isNotElse = lexer.getCurrentToken() != TokenType::ELSE;
 
   // Eat the if, elif or else
   lexer.generateNextToken();

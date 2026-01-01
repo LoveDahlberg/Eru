@@ -96,6 +96,7 @@ enum class TokenCategory {
   DATA_TYPE,
   OPERATOR,
   LITERAL,
+  MULTI_PURPOSE,
 };
 
 const std::unordered_map<TokenType, TokenCategory> tokenTypeToCategory{
@@ -129,13 +130,16 @@ const std::unordered_map<TokenType, TokenCategory> tokenTypeToCategory{
     {TokenType::EQUAL, TokenCategory::OPERATOR},
     {TokenType::OR, TokenCategory::OPERATOR},
     {TokenType::AND, TokenCategory::OPERATOR},
-    {TokenType::AMPERSAND, TokenCategory::OPERATOR},
-    {TokenType::STAR, TokenCategory::OPERATOR},
 
     {TokenType::INTEGER_LITERAL, TokenCategory::LITERAL},
     {TokenType::STRING_LITERAL, TokenCategory::LITERAL},
     {TokenType::END_OF_FILE, TokenCategory::NONE},
+
+    {TokenType::AMPERSAND, TokenCategory::MULTI_PURPOSE},
+    {TokenType::STAR, TokenCategory::MULTI_PURPOSE},
 };
+
+// TODO statically assert that maps contains all types.
 
 const std::unordered_map<TokenType, Operator> tokenTypeToOperator{
     {TokenType::PLUS, Operator::PLUS},

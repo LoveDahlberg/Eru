@@ -10,9 +10,41 @@
 #include <variant>
 
 namespace AST::Expression {
+using OperandKind =
+    std::variant<Types::NamedIdentifier, Types::StringLiteral,
+                 Types::IntegerLiteral, Function::FunctionCall *>;
 
-using Operand = std::variant<Types::NamedIdentifier, Types::StringLiteral,
-                             Types::IntegerLiteral, Function::FunctionCall *>;
+enum class OperandIndirection {
+  NONE,
+
+  // Represents getting the address of the subject.
+  // Think of it as going upwards.
+  GET_ADDRESS,
+
+  // Represents getting what the current subject points to.
+  // Think of it as going downwards.
+  GET_VALUE
+};
+
+struct Operand {
+  Operand()
+      : indirection(OperandIndirection::NONE), steps(0),
+        operandKind(OperandKind()) {}
+  Operand(OperandKind operandKind)
+        : indirection(OperandIndirection::NONE), steps(0),
+          operandKind(operandKind) {}
+  Operand(OperandIndirection indirection, int steps)
+      : indirection(indirection), steps(steps), operandKind(OperandKind()) {}
+
+  Operand setOperandKind(OperandKind kind) {
+    operandKind = kind;
+    return *this;
+  }
+
+  OperandIndirection indirection;
+  int steps;
+  OperandKind operandKind;
+};
 
 struct ExpressionUnit {
   // Is nullopt on first .
@@ -27,7 +59,7 @@ struct Expression {
   }
 
   std::vector<ExpressionUnit *> ExpressionUnits;
-  AST::Types::Types evaluatedType = AST::Types::NONE;
+  AST::Types::Type evaluatedType;
 };
 
 // a + b + c + d

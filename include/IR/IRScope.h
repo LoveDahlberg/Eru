@@ -1,37 +1,17 @@
-#include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/NoFolder.h>
-#include <llvm/IR/Type.h>
-#include <llvm/IR/Value.h>
-
+#include <AST/Types.h>
 #include <Support/Scope.h>
-#include <vector>
 
+#include "ScopeVariable.h"
 namespace IR {
 
-struct ScopeVariable {
-  /// Creates a non pointer scope variable.
-  ScopeVariable(llvm::Value *variable)
-      : variable(variable), pointedToType(nullptr) {}
+/// Extra information gathered at function declaration. This is then parsed
+/// and stored during function definition.
+struct ScopeFunction {
+  ScopeFunction() : function(nullptr), underlyingParameterTypes() {}
 
-  /// Creates a pointer scope variable.
-  ScopeVariable(llvm::Value *variable, llvm::Type *type)
-      : variable(variable), pointedToType(type) {}
+  llvm::Function *function;
 
-  /// Get the value of the variable. If it is a pointer, the value is loaded and
-  /// returned.
-  llvm::Value *getValue(llvm::IRBuilder<llvm::NoFolder> *builder) {
-    return pointedToType == nullptr
-               ? variable
-               : builder->CreateLoad(pointedToType, variable);
-  }
-
-  /// If the variable is a pointer, get it. Otherwise, get the value.
-  llvm::Value *getHighestOrderValue(llvm::IRBuilder<llvm::NoFolder> *builder) {
-    return variable;
-  }
-
-  llvm::Value *variable;
-  llvm::Type *pointedToType;
+  std::vector<AST::Types::Type> underlyingParameterTypes;
 };
 
 /// Extra information needed in the scope.
@@ -41,9 +21,10 @@ struct IRScopeContextData {
 };
 
 using IRScopeHandler =
-    Support::Scope::ScopeHandler<ScopeVariable, llvm::Function *,
+    Support::Scope::ScopeHandler<ScopeVariable *, ScopeFunction,
                                  IRScopeContextData>;
-using IRScope = Support::Scope::Scope<ScopeVariable>;
-using IRLocalScope = Support::Scope::LocalScope<ScopeVariable, IRScopeContextData>;
+using IRScope = Support::Scope::Scope<ScopeVariable *>;
+using IRLocalScope =
+    Support::Scope::LocalScope<ScopeVariable *, IRScopeContextData>;
 
 } // namespace IR

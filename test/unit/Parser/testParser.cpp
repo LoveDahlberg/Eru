@@ -51,3 +51,53 @@ TEST(Parser, TestFunctionBody) {
   auto item = RunParser(stream);
   ASSERT_TRUE(item.success);
 }
+
+TEST(Parser, TestExpressionPointerFailure) {
+
+  std::vector<failureTestCase> testCases;
+
+  testCases.push_back(
+      {R"(
+    int test()
+
+    int Valinor(){
+      int hello = *test()
+      return 1
+    }
+   )",
+       "Cannot perform pointer indirection on values directly being returned "
+       "from function calls. Called function: 'test'."});
+
+  testCases.push_back({R"(
+    int Valinor(){
+      int hello = *"test"
+      return 1
+    }
+   )",
+                       "Cannot perform pointer indirection on string literals. "
+                       "Value: 'test'."});
+
+  testCases.push_back(
+      {R"(
+    int Valinor(){
+      int hello = *1
+      return
+    }
+   )",
+       "Cannot perform pointer indirection on integer literals. Value: '1'."});
+
+  int order = 0;
+  for (auto testCase : testCases) {
+    auto item = RunParser(testCase.code, false);
+
+    if (!item.success) {
+      std::cout << "Failed for case " << std::to_string(order) << "\n";
+    }
+
+    ASSERT_TRUE(item.success);
+    if (!testCase.expectedFailure.empty()) {
+      EXPECT_EQ(item.result->failureDescription.front(),
+                testCase.expectedFailure);
+    }
+  }
+}

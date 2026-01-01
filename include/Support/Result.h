@@ -119,6 +119,15 @@ public:
     return *value;
   }
 
+  /// Get the underlying value. Only enable this for non-void values.
+  underLyingType *operator->() requires(!std::is_same_v<underLyingType, Void>) {
+    if (hasFailed) {
+      assert("Cannot access members of value when an error has occoured.");
+      return nullptr;
+    }
+    return &(*value);
+  }
+
   // Constructor called from the implicit converation operator, to create a new
   // object
   Result(bool hasFailed, std::vector<std::string> failureDescription,
@@ -144,7 +153,7 @@ namespace {
 #define RET_ON_FAILURE_FULL(obj, desc, code)                                   \
   do {                                                                         \
     auto evaluatedObj = obj;                                                   \
-    if (!evaluatedObj.isSuccessful(desc, code)) {                                     \
+    if (!evaluatedObj.isSuccessful(desc, code)) {                              \
       return std::move(evaluatedObj);                                          \
     }                                                                          \
   } while (0)

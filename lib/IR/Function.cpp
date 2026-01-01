@@ -3,6 +3,7 @@
 #include <IR/IRGenerator.h>
 
 // llvm
+#include <llvm/IR/Value.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/Support/Casting.h>
@@ -28,7 +29,7 @@ Result<llvm::Value *> IRGenerator::handle(Function::FunctionCall &AST) {
     evaluatedParameters.push_back(*maybeParameter);
   }
 
-  return builder->CreateCall(*callingFunction, evaluatedParameters);
+  return builder->CreateCall(callingFunction->function, evaluatedParameters);
 }
 
 Result<llvm::Value *> IRGenerator::handle(Function::Block &AST) {
@@ -43,7 +44,7 @@ Result<llvm::Value *> IRGenerator::handle(Function::Block &AST) {
       return {nullptr, "IRGenerator: Function::Block: no local scope"};
     }
     for (auto &[name, paramter] : localScope->getContextData()->parameters) {
-      localScope->addVariableDeclaration(name, paramter);
+      localScope->addVariableDeclaration(name, &paramter);
     }
   }
 
@@ -84,29 +85,38 @@ Result<llvm::Value *> IRGenerator::handle(Function::FunctionBody &AST) {
 
   // TODO Generate directive
 
-  auto maybefunctionToAttachTo =
+  auto maybeScopefunction =
       scopeHandler.getGlobal().getFunctionDeclaration(AST.functionName);
 
-  RET_ON_TRUE(!maybefunctionToAttachTo.has_value() || AST.block == nullptr,
+  RET_ON_TRUE(!maybeScopefunction.has_value() || AST.block == nullptr,
               "IRGenerator: FunctionBody: block is null "
               "or function cannot be found is null");
 
-  auto functionToAttachTo = *maybefunctionToAttachTo;
+  auto scopeFunction = *maybeScopefunction;
 
   auto &context = module.getContext();
   auto *basicBlock =
-      llvm::BasicBlock::Create(context, "block", functionToAttachTo);
+      llvm::BasicBlock::Create(context, "block", scopeFunction.function);
   if (builder == nullptr) {
     builder = new llvm::IRBuilder<llvm::NoFolder>(context);
   }
   builder->SetInsertPoint(basicBlock);
 
+  unsigned Idx = 0;
   IRScopeContextData contextData;
-  for (auto &parameter : functionToAttachTo->args()) {
-    contextData.parameters.emplace(parameter.getName().str(), &parameter);
+  for (auto &parameter : scopeFunction.function->args()) {
+
+    const auto &astType = scopeFunction.underlyingParameterTypes.at(Idx++);
+
+    auto type = GetType(astType);
+    RET_ON_FAILURE(type,
+                   "IRGenerator: FunctionBody: Error to get parameter type.");
+
+    contextData.parameters.try_emplace(parameter.getName().str(), &parameter,
+                                       *type, false, astType.pointerDepth);
   }
 
-  contextData.currentFunction = functionToAttachTo;
+  contextData.currentFunction = scopeFunction.function;
 
   scopeHandler.PrepareFunctionScope(&contextData);
 
@@ -115,20 +125,35 @@ Result<llvm::Value *> IRGenerator::handle(Function::FunctionBody &AST) {
 
 Result<llvm::Value *> IRGenerator::handle(Function::FunctionDeclaration &AST) {
 
+  IR::ScopeFunction scopeFunction;
+
   std::vector<llvm::Type *> parameterTypes;
   for (auto parameter : AST.parameters) {
-    auto type = GetType(parameter->type);
-    RET_ON_FAILURE(type,
-                "IRGenerator: FunctionDeclaration: Error to get parameter type.");
 
-    parameterTypes.emplace_back(*type);
+    // TODO: make this less confusing. I just need a way to pass the Types:Type
+    // as well as the underlying type to the FunctionBody handling function.
+    // Right now I save the entire thing and just get the type again, which is
+    // not very efficient and it is very confusing.
+    scopeFunction.underlyingParameterTypes.emplace_back(parameter->type);
+
+    auto type = GetType(parameter->type);
+    RET_ON_FAILURE(
+        type, "IRGenerator: FunctionDeclaration: Error to get parameter type.");
+
+    parameterTypes.emplace_back(
+        parameter->type.isPointer
+            ? llvm::PointerType::get(module.getContext(), 0)
+            : *type);
   }
 
   auto type = GetType(AST.type);
   RET_ON_FAILURE(type,
-              "IRGenerator: FunctionDeclaration: Error to get return type.");
+                 "IRGenerator: FunctionDeclaration: Error to get return type.");
 
-  auto *functionType = llvm::FunctionType::get(*type, parameterTypes, false);
+  auto *functionType = llvm::FunctionType::get(
+      AST.type.isPointer ? llvm::PointerType::get(module.getContext(), 0)
+                         : *type,
+      parameterTypes, false);
 
   auto function = llvm::Function::Create(
       functionType, llvm::GlobalValue::ExternalLinkage, AST.name, &module);
@@ -139,8 +164,10 @@ Result<llvm::Value *> IRGenerator::handle(Function::FunctionDeclaration &AST) {
     parameter.setName(name);
   }
 
+  scopeFunction.function = function;
+
   // Save reference to function so that it can be called later.
-  scopeHandler.getGlobal().addFunctionDeclaration(AST.name, function);
+  scopeHandler.getGlobal().addFunctionDeclaration(AST.name, scopeFunction);
 
   return function;
 }

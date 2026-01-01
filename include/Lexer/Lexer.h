@@ -12,25 +12,7 @@ struct Token {
   TokenType type = TokenType::NONE;
   std::string value;
 
-  // TODO make a custom matcher where this is done instead..
-  bool operator==(const Token &other) const {
-    bool success = true;
-    // if (other.value != value) {
-    //   std::cout << std::format(
-    //       "Token equality: value '{}' is not equal to expected value '{}'\n",
-    //       other.value, value);
-    //   success = false;
-    // }
-
-    // if (other.type != type) {
-    //   std::cout << std::format(
-    //       "Token equality: type '{}' is not equal to expected type '{}'\n",
-    //       std::to_string(static_cast<int>(other.type)),
-    //       std::to_string(static_cast<int>(type)));
-    //   success = false;
-    // }
-    return success;
-  };
+  bool operator==(const Token &other) const = default;
 
   bool operator==(TokenType tokenType) { return type == tokenType; }
 };

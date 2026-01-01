@@ -4,7 +4,7 @@ How to read
 // TODO Add proper newlines after each grammar rule where its needed.
 // TODO when adding more operators, make sure associativity (result is different depending on grouping) is considered.
 //      also, might need to correct grammar when combining boolean operators and arithmetic. For example boolean is usually only allowed between
-//      expressions that are arithmatically created.
+//      expressions that are arithmetically created.
 
 Contains the grammar definition
 

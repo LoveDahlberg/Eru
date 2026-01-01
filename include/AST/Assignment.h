@@ -15,7 +15,7 @@ namespace AST::Assignment {
 
 using AssignmentVariant =
     std::variant<VariableDeclaration::VariableDeclaration *,
-                 Types::NamedIdentifier*>;
+                 Types::NamedIdentifier *>;
 
 /// Concept that the given AssignmentType is:
 /// 1. A pointer.
@@ -30,7 +30,8 @@ struct Assignment {
   /// Create as a NamedIdentifier when assignment is done on a previously
   /// declared variable.
   template <ValidAssignmentType assignmentType>
-  Assignment(assignmentType target) : target(target) {}
+  Assignment(assignmentType target, int indirectionStep = 0)
+      : target(target), indirectionSteps(indirectionStep) {}
 
   void setExpression(Expression::Expression **expression) {
     this->expression = *expression;
@@ -38,6 +39,7 @@ struct Assignment {
 
   AssignmentVariant target;
   Expression::Expression *expression;
+  int indirectionSteps;
 };
 
 } // namespace AST::Assignment
