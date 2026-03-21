@@ -42,7 +42,7 @@ Error Compile(Action::CompilationAction *action, Support::IO::Files &files) {
     // Run action.ActOn(ASTContext)
     RET_ON_FAILURE(action->ActOn(astContext), "Failed to actOn.");
   }
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 } // namespace Frontend::Compiler

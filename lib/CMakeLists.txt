@@ -56,6 +56,7 @@ target_link_libraries(Parser PRIVATE Lexer Analyzer)
 # Create a library target for Rewriter
 add_library(LibRewriter STATIC
     Rewriter/Rewriter.cpp
+    Rewriter/BinaryRewriter.cpp
 )
 target_include_directories(LibRewriter PUBLIC ${CMAKE_SOURCE_DIR}/include ${BOLT_INCLUDE_DIRS})
 target_link_libraries(LibRewriter PRIVATE Support)
@@ -66,8 +67,7 @@ add_library(Frontend STATIC
     Frontend/Compiler.cpp
     Frontend/Linker.cpp
     Frontend/EmitObjectFile.cpp
-    Frontend/BinaryRewriter.cpp
 )
 
 target_include_directories(Frontend PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(Frontend PRIVATE LibRewriter Lexer Parser IR Support)
+target_link_libraries(Frontend PRIVATE Lexer Parser IR Support)

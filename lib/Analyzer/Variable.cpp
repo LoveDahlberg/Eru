@@ -46,7 +46,7 @@ Error VariableAnalyzer::addVariableDeclarationInCurrentScope(
       "addVariableDeclarationToCurrentScope: Variable already declared");
 
   analyzer.getCurrentScope().addVariableDeclaration(variable->name, variable);
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 Error VariableAnalyzer::ActOnGlobalDeclaration(
@@ -70,7 +70,7 @@ Error VariableAnalyzer::ActOnGlobalDeclaration(
 
   analyzer.getASTContext().compilationUnit->AddCompilationUnitItems(
       globalVariableInitialization);
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 Result<AST::VariableDeclaration::VariableDeclaration *>
@@ -175,7 +175,7 @@ Error VariableAnalyzer::ActOnAssignment(AST::Assignment::Assignment *assignment,
                 assignmentTarget->type.toPrintableString(true, indirection) +
                 "to an expression of type " +
                 expressionType.toPrintableString() + ".");
-        return SUCCESSFUL;
+        return ERU_SUCCESS;
       }
 
       // Else indirection is not all the way down to the type, so we need to
@@ -186,13 +186,13 @@ Error VariableAnalyzer::ActOnAssignment(AST::Assignment::Assignment *assignment,
     // currently do not see any difference between ints and pointer type wise.
     RET_ON_FALSE(expressionType.dataType == INT, assignmentError);
     expressionType.isPointer = true;
-    return SUCCESSFUL;
+    return ERU_SUCCESS;
   }
 
   // Check that the type of the expression matches the type of the variable.
   RET_ON_NOT_EQUAL(expressionType, assignmentTarget->type, assignmentError);
 
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 } // namespace Analyzer

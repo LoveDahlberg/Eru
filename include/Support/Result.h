@@ -138,9 +138,9 @@ public:
 
 using Error = Result<>;
 
-#define SUCCESSFUL Result<>()
+#define ERU_SUCCESS Result<>()
 
-#define FAIL(description)                                                   \
+#define ERU_FAILURE(description)                                                   \
   Formatter { description }
 #define FAILURE_CODE(description, lexer)                                       \
   { Formatter{description}, lexer.getParsedInput() }

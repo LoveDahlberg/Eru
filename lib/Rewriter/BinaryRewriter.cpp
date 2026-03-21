@@ -33,7 +33,7 @@ Error BinaryRewriter::ActOn(const Support::IO::Files &files) {
       llvm::bolt::RewriteInstance::create(elfObj, 0, nullptr, "eru");
 
       // ...
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 } // namespace Frontend::Action
@@ -53,7 +53,7 @@ Error Rewrite(Action::BinaryAction *action, const Support::IO::Files &file) {
 
   RET_ON_FAILURE(action->ActOn(file), "Failed Rewrite actOn.");
 
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 } // namespace Frontend

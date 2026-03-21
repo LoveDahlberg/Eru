@@ -137,7 +137,7 @@ Error Parser::SkipFunctionBody() {
     lexer.generateNextToken();
   };
 
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 Error Parser::ParseFunction(AST::VariableDeclaration::Variable *variable) {

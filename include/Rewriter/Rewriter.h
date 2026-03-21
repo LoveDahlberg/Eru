@@ -1,8 +1,8 @@
 
-//#undef SUCCESSFUL
+//#undef ERU_SUCCESS
 #include <bolt/Core/BinaryContext.h>
 #include <bolt/Passes/BinaryPasses.h>
-//#define SUCCESSFUL Result<>()
+//#define ERU_SUCCESS Result<>()
 
 namespace Rewriter {
 

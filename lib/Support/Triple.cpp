@@ -2,7 +2,7 @@
 
 namespace Support {
 
-Result<std::string> GetSupportedTriple(std::string &target) {
+Result<llvm::Triple> GetSupportedTriple(std::string &target) {
   // Triple is defined as 'arch-vendor-os-environment'
   // - arch: x86_64, aarch64, arm, riscv64 ..
   // - vendor: pc, apple, unknown ..
@@ -41,7 +41,7 @@ Result<std::string> GetSupportedTriple(std::string &target) {
                "GetSupportedTriple: Could not find a matching supported "
                "architecture for '" +
                    target + "'");
-  return target;
+  return llvm::Triple(target);
 }
 
 } // namespace Support

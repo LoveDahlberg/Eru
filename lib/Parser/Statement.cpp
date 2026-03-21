@@ -45,7 +45,7 @@ Parser::ParseFunctionCallOrAssignment(int indirection) {
     return FAILURE_CODE("ParseStatement: identifier: unexpected token", lexer);
   }
   }
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 Result<std::vector<AST::Statement::StatementVariant>>

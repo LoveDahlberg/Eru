@@ -5,7 +5,7 @@ namespace Parser {
 Error Parser::ParseDirective() {
 
   if (lexer.getCurrentToken() != TokenType::LEFT_BRACKET) {
-    return SUCCESSFUL;
+    return ERU_SUCCESS;
   }
 
   // Eat [
@@ -16,7 +16,7 @@ Error Parser::ParseDirective() {
   // Eat ]
   lexer.generateNextToken();
 
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 } // namespace Parser

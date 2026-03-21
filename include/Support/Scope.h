@@ -1,6 +1,9 @@
 
 #pragma once
 
+// llvm
+#include <llvm/Support/Casting.h>
+
 #include <cassert>
 #include <optional>
 #include <string>
@@ -35,7 +38,7 @@ public:
   Scope<variableKind>(Scope<variableKind> *parentScope)
       : parentScope(parentScope) {}
 
-  virtual scopeKind getScopeKind() { return scopeKind::BASE; }
+  virtual scopeKind getScopeKind() const { return scopeKind::BASE; }
 
   Scope<variableKind> *getParentScope() { return parentScope; }
 
@@ -98,7 +101,14 @@ struct LocalScope : public Scope<variableKind> {
 
   ContextKind *getContextData() { return contextData; }
 
-  virtual scopeKind getScopeKind() override { return scopeKind::LOCAL; }
+  virtual scopeKind getScopeKind() const override { return scopeKind::LOCAL; }
+
+  static bool classof(const Scope<variableKind> *scope) {
+    // List kinds that can be casted into a local scope or
+    // hey LocalScope, can you accept this object?
+    return scope->getScopeKind() == scopeKind::LOCAL ||
+           scope->getScopeKind() == scopeKind::FUNCTION;
+  }
 
 protected:
   ContextKind *contextData;
@@ -111,7 +121,11 @@ struct FunctionScope : public LocalScope<variableKind, ContextKind> {
                                            Scope<variableKind> *parentScope)
       : LocalScope<variableKind, ContextKind>(contextData, parentScope) {}
 
-  scopeKind getScopeKind() override { return scopeKind::FUNCTION; }
+  scopeKind getScopeKind() const override { return scopeKind::FUNCTION; }
+
+  static bool classof(const Scope<variableKind> *scope) {
+    return scope->getScopeKind() == scopeKind::FUNCTION;
+  }
 };
 
 template <typename variableKind, typename declarationKind>
@@ -130,7 +144,11 @@ public:
     functionDeclarations.emplace(name, variable);
   }
 
-  scopeKind getScopeKind() override { return scopeKind::GLOBAL; }
+  scopeKind getScopeKind() const override { return scopeKind::GLOBAL; }
+
+  static bool classof(const Scope<variableKind> *scope) {
+    return scope->getScopeKind() == scopeKind::GLOBAL;
+  }
 
 private:
   std::unordered_map<std::string, declarationKind> functionDeclarations;
@@ -194,10 +212,12 @@ struct ScopeHandler {
     currentScope = currentScope->getParentScope();
   }
 
-  LocalScope<variableKind, ContextKind> *
-  CastCurrentToLocalScope() {
-    if (auto *newScope =
-            dynamic_cast<LocalScope<variableKind, ContextKind> *>(currentScope)) {
+  LocalScope<variableKind, ContextKind> *CastCurrentToLocalScope() {
+    // Call classof on currentscope. This calls LocalScopes classof, as this is
+    // the thing we are casting to. This classof then asks, is the type of
+    // current scope Ok to do this cast?
+    if (auto *newScope = llvm::dyn_cast<LocalScope<variableKind, ContextKind>>(
+            currentScope)) {
       return newScope;
     }
     return nullptr;
@@ -212,7 +232,7 @@ struct ScopeHandler {
   findFunctionFrom(Scope<variableKind> *scope) {
 
     if (auto *newScope =
-            dynamic_cast<FunctionScope<variableKind, ContextKind> *>(scope)) {
+            llvm::dyn_cast<FunctionScope<variableKind, ContextKind>>(scope)) {
       return newScope;
     }
 

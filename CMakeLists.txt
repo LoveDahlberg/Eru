@@ -5,6 +5,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_compile_options(-Wunused-result)
 
+# LLVM is complied with this, so we must also use it.
+add_compile_options(-fno-rtti)
+
+# Use libstdc++ as project only supports Linux.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++ -gdwarf-4")
 
 project(project)
@@ -43,42 +47,22 @@ endif()
 find_package(CURL REQUIRED)
 
 # Find LLVM and configure flags.
-find_package(LLVM REQUIRED CONFIG)
-message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}, ${LLVM_INCLUDE_DIRS}")
-include_directories(${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
 
-llvm_map_components_to_libnames(llvm_libs -20)
-add_compile_definitions(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
-add_compile_options(-glldb)
-
-############################
-# BOLT Setup
-############################
-
-set(BOLT_SOURCE_DIR "" CACHE PATH "Path to llvm-project root from sparse checkout")
-
-if(NOT BOLT_SOURCE_DIR)
-  message(FATAL_ERROR "BOLT_BUILD_DIR not set. Pass -DBOLT_BUILD_DIR=/path/to/bolt/build")
+set(LLVM_PATH "" CACHE PATH "Path to LLVM+BOLT install prefix")
+if(NOT LLVM_PATH)
+  message(FATAL_ERROR "LLVM_PATH not set. Pass -DLLVM_PATH=/path/to/llvm-install")
 endif()
 
-set(BOLT_INCLUDE_DIRS
-    ${BOLT_SOURCE_DIR}/bolt/include   # headers from source
-)
-# link_directories(${BOLT_BUILD_DIR}/lib)
-link_directories(/usr/lib/llvm-20/lib)
+find_package(LLVM REQUIRED CONFIG PATHS ${LLVM_PATH}/lib/cmake/llvm NO_DEFAULT_PATH)
 
-set(BOLT_LIBS
-    LLVMBOLTCore
-    LLVMBOLTPasses
-    LLVMBOLTProfile
-    LLVMBOLTRewrite
-    LLVMBOLTRuntimeLibs
-    LLVMBOLTTargetX86
-    LLVMBOLTTargetAArch64
-    LLVMBOLTTargetRISCV
-    LLVMBOLTUtils
-)
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+
+include_directories(${LLVM_PATH}/include)
+link_directories(${LLVM_PATH}/lib)
+add_definitions(${LLVM_DEFINITIONS})
+
+# Find all llvm libs
+set(llvm_libs ${LLVM_AVAILABLE_LIBS})
 
 ############################
 # Includes and Libraries
@@ -117,7 +101,6 @@ target_link_libraries(eru PRIVATE
     Frontend
     Support)
 
-
 ############################
 # Create Rewriter target 
 ############################
@@ -128,22 +111,16 @@ set_target_properties(rewriter PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
-set(LLVM_TARGET_LIBS
-    LLVMX86CodeGen LLVMX86Desc LLVMX86Info LLVMX86AsmParser LLVMX86Disassembler
-    LLVMAArch64CodeGen LLVMAArch64Desc LLVMAArch64Info LLVMAArch64AsmParser LLVMAArch64Disassembler
-    LLVMRISCVCodeGen LLVMRISCVDesc LLVMRISCVInfo LLVMRISCVAsmParser LLVMRISCVDisassembler
-)
-
 target_link_libraries(rewriter PRIVATE
-    -Wl,--start-group
-    ${llvm_libs}
-    ${LLVM_TARGET_LIBS}
-    ${BOLT_LIBS}
+    # Project dependencies    
     Support
     Frontend
-    -Wl,--end-group
+    LibRewriter
 
     # LLVM dependecies
+    -Wl,--start-group
+    ${llvm_libs}
+    -Wl,--end-group
     LibEdit::LibEdit
     zstd::libzstd_shared
     CURL::libcurl

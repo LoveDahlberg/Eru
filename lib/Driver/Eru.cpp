@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
   // Get a supported target triple to use.
   auto maybeTarget = Support::GetSupportedTriple(Driver::TargetTriple);
   Support::ExitAndPrintOnError(maybeTarget);
-  const std::string &target = *maybeTarget;
+  const auto &target = *maybeTarget;
 
   // Determine action to use. For now just use EmitObjectFile action.
   auto *action = new Frontend::Action::EmitObjectFile(files, target, emitLLVM);

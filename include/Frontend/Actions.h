@@ -35,12 +35,12 @@ public:
 
 class BinaryAction {
 public:
-  virtual Error ActOn(const Support::IO::Files& files) = 0;
+  virtual Error ActOn(const Support::IO::Files &files) = 0;
 };
 
 class EmitObjectFile : public CompilationAction {
 public:
-  EmitObjectFile(Support::IO::Files &files, const std::string &targetTriple,
+  EmitObjectFile(Support::IO::Files &files, const llvm::Triple &targetTriple,
                  bool emitLLVM)
       : files(files), targetTriple(targetTriple), emitLLVM(emitLLVM) {}
 
@@ -48,7 +48,7 @@ public:
 
 private:
   Support::IO::Files &files;
-  const std::string &targetTriple;
+  const llvm::Triple &targetTriple;
   const bool emitLLVM;
 };
 

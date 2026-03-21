@@ -32,7 +32,7 @@ Error FunctionAnalyzer::addFunction(
     function->definitionStatus = variant;
     globalScope.addFunctionDeclaration(function->name, function);
 
-    return SUCCESSFUL;
+    return ERU_SUCCESS;
   }
 
   auto existingFunction = *maybeExistingFunction;
@@ -97,7 +97,7 @@ Error FunctionAnalyzer::addFunction(
   RET_ON_NOT_EQUAL(existingFunction->type, function->type,
                    "addFunction: Function with the same name but with "
                    "a different type already declared.");
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 Error FunctionAnalyzer::ActOnDeclaration(
@@ -112,7 +112,7 @@ Error FunctionAnalyzer::ActOnDeclaration(
                  "ActOnFunctionDeclaration: Failed to add function");
 
   analyzer.getASTContext().compilationUnit->AddCompilationUnitItems(function);
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 Error FunctionAnalyzer::ActOnDefinition(
@@ -127,7 +127,7 @@ Error FunctionAnalyzer::ActOnDefinition(
                  "ActOnFunctionDeclaration: Failed to add function");
 
   analyzer.getASTContext().compilationUnit->AddCompilationUnitItems(function);
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 Result<AST::Function::FunctionDeclaration *>
@@ -176,7 +176,7 @@ Error FunctionAnalyzer::ActOnCall(AST::Function::FunctionCall *call,
       expectedReturnValue, (*existingFunction)->type,
       "ActOnCall: return value of function does not match the expected one.");
 
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 Error FunctionAnalyzer::ActOnParameters() {
@@ -200,7 +200,7 @@ Error FunctionAnalyzer::ActOnParameters() {
     }
   }
 
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 Error FunctionAnalyzer::ActOnReturnValue(AST::Types::Type returnValue) {
@@ -226,7 +226,7 @@ Error FunctionAnalyzer::ActOnReturnValue(AST::Types::Type returnValue) {
                          ", but found return of type" +
                          returnValue.toPrintableString());
   }
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 Error FunctionAnalyzer::ActOnBody(AST::Function::FunctionBody *body) {
@@ -239,7 +239,7 @@ Error FunctionAnalyzer::ActOnBody(AST::Function::FunctionBody *body) {
 
   analyzer.getASTContext().compilationUnit->AddCompilationUnitItems(body);
 
-  return SUCCESSFUL;
+  return ERU_SUCCESS;
 }
 
 } // namespace Analyzer
