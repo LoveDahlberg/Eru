@@ -17,7 +17,7 @@
 
 namespace Frontend::Compiler {
 
-Error Compile(Action::Action *action, Support::IO::Files &files) {
+Error Compile(Action::CompilationAction *action, Support::IO::Files &files) {
 
   for (auto &file : files.getcompilableInputFiles()) {
 
@@ -42,7 +42,7 @@ Error Compile(Action::Action *action, Support::IO::Files &files) {
     // Run action.ActOn(ASTContext)
     RET_ON_FAILURE(action->ActOn(astContext), "Failed to actOn.");
   }
-  return SUCCESS;
+  return SUCCESSFUL;
 }
 
 } // namespace Frontend::Compiler

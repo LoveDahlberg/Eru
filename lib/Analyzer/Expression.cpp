@@ -28,7 +28,7 @@ Error ExpressionAnalyzer::evaluateInteger(IntegerLiteral integer,
   // TODO verify that the integer is within 32 bits and consider signed and
   // unsgined.
 
-  return SUCCESS;
+  return SUCCESSFUL;
 }
 
 Error ExpressionAnalyzer::evaluateString(StringLiteral string,
@@ -40,7 +40,7 @@ Error ExpressionAnalyzer::evaluateString(StringLiteral string,
 
   // TODO evaluate that this contains legal characters (?)
 
-  return SUCCESS;
+  return SUCCESSFUL;
 }
 
 Result<Type> ExpressionAnalyzer::getIdentifierType(NamedIdentifier identifier) {
@@ -226,13 +226,13 @@ Error ExpressionAnalyzer::ActOn(AST::Expression::Expression *expression) {
                        "ActOnExpression: failed to evaluate function call.");
       }
     } else {
-      return FAILURE("ActOnExpression: unexpected operand type");
+      return FAIL("ActOnExpression: unexpected operand type");
     }
     first = false;
   }
 
   expression->evaluatedType = evaluatedType;
-  return SUCCESS;
+  return SUCCESSFUL;
 }
 
 } // namespace Analyzer

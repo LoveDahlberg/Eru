@@ -8,6 +8,8 @@ target_link_libraries(testLexer PRIVATE
     Threads::Threads
     # Add linking agains the specific lib.
     Lexer
+
+    ${llvm_libs}
 )
 # target_include_directories(testLexer PRIVATE ${CMAKE_SOURCE_DIR}/lib)
 

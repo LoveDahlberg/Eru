@@ -16,6 +16,8 @@ target_link_libraries(testParser PRIVATE
     # Add linking agains the specific lib.
     Parser
     IR
+
+    ${llvm_libs}
 )
 
 # Register the test with CTest

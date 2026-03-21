@@ -53,6 +53,34 @@ add_compile_definitions(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
 add_compile_options(-glldb)
 
 ############################
+# BOLT Setup
+############################
+
+set(BOLT_SOURCE_DIR "" CACHE PATH "Path to llvm-project root from sparse checkout")
+
+if(NOT BOLT_SOURCE_DIR)
+  message(FATAL_ERROR "BOLT_BUILD_DIR not set. Pass -DBOLT_BUILD_DIR=/path/to/bolt/build")
+endif()
+
+set(BOLT_INCLUDE_DIRS
+    ${BOLT_SOURCE_DIR}/bolt/include   # headers from source
+)
+# link_directories(${BOLT_BUILD_DIR}/lib)
+link_directories(/usr/lib/llvm-20/lib)
+
+set(BOLT_LIBS
+    LLVMBOLTCore
+    LLVMBOLTPasses
+    LLVMBOLTProfile
+    LLVMBOLTRewrite
+    LLVMBOLTRuntimeLibs
+    LLVMBOLTTargetX86
+    LLVMBOLTTargetAArch64
+    LLVMBOLTTargetRISCV
+    LLVMBOLTUtils
+)
+
+############################
 # Includes and Libraries
 ############################
 
@@ -80,7 +108,7 @@ set_target_properties(eru PROPERTIES
 # Link dependencies
 target_link_libraries(eru PRIVATE
     # LLVM dependecies
-    ${LLVM_LIBRARIES}
+    ${llvm_libs}
     LibEdit::LibEdit
     zstd::libzstd_shared
     CURL::libcurl
@@ -88,3 +116,35 @@ target_link_libraries(eru PRIVATE
     # Project dependencies
     Frontend
     Support)
+
+
+############################
+# Create Rewriter target 
+############################
+
+add_executable(rewriter lib/Driver/Rewriter.cpp)
+
+set_target_properties(rewriter PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
+
+set(LLVM_TARGET_LIBS
+    LLVMX86CodeGen LLVMX86Desc LLVMX86Info LLVMX86AsmParser LLVMX86Disassembler
+    LLVMAArch64CodeGen LLVMAArch64Desc LLVMAArch64Info LLVMAArch64AsmParser LLVMAArch64Disassembler
+    LLVMRISCVCodeGen LLVMRISCVDesc LLVMRISCVInfo LLVMRISCVAsmParser LLVMRISCVDisassembler
+)
+
+target_link_libraries(rewriter PRIVATE
+    -Wl,--start-group
+    ${llvm_libs}
+    ${LLVM_TARGET_LIBS}
+    ${BOLT_LIBS}
+    Support
+    Frontend
+    -Wl,--end-group
+
+    # LLVM dependecies
+    LibEdit::LibEdit
+    zstd::libzstd_shared
+    CURL::libcurl
+)

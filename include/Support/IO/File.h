@@ -26,6 +26,7 @@ public:
   // Default constructor for Result.h
   Files() : compileOnly(false) {}
 
+  /// Compiler overload
   Files(const std::vector<std::filesystem::path> compilableInputFiles,
         const std::vector<std::filesystem::path> objectFiles,
         const std::filesystem::path finalOutputPath, const bool compileOnly)
@@ -33,7 +34,14 @@ public:
         finalOutputPath(finalOutputPath), objectFiles(objectFiles),
         compileOnly(compileOnly) {}
 
-  const std::vector<std::filesystem::path> &getcompilableInputFiles() {
+  /// Rewriter overload
+  Files(const std::filesystem::path inputObjectFile,
+        const std::filesystem::path outputObjectFile)
+      : directory(createTmpDir()), compilableInputFiles({}),
+        finalOutputPath(outputObjectFile), objectFiles({inputObjectFile}),
+        compileOnly(false) {}
+
+  const std::vector<std::filesystem::path> &getcompilableInputFiles() const {
     return compilableInputFiles;
   }
 
@@ -41,7 +49,7 @@ public:
     objectFiles.push_back(objectFile);
   }
 
-  const std::vector<std::filesystem::path> &GetObjectFiles() {
+  const std::vector<std::filesystem::path> &GetObjectFiles() const {
     return objectFiles;
   }
 

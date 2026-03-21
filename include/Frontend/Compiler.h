@@ -6,6 +6,6 @@
 
 namespace Frontend::Compiler {
 
-Error Compile(Action::Action *action, Support::IO::Files &files);
+Error Compile(Action::CompilationAction *action, Support::IO::Files &files);
 
 } // namespace Frontend::Compiler

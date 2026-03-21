@@ -72,7 +72,7 @@ Error Parser::ParseTopLevelItems() {
     break;
   } while (loopCounter++ < loopLimit);
 
-  return SUCCESS;
+  return SUCCESSFUL;
 }
 
 Error Parser::ParseFunctionBodies() {
@@ -88,7 +88,7 @@ Error Parser::ParseFunctionBodies() {
     RET_ON_FAILURE(analyzer.function().ActOnBody(*functionBody),
                    "ParseFunctionBodies: Failed ActOnBody.");
   }
-  return SUCCESS;
+  return SUCCESSFUL;
 }
 
 } // namespace Parser

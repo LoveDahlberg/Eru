@@ -37,7 +37,7 @@ Error emitObject(llvm::Module &module, const std::filesystem::path &outputFile,
   // This generally occurs if we've forgotten to initialise the
   // TargetRegistry or we have a bogus target triple.
   if (Target == nullptr) {
-    return FAILURE(
+    return FAIL(
         "EmitObjectFile: Cannot find the reqested target with error '" + Error +
         "'");
   }
@@ -58,7 +58,7 @@ Error emitObject(llvm::Module &module, const std::filesystem::path &outputFile,
   llvm::raw_fd_ostream dest(outputFile.string(), EC, llvm::sys::fs::OF_None);
 
   if (EC) {
-    return FAILURE("EmitObjectFile: Failed to define output file '" +
+    return FAIL("EmitObjectFile: Failed to define output file '" +
                    EC.message() + "'");
   }
 
@@ -66,13 +66,13 @@ Error emitObject(llvm::Module &module, const std::filesystem::path &outputFile,
   auto FileType = llvm::CodeGenFileType::ObjectFile;
 
   if (TargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType)) {
-    return FAILURE("EmitObjectFile: Failed to add pass to emit file.");
+    return FAIL("EmitObjectFile: Failed to add pass to emit file.");
   }
 
   pass.run(module);
   dest.flush();
 
-  return SUCCESS;
+  return SUCCESSFUL;
 }
 
 void writeIRToFile(llvm::Module &module, std::string &errorMsg) {
@@ -113,7 +113,7 @@ Error EmitObjectFile::ActOn(AST::Context::ASTContext context) {
       std::string errorMsg = "EmitObjectFile: ActOn: failed to walk AST";
       writeIRToFile(module, errorMsg);
 
-      return FAILURE(errorMsg);
+      return FAIL(errorMsg);
     }
   }
 
@@ -148,7 +148,7 @@ Error EmitObjectFile::ActOn(AST::Context::ASTContext context) {
 
   files.AddObjectFile(outputFile);
 
-  return SUCCESS;
+  return SUCCESSFUL;
 }
 
 } // namespace Frontend::Action

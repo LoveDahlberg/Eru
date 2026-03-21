@@ -2,7 +2,7 @@
 
 namespace Frontend::Action {
 
-Action *GetAction(const std::string &relevantArgument) {
+CompilationAction *GetAction(const std::string &relevantArgument) {
   if (!argumentToActionKind.contains(relevantArgument)) {
     return nullptr;
   }
@@ -10,7 +10,7 @@ Action *GetAction(const std::string &relevantArgument) {
   return GetAction(argumentToActionKind.at(relevantArgument));
 }
 
-Action *GetAction(const ActionKind &actionKind) {
+CompilationAction *GetAction(const ActionKind &actionKind) {
 
   // switch (actionKind) {
   // case EmitObj:

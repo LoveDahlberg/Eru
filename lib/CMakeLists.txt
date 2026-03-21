@@ -3,7 +3,6 @@ add_library(Lexer STATIC
     Lexer/Lexer.cpp
     Lexer/Tokens.cpp)
 target_include_directories(Lexer PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(Lexer PRIVATE ${llvm_libs})
 
 # Create a library target for Support
 add_library(Support STATIC
@@ -12,7 +11,6 @@ add_library(Support STATIC
     Support/Commandline.cpp
 )
 target_include_directories(Support PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(Support PRIVATE ${llvm_libs})
 
 # Create a library target for IR
 add_library(IR STATIC
@@ -25,7 +23,7 @@ add_library(IR STATIC
     IR/ScopeVariable.cpp
 )
 target_include_directories(IR PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(IR PRIVATE ${llvm_libs} Support)
+target_link_libraries(IR PRIVATE Support)
 
 # Create a library target for Analyzer
 add_library(Analyzer STATIC
@@ -35,7 +33,7 @@ add_library(Analyzer STATIC
     Analyzer/Analyzer.cpp
 )
 target_include_directories(Analyzer PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(Analyzer PRIVATE ${llvm_libs} Support)
+target_link_libraries(Analyzer PRIVATE Support)
 
 # Create a library target for Parser
 add_library(Parser STATIC
@@ -51,9 +49,16 @@ add_library(Parser STATIC
     Parser/Statement.cpp
     Parser/Type.cpp
     Parser/Parser.cpp
-    )
+)
 target_include_directories(Parser PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(Parser PRIVATE ${llvm_libs} Lexer Analyzer)
+target_link_libraries(Parser PRIVATE Lexer Analyzer)
+
+# Create a library target for Rewriter
+add_library(LibRewriter STATIC
+    Rewriter/Rewriter.cpp
+)
+target_include_directories(LibRewriter PUBLIC ${CMAKE_SOURCE_DIR}/include ${BOLT_INCLUDE_DIRS})
+target_link_libraries(LibRewriter PRIVATE Support)
 
 # Create a library target for Frontend
 add_library(Frontend STATIC
@@ -61,6 +66,8 @@ add_library(Frontend STATIC
     Frontend/Compiler.cpp
     Frontend/Linker.cpp
     Frontend/EmitObjectFile.cpp
+    Frontend/BinaryRewriter.cpp
 )
+
 target_include_directories(Frontend PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(Frontend PRIVATE ${llvm_libs} Lexer Parser IR Support)
+target_link_libraries(Frontend PRIVATE LibRewriter Lexer Parser IR Support)

@@ -28,19 +28,20 @@
 
 namespace Frontend::Action {
 
-enum ActionKind { EmitObj };
-
-static const std::unordered_map<std::string, ActionKind> argumentToActionKind =
-    {{"obj", ActionKind::EmitObj}};
-
-class Action {
+class CompilationAction {
 public:
   virtual Error ActOn(AST::Context::ASTContext) = 0;
 };
 
-class EmitObjectFile : public Action {
+class BinaryAction {
 public:
-  EmitObjectFile(Support::IO::Files &files, const std::string &targetTriple, bool emitLLVM)
+  virtual Error ActOn(const Support::IO::Files& files) = 0;
+};
+
+class EmitObjectFile : public CompilationAction {
+public:
+  EmitObjectFile(Support::IO::Files &files, const std::string &targetTriple,
+                 bool emitLLVM)
       : files(files), targetTriple(targetTriple), emitLLVM(emitLLVM) {}
 
   virtual Error ActOn(AST::Context::ASTContext) override;
@@ -51,7 +52,12 @@ private:
   const bool emitLLVM;
 };
 
-Action *GetAction(const std::string &relevantArgument);
-Action *GetAction(const ActionKind &actionKind);
+enum ActionKind { EmitObj };
+
+static const std::unordered_map<std::string, ActionKind> argumentToActionKind =
+    {{"obj", ActionKind::EmitObj}};
+
+CompilationAction *GetAction(const std::string &relevantArgument);
+CompilationAction *GetAction(const ActionKind &actionKind);
 
 } // namespace Frontend::Action

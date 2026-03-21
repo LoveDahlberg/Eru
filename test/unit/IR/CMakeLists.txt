@@ -9,6 +9,8 @@ target_link_libraries(testIR PRIVATE
 
     # Add linking agains the specific lib.
     IR
+
+    ${llvm_libs}
 )
 
 # Register the test with CTest

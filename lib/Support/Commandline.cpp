@@ -7,7 +7,25 @@
 
 namespace Support {
 
-Result<IO::Files> VerifyCommandLineAndCreateFiles(
+Result<IO::Files> VerifyRewriterCommandLineAndCreateFiles(
+    const std::filesystem::path &parsedInputFile,
+    const std::filesystem::path &parsedOutputFile) {
+  RET_ON_TRUE(parsedInputFile.empty(),
+              "Must specifiy one input file to rewriter.");
+
+  RET_ON_FALSE(parsedInputFile.extension() == ".o",
+               "Must pass object file to rewriter.");
+
+  RET_ON_TRUE(parsedOutputFile.empty(),
+              "Must specifiy one output file to rewriter.");
+
+  RET_ON_TRUE(parsedInputFile == parsedOutputFile,
+              "Error: Input file same as output file.");
+
+  return IO::Files(parsedInputFile, parsedOutputFile);
+}
+
+Result<IO::Files> VerifyEruCommandLineAndCreateFiles(
     const std::vector<std::filesystem::path> &parsedInputFiles,
     const std::filesystem::path &parsedOutputFile, const bool compileOnly) {
 

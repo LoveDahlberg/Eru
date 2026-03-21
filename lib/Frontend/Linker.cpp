@@ -49,7 +49,7 @@ Error Link(Support::IO::Files &files, const LinkerData data) {
   RET_ON_FALSE(std::system(linkerCmd.c_str()) == 0,
                "Link: Failed to link with invocation:\n\n" + linkerCmd);
 
-  return SUCCESS;
+  return SUCCESSFUL;
 }
 
 } // namespace Frontend::Linker

@@ -9,6 +9,8 @@ target_link_libraries(testFile PRIVATE
     
     # Add linking agains the specific lib.
     Support
+
+    ${llvm_libs}
 )
 # target_include_directories(testFile PRIVATE ${CMAKE_SOURCE_DIR}/lib)
 

@@ -27,7 +27,7 @@ Error Parser::Parse() {
   // For each function definition, call ParseBlock.
   RET_ON_FAILURE_CODE(ParseFunctionBodies(), "Parse: ParseFunctionBodies failed.", lexer);
 
-  return SUCCESS;
+  return SUCCESSFUL;
 }
 
 } // namespace Parser

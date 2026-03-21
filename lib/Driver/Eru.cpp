@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 
   // Verify that the commandline arguments are correct and setup temporary
   // directory and file paths.
-  auto maybefiles = Support::VerifyCommandLineAndCreateFiles(
+  auto maybefiles = Support::VerifyEruCommandLineAndCreateFiles(
       inputFiles, outputFile, compileOnly);
   Support::ExitAndPrintOnError(maybefiles);
   auto files = *maybefiles;
