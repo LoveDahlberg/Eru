@@ -64,6 +64,9 @@ add_definitions(${LLVM_DEFINITIONS})
 # Find all llvm libs
 set(llvm_libs ${LLVM_AVAILABLE_LIBS})
 
+# Remove as it causes two of the same opts to be linked in. 
+list(REMOVE_ITEM llvm_libs LLVMOptDriver)
+
 ############################
 # Includes and Libraries
 ############################

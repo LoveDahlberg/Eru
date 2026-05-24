@@ -10,6 +10,8 @@
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <bolt/Utils/CommandLineOpts.h>
+
 namespace Driver::Rewriter {
 
 static llvm::cl::OptionCategory rewriterCategory("Compiler options");
@@ -17,11 +19,6 @@ static llvm::cl::OptionCategory rewriterCategory("Compiler options");
 llvm::cl::opt<std::string> InputFilename(llvm::cl::Positional,
                                          llvm::cl::ValueRequired,
                                          llvm::cl::desc("<input file>"));
-
-// llvm::cl::opt<std::string>
-//     OutputFilename("aaaa", llvm::cl::desc("Specify output filename."),
-//                    llvm::cl::ValueRequired, llvm::cl::value_desc("filename"),
-//                    llvm::cl::cat(rewriterCategory));
 
 } // namespace Driver::Rewriter
 
@@ -32,11 +29,12 @@ int main(int argc, char *argv[]) {
       [](llvm::raw_ostream &OS) { OS << "Rewriter 0.1.0\n"; });
   llvm::cl::HideUnrelatedOptions(Driver::Rewriter::rewriterCategory);
 
-
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
   const auto &inputFile = Driver::Rewriter::InputFilename.getValue();
-  const auto &outputFile = "";//Driver::Rewriter::OutputFilename.getValue();
+
+  // Bolt already registered a OutputFilename, though it is optional.
+  const auto &outputFile = opts::OutputFilename.getValue();
 
   auto maybefiles =
       Support::VerifyRewriterCommandLineAndCreateFiles(inputFile, outputFile);

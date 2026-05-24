@@ -11,7 +11,6 @@
 
 // NORMAL: Hello a
 
-// Compile main.arda
 // RUN: %rewriter %t/main.o -o %t/main-mod.o
 
 // Manually link modified object
