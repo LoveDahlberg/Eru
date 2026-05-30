@@ -20,7 +20,6 @@
 // std
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <string>
 #include <string_view>
 
@@ -63,16 +62,31 @@ struct RelocationInfo {
   uint64_t targetAddress;
 };
 
+Result<uint64_t> GetValueAtOffset(const llvm::bolt::BinarySection *section,
+                                  uint64_t offset,
+                                  const size_t &sizeOfRelocation) {
+
+  llvm::DataExtractor extractor(section->getContents(),
+                                /* IsLittleEndian */ true,
+                                /* AddressSize */ 8);
+
+  // Verify the section actually holds enough bytes for this relocation
+  RET_ON_TRUE(!extractor.isValidOffsetForDataOfSize(offset, sizeOfRelocation),
+              "Relocation offset out of section bounds.");
+
+  return extractor.getUnsigned(&offset, sizeOfRelocation);
+}
+
 // Move to private.
-std::optional<RelocationInfo>
-GetRelocationInfo(const RelocationRef &relocation,
-                  const uint32_t relocationType,
-                  llvm::ELF64LEObjectFile *elfFile,
-                  llvm::bolt::BinaryContext *binaryContext) {
+Result<RelocationInfo> GetRelocationInfo(
+    const RelocationRef &relocation, const uint32_t relocationType,
+    llvm::ELF64LEObjectFile *elfFile, llvm::bolt::BinaryContext *binaryContext,
+    llvm::bolt::BinarySection *targetSection) {
   RelocationInfo info;
 
   if (!llvm::bolt::Relocation::isSupported(relocationType)) {
-    return std::nullopt;
+    return {"Relocation type '" + std::to_string(relocationType) +
+            "' not supported."};
   }
 
   // A relocation is in a dedicated section (such as .rela.text for the text
@@ -95,32 +109,34 @@ GetRelocationInfo(const RelocationRef &relocation,
   // relocation on it. This is in a source function. The destination is the
   // targetaddress, `def foo` which might be at 0x500.
 
-  const size_t relSize = llvm::bolt::Relocation::getSizeForType(relocationType);
+  const size_t sizeOfRelocation =
+      llvm::bolt::Relocation::getSizeForType(relocationType);
+
+  const auto &offset = relocation.getOffset();
 
   // Extract the raw value that is written at the offset.
-  llvm::ErrorOr<uint64_t> value =
-      binaryContext->getUnsignedValueAtAddress(relocation.getOffset(), relSize);
-  assert(value && "failed to extract relocated value");
+  auto value = GetValueAtOffset(targetSection, offset, sizeOfRelocation);
+  RET_ON_FAILURE(value, "Failed to get value at address '" +
+                            std::to_string(offset) + "' in section '" +
+                            targetSection->getName().str() + "'");
 
   // Get the data currently present at the offset of the relocation.
   info.extractedValue = llvm::bolt::Relocation::extractValue(
-      relocationType, value.get(), relocation.getOffset());
+      relocationType, *value, relocation.getOffset());
 
   info.addend = GetRelocationAddend(elfFile, relocation);
 
   // Whether or not the relocation type is PC relative.
   const bool isPCRelative =
       llvm::bolt::Relocation::isPCRelative(relocationType);
-  const uint64_t pcRelOffset = isPCRelative ? relocation.getOffset() : 0;
+  const uint64_t pcRelOffset = isPCRelative ? offset : 0;
 
   // Check if relocation is connected to valid symbol. Must always be true for
   // object files.
   auto symbolIter = relocation.getSymbol();
   if (symbolIter == elfFile->symbol_end()) {
-    assert(false &&
-           "Relocation has no symbol associated with it, object file is "
-           "malformed.");
-    return std::nullopt;
+    return {"Relocation has no symbol associated with it, object file is "
+            "malformed."};
   }
 
   const SymbolRef &symbol = *symbolIter;
@@ -156,13 +172,11 @@ GetRelocationInfo(const RelocationRef &relocation,
 
     if (info.extractedValue != 0 || info.addend == 0 || isPCRelative) {
       info.symbolAddress = llvm::bolt::truncateToSize(
-          info.extractedValue - info.addend + pcRelOffset, relSize);
+          info.extractedValue - info.addend + pcRelOffset, sizeOfRelocation);
     } else {
       // Address is 0, we have no extracted value, no addend and no relative
       // offset.
-      assert(false &&
-             "Unexpected relocation with no address, value or addend.");
-      return std::nullopt;
+      return {"Unexpected relocation with no address, value or addend."};
     }
   }
 
@@ -172,9 +186,9 @@ GetRelocationInfo(const RelocationRef &relocation,
   // Verify that the extracted value is equal to the symbol address taking
   // addend and relative offset in mind. Essentially check that the relocation
   // math is correct.
-  if (llvm::bolt::truncateToSize(info.extractedValue, relSize) !=
+  if (llvm::bolt::truncateToSize(info.extractedValue, sizeOfRelocation) !=
       llvm::bolt::truncateToSize(info.symbolAddress + info.addend - pcRelOffset,
-                                 relSize)) {
+                                 sizeOfRelocation)) {
 
     // Skip known cases where the relocation behaves differently.
     // - ST_Other indicates we have a abnormal relocation, it should not be
@@ -188,8 +202,7 @@ GetRelocationInfo(const RelocationRef &relocation,
       return info;
     }
 
-    assert(false && "Mismatched extracted relocation value.");
-    return std::nullopt;
+    return {"Mismatched extracted relocation value."};
   }
 
   return info;
@@ -292,10 +305,10 @@ llvm::MCSymbol *GetFunctionRelocationSymbol(
 }
 
 // In its own file privated with ProcessRelocations
-bool HandleRelocations(const SectionRef &relocationTargetSection,
-                       const RelocationRef &relocation,
-                       llvm::ELF64LEObjectFile *elfFile,
-                       llvm::bolt::BinaryContext *binaryContext) {
+Error HandleRelocations(const SectionRef &relocationTargetSection,
+                        const RelocationRef &relocation,
+                        llvm::ELF64LEObjectFile *elfFile,
+                        llvm::bolt::BinaryContext *binaryContext) {
 
   // Sanity check that we are processing x86.
   assert(binaryContext->isX86());
@@ -308,7 +321,7 @@ bool HandleRelocations(const SectionRef &relocationTargetSection,
   // from the original .rela sections during emit.
   // TODO when we modify data sections, this needs to be handled.
   if (!targetSectionIsCode) {
-    return true;
+    return ERU_SUCCESS;
   }
 
   // Information about the relocation type
@@ -324,15 +337,19 @@ bool HandleRelocations(const SectionRef &relocationTargetSection,
 
   // Skip TLS relocations, no special handling is needed on x86.
   if (llvm::bolt::Relocation::isTLS(relocationType)) {
-    return true;
+    return ERU_SUCCESS;
   }
 
+  auto *targetSection =
+      binaryContext->getSectionForSectionRef(relocationTargetSection);
+  RET_ON_TRUE(targetSection == nullptr, "Failed to get target BinarySection");
+
   // Parse and return information regarding the relocation.
-  const auto maybeRelocationInfo =
-      GetRelocationInfo(relocation, relocationType, elfFile, binaryContext);
-  if (!maybeRelocationInfo.has_value()) {
-    return false;
-  }
+  auto maybeRelocationInfo = GetRelocationInfo(
+      relocation, relocationType, elfFile, binaryContext, targetSection);
+
+  RET_ON_FAILURE(maybeRelocationInfo, "Parsing of relocation info failed");
+
   auto relocationInfo = *maybeRelocationInfo;
 
   // The function that the relocation is in. This is the point to be patched so
@@ -357,7 +374,7 @@ bool HandleRelocations(const SectionRef &relocationTargetSection,
     relocationSourceFunction->setSize(relocationSourceFunction->getMaxSize());
     relocationSourceFunction->setSimple(false);
 
-    return true;
+    return ERU_SUCCESS;
   }
 
   // The function that the relocation resolves to. This is the final location
@@ -385,14 +402,14 @@ bool HandleRelocations(const SectionRef &relocationTargetSection,
                                           relocationType, relocationInfo.addend,
                                           relocationInfo.extractedValue);
 
-  return true;
+  return ERU_SUCCESS;
 }
 
 // In its own file privated
-void ProcessRelocations(llvm::ELF64LEObjectFile *elfFile,
-                        llvm::bolt::BinaryContext *binaryContext) {
+Error ProcessRelocations(llvm::ELF64LEObjectFile *elfFile,
+                         llvm::bolt::BinaryContext *binaryContext) {
   if (!binaryContext->HasRelocations) {
-    return;
+    return ERU_SUCCESS;
   }
 
   // Here, go through all sections looking for 'rela.text' relocation sections.
@@ -451,12 +468,13 @@ void ProcessRelocations(llvm::ELF64LEObjectFile *elfFile,
 
     // Go through each relocation in the valid relocation section.
     for (const auto &relocation : section.relocations()) {
-      // TODO propagate errors.
-      auto result = HandleRelocations(relocationTargetSection, relocation,
-                                      elfFile, binaryContext);
-      assert(result && "Error handling relocations");
+      RET_ON_FAILURE(HandleRelocations(relocationTargetSection, relocation,
+                                       elfFile, binaryContext),
+                     "Error handling relocations");
     }
   }
+
+  return ERU_SUCCESS;
 }
 
 // In its own file private
@@ -519,13 +537,8 @@ Error ProcessSymbols(llvm::ELF64LEObjectFile *elfFile,
 
   AdjustFunctionBoundaries(binaryContext);
 
-  // parse .rela.text and attach each relocation entry to the BinaryFunction
-  // that owns the address it applies to. This is important because when you
-  // emit your rewritten function bodies, you need to know which relocations
-  // to carry forward (references to external symbols) and which ones become
-  // internal to your emitted code (branches within the function, which you'll
-  // recompute from your CFG).
-  ProcessRelocations(elfFile, binaryContext);
+  RET_ON_FAILURE(ProcessRelocations(elfFile, binaryContext),
+                 "Failed to process relocations");
 
   return ERU_SUCCESS;
 }
@@ -907,6 +920,9 @@ Error EmitObjectFile(llvm::bolt::BinaryContext *binaryContext,
 
 /// TODO this should be an act on object file so that we can later have act
 /// on binary.
+/// Better idea, the act on should only be the actual pass I want to do, so the
+/// actual modifications to the object. All of this can be in the entry at the
+/// bottom.
 Error BinaryRewriter::ActOn(const Support::IO::Files &files) {
 
   // Initialize LLVM targets — required before anything BOLT does
@@ -924,10 +940,11 @@ Error BinaryRewriter::ActOn(const Support::IO::Files &files) {
   }
 
   // 1. Initialize
-  //  - ELFObjectFileBase must be casted to ELF64LEObjectFile
   llvm::ELF64LEObjectFile *ELF64LEFile =
       llvm::dyn_cast<ELF64LEObjectFile>(objOrErr->getBinary());
-  //  - Create binary context.
+  llvm::bolt::Relocation::Arch = ELF64LEFile->makeTriple().getArch();
+
+  // Create binary context.
   auto maybeBC = llvm::bolt::BinaryContext::createBinaryContext(
       ELF64LEFile->makeTriple(),
       std::make_shared<llvm::orc::SymbolStringPool>(), filePath, nullptr, true,
@@ -940,7 +957,8 @@ Error BinaryRewriter::ActOn(const Support::IO::Files &files) {
     return ERU_FAILURE("Error creating binary context.");
   }
   auto binaryContext = std::move(maybeBC.get());
-  // - Add MCPlusBuilder as target builder in context
+
+  // Add MCPlusBuilder as target builder in context
   binaryContext->initializeTarget(std::unique_ptr<llvm::bolt::MCPlusBuilder>(
       llvm::bolt::createX86MCPlusBuilder(
           binaryContext->MIA.get(), binaryContext->MII.get(),

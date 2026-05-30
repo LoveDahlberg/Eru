@@ -8,9 +8,19 @@
 
 ## How to build
 
-The project depends on the LLVM project with bolt. Build this from source
+The project depends on the LLVM project with bolt. Build this from source.
 
-### Build llvm with bolt
+
+### Build Project
+
+Clone project
+
+```
+cd project
+git clone https://github.com/LoveDahlberg/Eru.git
+```
+
+#### Build llvm with bolt
 
 First clone llvm. The project currently built for LLVM 22.1.1.
 
@@ -26,7 +36,10 @@ git sparse-checkout set llvm bolt cmake third-party
 git checkout
 ```
 
-Apply custom patch (TODO)
+Apply custom patch
+```
+git apply project/vendor/llvm/binaryFuncition_public_symbols.patch
+```
 
 Then configure and install llvm with bolt
 
@@ -49,12 +62,12 @@ Lastly, copy bolt headers into the install directory
 cp -r llvm-project/bolt/include/bolt <llvm-install-dir>/include/
 ```
 
-### Build Project
+#### Build project 
 
-Then clone and build the project
+Build the cloned project using the built LLVM
 
 ```
-git clone https://github.com/LoveDahlberg/Eru.git
+cd project
 mkdir build
 cd build
 env CXX=clang++ cmake ../Eru -DLLVM_DIR=<llvm-install-dir>
