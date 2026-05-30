@@ -26,6 +26,8 @@ git sparse-checkout set llvm bolt cmake third-party
 git checkout
 ```
 
+Apply custom patch (TODO)
+
 Then configure and install llvm with bolt
 
 ```
