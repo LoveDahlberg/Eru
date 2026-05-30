@@ -1,17 +1,24 @@
+#include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/MCPlusBuilder.h"
+#include "llvm/MC/MCSymbol.h"
 #include <Frontend/BinaryRewriter.h>
 #include <Rewriter/Rewriter.h>
 #include <Support/Result.h>
 
 // llvm
-#include <cstdint>
 #include <llvm/Object/ELFObjectFile.h>
 #include <llvm/Object/ObjectFile.h>
+#include <llvm/Support/FileSystem.h>
 #include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/ToolOutputFile.h>
 
 // bolt
+#include <bolt/Core/BinaryEmitter.h>
 #include <bolt/Passes/BinaryPasses.h>
 #include <bolt/Rewrite/RewriteInstance.h>
+
+// std
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -188,6 +195,102 @@ GetRelocationInfo(const RelocationRef &relocation,
   return info;
 }
 
+llvm::MCSymbol *
+GetNonFunctionRelocationSymbol(RelocationInfo &relocationInfo,
+                               llvm::bolt::BinaryContext *binaryContext) {
+
+  // Attempt to find the referenced symbol for non section relocations.
+  if (!relocationInfo.isSectionRelocation) {
+
+    // Try getting symbol through the relocation symbol name.
+    if (auto *binaryData =
+            binaryContext->getBinaryDataByName(relocationInfo.symbolName)) {
+      return binaryData->getSymbol();
+    }
+
+    // Try to get the symbol through the relocation symbol address.
+    if (auto *binaryData = binaryContext->getBinaryDataAtAddress(
+            relocationInfo.symbolAddress)) {
+      return binaryData->getSymbol();
+    }
+  }
+
+  // If we don't have a symbol and it doesn't point to a known function,
+  // we must register it so the relocation has an anchor.
+
+  // When relocation points to somewhere that the linker will fill in. Such
+  // as external calls and section relocations.
+  if (relocationInfo.symbolAddress == 0) {
+    return binaryContext->registerNameAtAddress(relocationInfo.symbolName, 0, 0,
+                                                0);
+  }
+
+  // This is likely a absolute data reference.
+  return binaryContext->getOrCreateGlobalSymbol(relocationInfo.symbolAddress,
+                                                "SYMBOLat");
+}
+
+llvm::MCSymbol *GetFunctionRelocationSymbol(
+    llvm::bolt::BinaryFunction *relocationTargetFunction,
+    llvm::bolt::BinaryFunction *relocationSourceFunction,
+    RelocationInfo &relocationInfo, const uint64_t relocationOffset) {
+
+  // The relocation target is not a function.
+  if (relocationTargetFunction == nullptr) {
+    return nullptr;
+  }
+
+  // If the relocation points one byte past the end of the function. This is for
+  // example __builtin_unreachable. For this we need to use the function start
+  // symbol.
+  if (!relocationTargetFunction->containsAddress(relocationInfo.targetAddress,
+                                                 /*UseMaxSize*/ true)) {
+    return relocationTargetFunction->getSymbol();
+  }
+
+  // Calculate the far in the target is in to the function.
+  uint64_t refFunctionOffset =
+      relocationInfo.targetAddress - relocationTargetFunction->getAddress();
+
+  // We are going to point the relocation symbol directly to the internal
+  // function block. So we no longer need the symbol address to be a computation
+  // of target address + addend, as we instead just point directly at it.
+  // Restore the symbol address and addend that was previously calculated in
+  // GetRelocationInfo.
+  relocationInfo.symbolAddress = relocationInfo.targetAddress;
+  relocationInfo.addend = 0;
+
+  // The symbol points to the function start symbol. Here we just use this exact
+  // symbol.
+  if (refFunctionOffset <= 0) {
+    return relocationTargetFunction->getSymbol();
+  }
+
+  // If the target address is a constant island, we need to treat it as data.
+  // Constant islands are non executable code inside of functions, which should
+  // not be treated as an entry point. We only need a new label to keep track of
+  // it.
+  if (relocationTargetFunction->isInConstantIsland(
+          relocationInfo.targetAddress)) {
+    return relocationTargetFunction->getOrCreateLocalLabel(
+        relocationInfo.targetAddress);
+  }
+
+  // The relocation source targets a specific block or label inside another
+  // function. For example a jump from one function into the middle of another.
+  if (relocationSourceFunction != relocationTargetFunction) {
+    return relocationTargetFunction->addEntryPointAtOffset(refFunctionOffset);
+  }
+
+  // The relocation source targets a symbol in the same function, for example a
+  // loop. Create a local label for it.
+  //
+  // Important, when handling relocations from data sections, make sure to call
+  // registerInternalRefDataRelocation here.
+  return relocationTargetFunction->getOrCreateLocalLabel(
+      relocationInfo.targetAddress);
+}
+
 // In its own file privated with ProcessRelocations
 bool HandleRelocations(const SectionRef &relocationTargetSection,
                        const RelocationRef &relocation,
@@ -211,8 +314,13 @@ bool HandleRelocations(const SectionRef &relocationTargetSection,
   // Information about the relocation type
   llvm::SmallString<16> relocationTypeName;
   relocation.getTypeName(relocationTypeName);
-  const auto relocationType = llvm::bolt::Relocation::getType(relocation);
   const auto relocationOffset = relocation.getOffset();
+  auto relocationType = llvm::bolt::Relocation::getType(relocation);
+
+  // Strip x86 specific linker manipulation flags if present.
+  if (relocationType & llvm::ELF::R_X86_64_converted_reloc_bit) {
+    relocationType &= ~llvm::ELF::R_X86_64_converted_reloc_bit;
+  }
 
   // Skip TLS relocations, no special handling is needed on x86.
   if (llvm::bolt::Relocation::isTLS(relocationType)) {
@@ -260,90 +368,19 @@ bool HandleRelocations(const SectionRef &relocationTargetSection,
           /* CheckPastEnd */ true,
           /* UseMaxSize */ false);
 
-  llvm::MCSymbol *referencedSymbol = nullptr;
+  // Get the corrected relocation symbol if it exists in the target function.
+  llvm::MCSymbol *referencedSymbol = GetFunctionRelocationSymbol(
+      relocationTargetFunction, relocationSourceFunction, relocationInfo,
+      relocationOffset);
 
-  // If the relocation points to a known function.
-  if (relocationTargetFunction) {
-
-    // TODO make to its own function.
-    referencedSymbol = relocationTargetFunction->getSymbol();
-    uint64_t refFunctionOffset = 0;
-
-    // Check if the relocation points inside the target function (not just the
-    // start).
-    if (relocationTargetFunction->containsAddress(relocationInfo.targetAddress,
-                                                  /*UseMaxSize*/ true)) {
-      refFunctionOffset =
-          relocationInfo.targetAddress - relocationTargetFunction->getAddress();
-
-      if (refFunctionOffset > 0) {
-        // It points to a specific block/label inside the function.
-        if (relocationSourceFunction != relocationTargetFunction &&
-            !relocationTargetFunction->isInConstantIsland(
-                relocationInfo.targetAddress)) {
-          // It's a jump from one function into the middle of another.
-          referencedSymbol = relocationTargetFunction->addEntryPointAtOffset(
-              refFunctionOffset);
-        } else {
-          // It's a jump within the same function (e.g., a loop), or into a
-          // constant island.
-          // TODO these functions are private..
-          referencedSymbol = relocationTargetFunction->getOrCreateLocalLabel(
-              relocationInfo.targetAddress);
-
-          if (!relocationTargetFunction->isInConstantIsland(
-                  relocationInfo.targetAddress)) {
-            relocationTargetFunction->registerInternalRefDataRelocation(
-                refFunctionOffset, relocationOffset);
-          }
-        }
-      }
-
-      // Because we've now pointed the symbol directly at the internal block
-      // label, we reset the math so the CFG builder doesn't double-apply the
-      // addend.
-      relocationInfo.symbolAddress = relocationInfo.targetAddress;
-      relocationInfo.addend = 0;
-    }
-
-    // else the relocation points to data, an external symbol, or a section.
-  } else {
-    // TODO make its own function
-
-    referencedSymbol = [&] -> llvm::MCSymbol * {
-      // Attempt to find the referenced symbol for non section relocations.
-      if (!relocationInfo.isSectionRelocation) {
-
-        // Try getting symbol through the relocation symbol name.
-        if (auto *binaryData =
-                binaryContext->getBinaryDataByName(relocationInfo.symbolName)) {
-          return binaryData->getSymbol();
-        }
-
-        // Try to get the symbol through the relocation symbol address.
-        if (auto *binaryData = binaryContext->getBinaryDataAtAddress(
-                relocationInfo.symbolAddress)) {
-          return binaryData->getSymbol();
-        }
-      }
-
-      // If we don't have a symbol and it doesn't point to a known function,
-      // we must register it so the relocation has an anchor.
-
-      // When relocation points to somewhere that the linker will fill in. Such
-      // as external calls and section relocations.
-      if (relocationInfo.symbolAddress == 0) {
-        return binaryContext->registerNameAtAddress(relocationInfo.symbolName,
-                                                    0, 0, 0);
-      }
-
-      // This is likely a absolute data reference.
-      return binaryContext->getOrCreateGlobalSymbol(
-          relocationInfo.symbolAddress, "SYMBOLat");
-    }();
+  // If no function was found, then the relocation points to data, an external
+  // symbol or a section.
+  if (referencedSymbol == nullptr) {
+    referencedSymbol =
+        GetNonFunctionRelocationSymbol(relocationInfo, binaryContext);
   }
 
-  // Attach the relocation to the holding function.
+  // Attach the relocation to the source function.
   relocationSourceFunction->addRelocation(relocationOffset, referencedSymbol,
                                           relocationType, relocationInfo.addend,
                                           relocationInfo.extractedValue);
@@ -415,8 +452,9 @@ void ProcessRelocations(llvm::ELF64LEObjectFile *elfFile,
     // Go through each relocation in the valid relocation section.
     for (const auto &relocation : section.relocations()) {
       // TODO propagate errors.
-      HandleRelocations(relocationTargetSection, relocation, elfFile,
-                        binaryContext);
+      auto result = HandleRelocations(relocationTargetSection, relocation,
+                                      elfFile, binaryContext);
+      assert(result && "Error handling relocations");
     }
   }
 }
@@ -481,7 +519,6 @@ Error ProcessSymbols(llvm::ELF64LEObjectFile *elfFile,
 
   AdjustFunctionBoundaries(binaryContext);
 
-  // 2. processRelocations
   // parse .rela.text and attach each relocation entry to the BinaryFunction
   // that owns the address it applies to. This is important because when you
   // emit your rewritten function bodies, you need to know which relocations
@@ -510,11 +547,16 @@ void RegisterSymbolName(const uint64_t address, const SymbolRef &symbol,
       cantFail(symbol.getFlags()));
 }
 
+struct DiscoveredSymbols {
+  std::vector<SymbolInfo> normalSortedSymbols;
+  std::vector<SymbolRef> fileSymbols;
+};
+
 // Should be private in its own file with DiscoverAndRegisterSymbols
-// todo clean this up in to several smaller meaningful functions.
+// TODO clean this up in to several smaller meaningful functions.
 Error RegisterSymbols(llvm::ELF64LEObjectFile *elfFile,
                       llvm::bolt::BinaryContext *binaryContext,
-                      const std::vector<SymbolInfo> &sortedSymbols) {
+                      const DiscoveredSymbols &sortedSymbols) {
 
   // Count used to generate unique names for functions without one.
   unsigned anonymousId = 0;
@@ -523,18 +565,36 @@ Error RegisterSymbols(llvm::ELF64LEObjectFile *elfFile,
   // consider if non ST_Function symbols are a part of this function.
   llvm::bolt::BinaryFunction *previousFunction = nullptr;
 
-  for (const auto &[address, symbol] : sortedSymbols) {
+  // Go through all the sorted normal symbols.
+  for (const auto &[address, symbol] : sortedSymbols.normalSortedSymbols) {
     const SymbolRef::Type symbolType = cantFail(symbol.getType());
 
     // File symbols are skipped.
-    if (symbolType == llvm::SymbolRef::ST_File || address == 0) {
+    if (address == 0) {
       continue;
     }
 
     // Get a unique symbol name.
     const auto name = [&symbol, &anonymousId]() -> std::string {
       const auto name = cantFail(symbol.getName()).str();
-      return name.empty() ? "anon." + std::to_string(++anonymousId) : name;
+
+      // If it has no name then simply generate a new unique name.
+      if (name.empty()) {
+        return "anon." + std::to_string(++anonymousId);
+      }
+
+      // If symbol is global then the name has to be unique already.
+      if (cantFail(symbol.getFlags()) & SymbolRef::SF_Global) {
+        return name;
+      }
+
+      // If we have a local name, then it might not be unique cross object
+      // files.
+      //
+      // For now, we just handle a single object file at the time, so return the
+      // name used. TODO If we ever need it in the future, we must use the
+      // fileSymbols to find duplicates and name correctly.
+      return name;
     }();
 
     const uint64_t symbolSize = ELFSymbolRef(symbol).getSize();
@@ -624,7 +684,7 @@ Error RegisterSymbols(llvm::ELF64LEObjectFile *elfFile,
       }
 
       // TODO make addAlternativeName public.
-      // newBinaryFunction->addAlternativeName(name);
+      newBinaryFunction->addAlternativeName(name);
     } else {
       // Function is new and unique.
 
@@ -643,28 +703,29 @@ Error RegisterSymbols(llvm::ELF64LEObjectFile *elfFile,
     RegisterSymbolName(address, symbol, name, symbolSize, binaryContext);
     previousFunction = newBinaryFunction;
   }
+
   return ERU_SUCCESS;
 }
 
 // Should be private in its own file with DiscoverAndRegisterSymbols
-Result<std::vector<SymbolInfo>>
+Result<DiscoveredSymbols>
 DiscoverSymbols(llvm::ELF64LEObjectFile *elfFile,
                 llvm::bolt::BinaryContext *binaryContext) {
 
-  // Sort and merge symbols and register them.
+  // Sort, merge symbols and register them.
   // For each function symbol in the text section, create a BinaryFunction
   // shell object with a name, start address, and size. The size is
   // determined either from st_size in the symbol table entry
 
-  std::vector<SymbolInfo> SortedSymbols;
+  DiscoveredSymbols discoveredSymbols;
 
   // Whether or not a symbol has a meaningful runtime presence. If it is, then
   // we need to save it.
-  auto isSymbolInMemory = [&binaryContext](const SymbolRef &Sym) {
+  auto isSymbolInMemory = [&binaryContext](const SymbolRef &Sym,
+                                           const SymbolRef::Type &type) {
     const auto flags = cantFail(Sym.getFlags());
-    const auto type = cantFail(Sym.getType());
 
-    if (type & SymbolRef::ST_File || flags & SymbolRef::SF_Undefined) {
+    if (flags & SymbolRef::SF_Undefined) {
       return false;
     }
     if (flags & SymbolRef::SF_Absolute) {
@@ -677,8 +738,17 @@ DiscoverSymbols(llvm::ELF64LEObjectFile *elfFile,
   };
 
   for (const SymbolRef &Symbol : elfFile->symbols()) {
-    if (isSymbolInMemory(Symbol)) {
-      SortedSymbols.push_back({cantFail(Symbol.getAddress()), Symbol});
+    const auto type = cantFail(Symbol.getType());
+
+    // Catch ST_File symbols exactly as they appear in the table
+    if (type == SymbolRef::ST_File) {
+      discoveredSymbols.fileSymbols.push_back(Symbol);
+      continue;
+    }
+
+    if (isSymbolInMemory(Symbol, type)) {
+      discoveredSymbols.normalSortedSymbols.push_back(
+          {cantFail(Symbol.getAddress()), Symbol});
     }
   }
 
@@ -698,9 +768,9 @@ DiscoverSymbols(llvm::ELF64LEObjectFile *elfFile,
 
     return false;
   };
-  llvm::stable_sort(SortedSymbols, CompareSymbols);
+  llvm::stable_sort(discoveredSymbols.normalSortedSymbols, CompareSymbols);
 
-  return SortedSymbols;
+  return discoveredSymbols;
 }
 
 // public in its own file
@@ -776,6 +846,65 @@ Error DiscoverAndRegisterObject(llvm::ELF64LEObjectFile *elfFile,
   return ERU_SUCCESS;
 }
 
+Error DisassembleAndBuildCFG(llvm::bolt::BinaryContext *binaryContext) {
+  for (auto &[_, function] : binaryContext->getBinaryFunctions()) {
+
+    // Skip ignored and pseudo functions that doesnt have code.
+    if (function.isPseudo() || function.isIgnored()) {
+      continue;
+    }
+
+    // Attempt to disassemble.
+    if (auto err = function.disassemble()) {
+      return {"Failed to disassemble one or more functions. " +
+              llvm::toString(std::move(err))};
+    }
+
+    // Run necessary post-disassembly fixups.
+    function.validateInternalBranches();
+
+    // Skip complex functions that cannot be modified.
+    if (!function.isSimple()) {
+      continue;
+    }
+
+    // Build the CFG.
+    if (auto err = function.buildCFG(0)) {
+      return {"Failed to build CFG. " + llvm::toString(std::move(err))};
+    }
+
+    // Finalize the CFG layout.
+    function.postProcessCFG();
+  }
+
+  return ERU_SUCCESS;
+}
+
+Error EmitObjectFile(llvm::bolt::BinaryContext *binaryContext,
+                     const std::string &outputPath) {
+
+  // Open the output file stream
+  std::error_code errorCode;
+  llvm::ToolOutputFile outFile(outputPath, errorCode, llvm::sys::fs::OF_None);
+
+  RET_ON_TRUE(errorCode, "Cannot open output file: " + errorCode.message());
+
+  // Create the LLVM MCStreamer
+  std::unique_ptr<llvm::MCStreamer> streamer =
+      binaryContext->createStreamer(outFile.os());
+
+  // Emit the functions and sections
+  llvm::bolt::emitBinaryContext(*streamer, *binaryContext, /*OrgSecPrefix=*/"");
+  streamer->finish();
+
+  RET_ON_TRUE(streamer->getContext().hadError(),
+              "LLVM MCStreamer encountered an error during emission.");
+
+  outFile.keep();
+
+  return ERU_SUCCESS;
+}
+
 /// TODO this should be an act on object file so that we can later have act
 /// on binary.
 Error BinaryRewriter::ActOn(const Support::IO::Files &files) {
@@ -818,8 +947,19 @@ Error BinaryRewriter::ActOn(const Support::IO::Files &files) {
           binaryContext->MRI.get(), binaryContext->STI.get())));
 
   // 2. Discover the content of the ELF file
-  auto result = DiscoverAndRegisterObject(ELF64LEFile, binaryContext.get());
-  RET_ON_FAILURE(result, "Failed to discover");
+  RET_ON_FAILURE(DiscoverAndRegisterObject(ELF64LEFile, binaryContext.get()),
+                 "Failed to discover");
+
+  // 3. Dissasemble and build the CFG
+  RET_ON_FAILURE(DisassembleAndBuildCFG(binaryContext.get()),
+                 "failed to disassemble and build CFG");
+
+  // 4. Run passes
+
+  // 5. Emit
+  RET_ON_FAILURE(
+      EmitObjectFile(binaryContext.get(), files.getFinalOutputPath()),
+      "failed to emit object file");
 
   return ERU_SUCCESS;
 }

@@ -57,7 +57,9 @@ public:
 
   bool isSingleArda() { return compilableInputFiles.size() == 1; }
 
-  const std::filesystem::path &getFinalOutputPath() { return finalOutputPath; }
+  const std::filesystem::path &getFinalOutputPath() const {
+    return finalOutputPath;
+  }
 
   const std::filesystem::path
   CreateFileTmpPath(std::filesystem::path originalPath);

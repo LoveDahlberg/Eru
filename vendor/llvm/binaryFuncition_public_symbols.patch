@@ -1,0 +1,27 @@
+diff --git a/bolt/include/bolt/Core/BinaryFunction.h b/bolt/include/bolt/Core/BinaryFunction.h
+index 12aef415aa05..5e5f0a282e23 100644
+--- a/bolt/include/bolt/Core/BinaryFunction.h
++++ b/bolt/include/bolt/Core/BinaryFunction.h
+@@ -626,18 +626,20 @@ private:
+   /// Count the number of functions created.
+   static uint64_t Count;
+ 
++public:
+   /// Register alternative function name.
+   void addAlternativeName(std::string NewName) {
+     Aliases.push_back(std::move(NewName));
+   }
+-
++  
+   /// Return a label at a given \p Address in the function. If the label does
+   /// not exist - create it.
+   ///
+   /// NOTE: the function always returns a local (temp) symbol, even if there's
+   ///       a global symbol that corresponds to an entry at this address.
+   MCSymbol *getOrCreateLocalLabel(uint64_t Address);
+-
++  
++private:
+   /// Register an data entry at a given \p Offset into the function.
+   void markDataAtOffset(uint64_t Offset) {
+     if (!Islands)
