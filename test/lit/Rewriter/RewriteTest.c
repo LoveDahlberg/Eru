@@ -14,9 +14,9 @@
 // RUN: %rewriter %t/main.o -o %t/main-mod.o
 
 // Manually link modified object
-// RUN clang %t/main-mod.o -o %t/main-mod
+// RUN: clang %t/main-mod.o -o %t/main-mod
 
-// RUN %t/main-mod
+// RUN: %t/main-mod
 
 //--- main.c
 

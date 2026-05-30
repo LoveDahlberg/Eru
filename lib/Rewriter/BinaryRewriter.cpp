@@ -60,6 +60,7 @@ struct RelocationInfo {
   uint64_t extractedValue;
   bool isSectionRelocation;
   uint64_t targetAddress;
+  bool isUndefined;
 };
 
 Result<uint64_t> GetValueAtOffset(const llvm::bolt::BinarySection *section,
@@ -92,22 +93,54 @@ Result<RelocationInfo> GetRelocationInfo(
   // A relocation is in a dedicated section (such as .rela.text for the text
   // section). Each relocation entry contains the following:
   // - Offset: The memory address (offset from the start of the section) within
-  //    the target section (so .text for example) where the relocation is meant
-  //    to patch.
+  //           the target section (so .text for example) where the relocation is
+  //           meant to patch.
   // - Info: The relocation type (lower 32 bits) and the index of the target
-  //    symbol (upper 32 bits) in the symbol table (for example function like
-  //    printf).
+  //         symbol (upper 32 bits) in the symbol table (for example function
+  //         like printf).
   // - Addend: Constant offset. For example if Offset points to usage of
-  //    myArray[4], the addend would be 4 elements * 4 bytes = 16 addend.
+  //           myArray[4], the addend would be 4 elements * 4 bytes = 16 addend.
   // - Extracted value: The data currently present at the offset.
   //
-  // Additionally, we have the target address. This is the final destination the
-  // relocation wants to read (target symbol address + addend). This needs to be
-  // calculated so we know what instruction it relates to.
+  // We also have:
+  //  - Target symbol and symbol address: The address of the symbol the
+  //                                      relocation is connected to.
+  //  - Target address: This is the final destination the relocation wants to
+  //                    read (target symbol address + addend). This needs to be
+  //                    calculated so we know what instruction it relates to.
   //
-  // So for example, we can have a `call foo` at offset 0x100 which has a
-  // relocation on it. This is in a source function. The destination is the
-  // targetaddress, `def foo` which might be at 0x500.
+  // For example:
+  //
+  // clang-format off
+  // 
+  //   Assembly from `llvm-objdump -r -l`
+  //
+  //       26: 48 8d 3d 00 00 00 00         	leaq	(%rip), %rdi            # 0x2d <main+0x2d>
+	//       0000000000000029:  R_X86_64_PC32	.L.str-0x4
+  //       2d: b0 00                        	movb	$0x0, %al
+  //
+  //   Symbol table from `readelf -s`
+  //     
+  //       Num:    Value          Size Type    Bind   Vis      Ndx Name
+  //         3: 0000000000000000     9 OBJECT  LOCAL  DEFAULT    4 .L.str
+  //
+  //   Section headers with `llvm-objdump --section-headers`
+  //
+  //       Sections:
+  //       Idx Name            Size     VMA              Type
+  //         4 .rodata.str1.1  00000009 0000000000000000 DATA
+  //
+  // The symbol table show that .L.str is in section index 4, which is .rodata.str1.1
+  //
+  // - Offset: 0x29, see address first on relocation line
+  // - Info: Type R_X86_64_PC32 and index 3 in the symbol table.
+  // - Addend: -0x4. The compiler's adjustment because the RIP register will be at 0x2d when this executes.
+  // - Extracted value: value at offset 0x29 -> `00 00 00 00`, just passed the `48 8d 3d` leaq.  
+  // - Target symbol: The actual `L.str` symbol.
+  // - Symbol address: 0x00 as it is the first byte in Section index 4.
+  // - Target address: 0x00 calculated as: SymbolAddress (0) + Addend (-4) + PCRelArtifactSize (4) = 0
+  //
+  // clang-format on
 
   const size_t sizeOfRelocation =
       llvm::bolt::Relocation::getSizeForType(relocationType);
@@ -121,15 +154,10 @@ Result<RelocationInfo> GetRelocationInfo(
                             targetSection->getName().str() + "'");
 
   // Get the data currently present at the offset of the relocation.
-  info.extractedValue = llvm::bolt::Relocation::extractValue(
-      relocationType, *value, relocation.getOffset());
+  info.extractedValue =
+      llvm::bolt::Relocation::extractValue(relocationType, *value, offset);
 
   info.addend = GetRelocationAddend(elfFile, relocation);
-
-  // Whether or not the relocation type is PC relative.
-  const bool isPCRelative =
-      llvm::bolt::Relocation::isPCRelative(relocationType);
-  const uint64_t pcRelOffset = isPCRelative ? offset : 0;
 
   // Check if relocation is connected to valid symbol. Must always be true for
   // object files.
@@ -141,6 +169,12 @@ Result<RelocationInfo> GetRelocationInfo(
 
   const SymbolRef &symbol = *symbolIter;
   info.symbolAddress = cantFail(symbol.getAddress());
+
+  // Check whether or not the symbol is undefined. Needed to separate undefined
+  // symbols from functions at address 0. The first function of each section
+  // will be at address 0, due to all sections being at offset 0 in an object
+  // file.
+  info.isUndefined = (cantFail(symbol.getFlags()) & SymbolRef::SF_Undefined);
 
   // Set whether or not the symbol is a section symbol. LLVM assign section
   // symbols to ST_Debug it seems.
@@ -157,53 +191,14 @@ Result<RelocationInfo> GetRelocationInfo(
     return std::string(cantFail(symbol.getName()));
   }();
 
-  const bool relocationIsDynamic =
-      llvm::bolt::Relocation::isGOT(relocationType) ||
-      llvm::bolt::Relocation::isTLS(relocationType);
-
-  // If the symbol address is 0 for a symbol we expect to be defined, it must be
-  // recalculate.
-  // - But importantly for section relocations, it will be equal to
-  //   0, as they are not assigned a value until the binary is linked.
-  // - Also for dynamic relocations, these are filled by the linker, so the
-  // address is not relevant.
-  if (info.symbolAddress == 0 && !info.isSectionRelocation &&
-      !relocationIsDynamic) {
-
-    if (info.extractedValue != 0 || info.addend == 0 || isPCRelative) {
-      info.symbolAddress = llvm::bolt::truncateToSize(
-          info.extractedValue - info.addend + pcRelOffset, sizeOfRelocation);
-    } else {
-      // Address is 0, we have no extracted value, no addend and no relative
-      // offset.
-      return {"Unexpected relocation with no address, value or addend."};
-    }
-  }
-
-  // Calculate the actual memory lcoation the relocation points to.
-  info.targetAddress = info.symbolAddress + info.addend;
-
-  // Verify that the extracted value is equal to the symbol address taking
-  // addend and relative offset in mind. Essentially check that the relocation
-  // math is correct.
-  if (llvm::bolt::truncateToSize(info.extractedValue, sizeOfRelocation) !=
-      llvm::bolt::truncateToSize(info.symbolAddress + info.addend - pcRelOffset,
-                                 sizeOfRelocation)) {
-
-    // Skip known cases where the relocation behaves differently.
-    // - ST_Other indicates we have a abnormal relocation, it should not be
-    //   verified.
-    // - If it's GOT or TLS, do not perform verification. These are relocations
-    //   created by the compiler but only filled in by the linker.
-    // - R_X86_64_PLT32 means a symbol that can potentially be resolved
-    //   externally. Is handled differently after linking.
-    if ((cantFail(symbol.getType()) == SymbolRef::ST_Other) ||
-        relocationIsDynamic || relocationType == llvm::ELF::R_X86_64_PLT32) {
-      return info;
-    }
-
-    return {"Mismatched extracted relocation value."};
-  }
+  // Calculate the actual logical memory location the relocation points to.
+  // For PC-relative relocations, the compiler bakes in a negative addend to
+  // account for the Instruction Pointer advancing. We neutralize that artifact
+  // here so the CFG builder looks up the true target address.
+  info.targetAddress =
+      info.symbolAddress + info.addend +
+      (llvm::bolt::Relocation::isPCRelative(relocationType) ? sizeOfRelocation
+                                                            : 0);
 
   return info;
 }
@@ -234,8 +229,15 @@ GetNonFunctionRelocationSymbol(RelocationInfo &relocationInfo,
   // When relocation points to somewhere that the linker will fill in. Such
   // as external calls and section relocations.
   if (relocationInfo.symbolAddress == 0) {
+
+    // If symbol is undefined
+    if (relocationInfo.isUndefined) {
+      return binaryContext->getOrCreateUndefinedGlobalSymbol(
+          relocationInfo.symbolName);
+    }
+
     return binaryContext->registerNameAtAddress(relocationInfo.symbolName, 0, 0,
-                                                0);
+                                                1);
   }
 
   // This is likely a absolute data reference.
@@ -355,7 +357,7 @@ Error HandleRelocations(const SectionRef &relocationTargetSection,
   // The function that the relocation is in. This is the point to be patched so
   // to say. Since we only handle text relocations for now, relocations are
   // always in functions.
-  llvm::bolt::BinaryFunction *relocationSourceFunction =
+  auto *relocationSourceFunction =
       binaryContext->getBinaryFunctionContainingAddress(
           relocationOffset,
           /* CheckPastEnd */ false,
@@ -380,13 +382,15 @@ Error HandleRelocations(const SectionRef &relocationTargetSection,
   // The function that the relocation resolves to. This is the final location
   // that the relocationSouceFunction code wants to reach.
   auto *relocationTargetFunction =
-      binaryContext->getBinaryFunctionContainingAddress(
-          relocationInfo.targetAddress,
-          /* CheckPastEnd */ true,
-          /* UseMaxSize */ false);
+      relocationInfo.isUndefined
+          ? nullptr
+          : binaryContext->getBinaryFunctionContainingAddress(
+                relocationInfo.targetAddress,
+                /* CheckPastEnd */ true,
+                /* UseMaxSize */ false);
 
   // Get the corrected relocation symbol if it exists in the target function.
-  llvm::MCSymbol *referencedSymbol = GetFunctionRelocationSymbol(
+  auto *referencedSymbol = GetFunctionRelocationSymbol(
       relocationTargetFunction, relocationSourceFunction, relocationInfo,
       relocationOffset);
 
@@ -571,6 +575,11 @@ Error RegisterSymbols(llvm::ELF64LEObjectFile *elfFile,
                       llvm::bolt::BinaryContext *binaryContext,
                       const DiscoveredSymbols &sortedSymbols) {
 
+  // TODO this will break once we have several sections to parse (or even
+  // earlier even), as object files have all its sections at address 0. We would
+  // have to either work around this or assign virtual section addresses
+  // internally.
+
   // Count used to generate unique names for functions without one.
   unsigned anonymousId = 0;
 
@@ -581,11 +590,6 @@ Error RegisterSymbols(llvm::ELF64LEObjectFile *elfFile,
   // Go through all the sorted normal symbols.
   for (const auto &[address, symbol] : sortedSymbols.normalSortedSymbols) {
     const SymbolRef::Type symbolType = cantFail(symbol.getType());
-
-    // File symbols are skipped.
-    if (address == 0) {
-      continue;
-    }
 
     // Get a unique symbol name.
     const auto name = [&symbol, &anonymousId]() -> std::string {
@@ -696,13 +700,11 @@ Error RegisterSymbols(llvm::ELF64LEObjectFile *elfFile,
         binaryContext->setBinaryDataSize(address, newSize);
       }
 
-      // TODO make addAlternativeName public.
       newBinaryFunction->addAlternativeName(name);
     } else {
-      // Function is new and unique.
 
-      llvm::ErrorOr<llvm::bolt::BinarySection &> binarySection =
-          binaryContext->getSectionForAddress(address);
+      // Function is new and unique.
+      auto *binarySection = binaryContext->getSectionForSectionRef(*section);
 
       // Skip symbols from invalid or zero-sized sections.
       if (!binarySection || !binarySection->getSize()) {
@@ -900,14 +902,44 @@ Error EmitObjectFile(llvm::bolt::BinaryContext *binaryContext,
   std::error_code errorCode;
   llvm::ToolOutputFile outFile(outputPath, errorCode, llvm::sys::fs::OF_None);
 
-  RET_ON_TRUE(errorCode, "Cannot open output file: " + errorCode.message());
+  RET_ON_TRUE(errorCode, "Cannot open output file: '" + outputPath +
+                             "' with error '" + errorCode.message() + "'");
 
   // Create the LLVM MCStreamer
   std::unique_ptr<llvm::MCStreamer> streamer =
       binaryContext->createStreamer(outFile.os());
+  
+  for (auto &[_, function] : binaryContext->getBinaryFunctions()) {
+    
+      // TODO add flag for this and then write to file instead.
+    llvm::outs() << "Dumping function: " << function.getPrintName() << "\n";
+    function.print(llvm::outs(), "Before Emit");
 
-  // Emit the functions and sections
-  llvm::bolt::emitBinaryContext(*streamer, *binaryContext, /*OrgSecPrefix=*/"");
+    // 1. Tell the streamer to write into the .text section
+    streamer->switchSection(binaryContext->getTextSection());
+
+    // 2. Emit the main function symbol (e.g. 'main') so the linker can find it
+    streamer->emitSymbolAttribute(function.getSymbol(), llvm::MCSA_Global);
+    streamer->emitLabel(function.getSymbol());
+
+    // 3. Iterate through the CFG and emit the instructions
+    for (llvm::bolt::BinaryBasicBlock *bb : function.getLayout().blocks()) {
+
+      // Emit the block's internal label (.LBB00)
+      streamer->emitLabel(bb->getLabel());
+
+      for (llvm::MCInst &inst : *bb) {
+
+        // Strip BOLT's internal tracking data before handing it to standard
+        // LLVM
+        binaryContext->MIB->stripAnnotations(inst);
+
+        // Emit the raw instruction bytes!
+        streamer->emitInstruction(inst, *binaryContext->STI);
+      }
+    }
+  }
+
   streamer->finish();
 
   RET_ON_TRUE(streamer->getContext().hadError(),
