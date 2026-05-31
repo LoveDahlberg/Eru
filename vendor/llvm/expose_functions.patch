@@ -1,0 +1,103 @@
+diff --git a/bolt/include/bolt/Core/BinaryContext.h b/bolt/include/bolt/Core/BinaryContext.h
+index 31c90d2c502b..11cddba6abe1 100644
+--- a/bolt/include/bolt/Core/BinaryContext.h
++++ b/bolt/include/bolt/Core/BinaryContext.h
+@@ -1161,11 +1161,13 @@ public:
+ 
+   /// Register information about the given \p Section so we can look up
+   /// sections by address.
+-  BinarySection &registerSection(SectionRef Section);
++  BinarySection &
++  registerSection(SectionRef Section,
++                  std::optional<uint64_t> NewSectionAddress = std::nullopt);
+ 
+   /// Register a copy of /p OriginalSection under a different name.
+   BinarySection &registerSection(const Twine &SectionName,
+-                                 const BinarySection &OriginalSection);
++    const BinarySection &OriginalSection);
+ 
+   /// Register or update the information for the section with the given
+   /// /p Name.  If the section already exists, the information in the
+diff --git a/bolt/include/bolt/Core/BinaryFunction.h b/bolt/include/bolt/Core/BinaryFunction.h
+index 12aef415aa05..c83c27b870e5 100644
+--- a/bolt/include/bolt/Core/BinaryFunction.h
++++ b/bolt/include/bolt/Core/BinaryFunction.h
+@@ -626,6 +626,7 @@ private:
+   /// Count the number of functions created.
+   static uint64_t Count;
+ 
++public:
+   /// Register alternative function name.
+   void addAlternativeName(std::string NewName) {
+     Aliases.push_back(std::move(NewName));
+@@ -638,6 +639,7 @@ private:
+   ///       a global symbol that corresponds to an entry at this address.
+   MCSymbol *getOrCreateLocalLabel(uint64_t Address);
+ 
++private:
+   /// Register an data entry at a given \p Offset into the function.
+   void markDataAtOffset(uint64_t Offset) {
+     if (!Islands)
+diff --git a/bolt/include/bolt/Core/BinarySection.h b/bolt/include/bolt/Core/BinarySection.h
+index 154a8d12de5c..81153665b0e3 100644
+--- a/bolt/include/bolt/Core/BinarySection.h
++++ b/bolt/include/bolt/Core/BinarySection.h
+@@ -154,9 +154,12 @@ public:
+         PendingRelocations(Section.PendingRelocations), OutputName(Name.str()),
+         SectionNumber(++Count) {}
+ 
+-  BinarySection(BinaryContext &BC, SectionRef Section)
++  BinarySection(BinaryContext &BC, SectionRef Section,
++                std::optional<uint64_t> NewSectionAddress = std::nullopt)
+       : BC(BC), Name(getName(Section)), Section(Section),
+-        Contents(getContentsOrQuit(Section)), Address(Section.getAddress()),
++        Contents(getContentsOrQuit(Section)),
++        Address(NewSectionAddress.has_value() ? *NewSectionAddress
++                                              : Section.getAddress()),
+         Size(Section.getSize()), Alignment(Section.getAlignment().value()),
+         OutputName(Name), SectionNumber(++Count) {
+     if (isELF()) {
+@@ -251,6 +254,7 @@ public:
+   bool isMachO() const;
+   StringRef getName() const { return Name; }
+   uint64_t getAddress() const { return Address; }
++  void setAddress(uint64_t NewAddress) { Address = NewAddress; }
+   uint64_t getEndAddress() const { return Address + Size; }
+   uint64_t getSize() const { return Size; }
+   uint64_t getInputFileOffset() const { return InputFileOffset; }
+diff --git a/bolt/lib/Core/BinaryContext.cpp b/bolt/lib/Core/BinaryContext.cpp
+index f0541921c70a..c7589fec628f 100644
+--- a/bolt/lib/Core/BinaryContext.cpp
++++ b/bolt/lib/Core/BinaryContext.cpp
+@@ -53,8 +53,8 @@ static cl::opt<bool>
+                 cl::Hidden, cl::cat(BoltCategory));
+ 
+ static cl::opt<bool>
+-PrintDebugInfo("print-debug-info",
+-  cl::desc("print debug info when printing functions"),
++    PrintDebugInfo("print-debug-info",
++                   cl::desc("print debug info when printing functions"),
+   cl::Hidden,
+   cl::ZeroOrMore,
+   cl::cat(BoltCategory));
+@@ -66,7 +66,7 @@ cl::opt<bool> PrintRelocations(
+ 
+ static cl::opt<bool>
+ PrintMemData("print-mem-data",
+-  cl::desc("print memory data annotations when printing functions"),
++    cl::desc("print memory data annotations when printing functions"),
+   cl::Hidden,
+   cl::ZeroOrMore,
+   cl::cat(BoltCategory));
+@@ -2297,8 +2297,9 @@ BinarySection &BinaryContext::registerSection(BinarySection *Section) {
+   return *Section;
+ }
+ 
+-BinarySection &BinaryContext::registerSection(SectionRef Section) {
+-  return registerSection(new BinarySection(*this, Section));
++BinarySection &BinaryContext::registerSection(SectionRef Section,
++                               std::optional<uint64_t> NewSectionAddress) {
++  return registerSection(new BinarySection(*this, Section, NewSectionAddress));
+ }
+ 
+ BinarySection &

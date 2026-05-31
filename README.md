@@ -56,6 +56,27 @@ cmake -G Ninja ../llvm-project/llvm \
 
 ninja install
 ```
+
+or if building minimally with Debug enabled
+```
+cmake -G Ninja ../llvm \
+  -DCMAKE_INSTALL_PREFIX=<llvm-install-dir> \
+  -DLLVM_TARGETS_TO_BUILD="X86" \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DLLVM_ENABLE_ASSERTIONS=ON \
+  -DLLVM_ENABLE_DUMP=ON \
+  -DLLVM_ENABLE_PROJECTS="bolt" \
+  -DLLVM_INCLUDE_TESTS=OFF \
+  -DLLVM_INCLUDE_BENCHMARKS=OFF \
+  -DBOLT_INCLUDE_TESTS=OFF \
+  -DLLVM_BUILD_TOOLS=OFF \
+  -DLLVM_USE_LINKER=lld \
+  -DLLVM_PARALLEL_LINK_JOBS=1 \
+  -DLLVM_USE_SPLIT_DWARF=ON
+
+ninja install
+```
+
 Lastly, copy bolt headers into the install directory
 
 ```

@@ -22,6 +22,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 namespace Frontend::Action {
 
@@ -78,11 +79,34 @@ Result<uint64_t> GetValueAtOffset(const llvm::bolt::BinarySection *section,
   return extractor.getUnsigned(&offset, sizeOfRelocation);
 }
 
+uint64_t getVirtualAddress(
+    const llvm::SymbolRef &symbol, llvm::ELF64LEObjectFile *elfFile,
+    std::unordered_map<std::string, uint64_t> &sectionVirtualMapping) {
+
+  const uint64_t originalAddress = cantFail(symbol.getAddress());
+
+  // Symbol belongs to a section, shift its address by the section's
+  // virtual memory address.
+  auto symbolSectionIter = cantFail(symbol.getSection());
+  if (symbolSectionIter != elfFile->section_end()) {
+
+    const auto sectionName = cantFail(symbolSectionIter->getName());
+    assert(sectionVirtualMapping.contains(sectionName.str()) &&
+           "Unknown section!");
+
+    return originalAddress + sectionVirtualMapping.at(sectionName.str());
+  }
+
+  // No section, so use the original address.
+  return originalAddress;
+}
+
 // Move to private.
 Result<RelocationInfo> GetRelocationInfo(
     const RelocationRef &relocation, const uint32_t relocationType,
     llvm::ELF64LEObjectFile *elfFile, llvm::bolt::BinaryContext *binaryContext,
-    llvm::bolt::BinarySection *targetSection) {
+    llvm::bolt::BinarySection *targetSection,
+    std::unordered_map<std::string, uint64_t> &sectionVirtualMapping) {
   RelocationInfo info;
 
   if (!llvm::bolt::Relocation::isSupported(relocationType)) {
@@ -168,7 +192,8 @@ Result<RelocationInfo> GetRelocationInfo(
   }
 
   const SymbolRef &symbol = *symbolIter;
-  info.symbolAddress = cantFail(symbol.getAddress());
+  info.symbolAddress =
+      getVirtualAddress(symbol, elfFile, sectionVirtualMapping);
 
   // Check whether or not the symbol is undefined. Needed to separate undefined
   // symbols from functions at address 0. The first function of each section
@@ -228,16 +253,16 @@ GetNonFunctionRelocationSymbol(RelocationInfo &relocationInfo,
 
   // When relocation points to somewhere that the linker will fill in. Such
   // as external calls and section relocations.
+
+  // If symbol is undefined
+  if (relocationInfo.isUndefined) {
+    return binaryContext->getOrCreateUndefinedGlobalSymbol(
+        relocationInfo.symbolName);
+  }
+
+  // Cant we just do registerNameAtAddress?
   if (relocationInfo.symbolAddress == 0) {
-
-    // If symbol is undefined
-    if (relocationInfo.isUndefined) {
-      return binaryContext->getOrCreateUndefinedGlobalSymbol(
-          relocationInfo.symbolName);
-    }
-
-    return binaryContext->registerNameAtAddress(relocationInfo.symbolName, 0, 0,
-                                                1);
+    return binaryContext->Ctx->getOrCreateSymbol(relocationInfo.symbolName);
   }
 
   // This is likely a absolute data reference.
@@ -307,10 +332,10 @@ llvm::MCSymbol *GetFunctionRelocationSymbol(
 }
 
 // In its own file privated with ProcessRelocations
-Error HandleRelocations(const SectionRef &relocationTargetSection,
-                        const RelocationRef &relocation,
-                        llvm::ELF64LEObjectFile *elfFile,
-                        llvm::bolt::BinaryContext *binaryContext) {
+Error HandleRelocation(
+    const SectionRef &relocationTargetSection, const RelocationRef &relocation,
+    llvm::ELF64LEObjectFile *elfFile, llvm::bolt::BinaryContext *binaryContext,
+    std::unordered_map<std::string, uint64_t> &sectionVirtualMapping) {
 
   // Sanity check that we are processing x86.
   assert(binaryContext->isX86());
@@ -329,7 +354,13 @@ Error HandleRelocations(const SectionRef &relocationTargetSection,
   // Information about the relocation type
   llvm::SmallString<16> relocationTypeName;
   relocation.getTypeName(relocationTypeName);
-  const auto relocationOffset = relocation.getOffset();
+
+  // Shift the offset by the virtual section offset.
+  const auto relocationOffset =
+      relocation.getOffset() +
+      sectionVirtualMapping.at(
+          cantFail(relocationTargetSection.getName()).str());
+
   auto relocationType = llvm::bolt::Relocation::getType(relocation);
 
   // Strip x86 specific linker manipulation flags if present.
@@ -347,8 +378,9 @@ Error HandleRelocations(const SectionRef &relocationTargetSection,
   RET_ON_TRUE(targetSection == nullptr, "Failed to get target BinarySection");
 
   // Parse and return information regarding the relocation.
-  auto maybeRelocationInfo = GetRelocationInfo(
-      relocation, relocationType, elfFile, binaryContext, targetSection);
+  auto maybeRelocationInfo =
+      GetRelocationInfo(relocation, relocationType, elfFile, binaryContext,
+                        targetSection, sectionVirtualMapping);
 
   RET_ON_FAILURE(maybeRelocationInfo, "Parsing of relocation info failed");
 
@@ -401,6 +433,12 @@ Error HandleRelocations(const SectionRef &relocationTargetSection,
         GetNonFunctionRelocationSymbol(relocationInfo, binaryContext);
   }
 
+  // TODO might be needed?
+  // int64_t safeAddend = relocationInfo.addend;
+  // if (relocationInfo.isUndefined) {
+  //   safeAddend = 0;
+  // }
+
   // Attach the relocation to the source function.
   relocationSourceFunction->addRelocation(relocationOffset, referencedSymbol,
                                           relocationType, relocationInfo.addend,
@@ -410,8 +448,9 @@ Error HandleRelocations(const SectionRef &relocationTargetSection,
 }
 
 // In its own file privated
-Error ProcessRelocations(llvm::ELF64LEObjectFile *elfFile,
-                         llvm::bolt::BinaryContext *binaryContext) {
+Error ProcessRelocations(
+    llvm::ELF64LEObjectFile *elfFile, llvm::bolt::BinaryContext *binaryContext,
+    std::unordered_map<std::string, uint64_t> &sectionVirtualMapping) {
   if (!binaryContext->HasRelocations) {
     return ERU_SUCCESS;
   }
@@ -472,8 +511,9 @@ Error ProcessRelocations(llvm::ELF64LEObjectFile *elfFile,
 
     // Go through each relocation in the valid relocation section.
     for (const auto &relocation : section.relocations()) {
-      RET_ON_FAILURE(HandleRelocations(relocationTargetSection, relocation,
-                                       elfFile, binaryContext),
+      RET_ON_FAILURE(HandleRelocation(relocationTargetSection, relocation,
+                                      elfFile, binaryContext,
+                                      sectionVirtualMapping),
                      "Error handling relocations");
     }
   }
@@ -536,13 +576,15 @@ void AdjustFunctionBoundaries(llvm::bolt::BinaryContext *binaryContext) {
   }
 }
 
-Error ProcessSymbols(llvm::ELF64LEObjectFile *elfFile,
-                     llvm::bolt::BinaryContext *binaryContext) {
+Error ProcessSymbols(
+    llvm::ELF64LEObjectFile *elfFile, llvm::bolt::BinaryContext *binaryContext,
+    std::unordered_map<std::string, uint64_t> &sectionVirtualMapping) {
 
   AdjustFunctionBoundaries(binaryContext);
 
-  RET_ON_FAILURE(ProcessRelocations(elfFile, binaryContext),
-                 "Failed to process relocations");
+  RET_ON_FAILURE(
+      ProcessRelocations(elfFile, binaryContext, sectionVirtualMapping),
+      "Failed to process relocations");
 
   return ERU_SUCCESS;
 }
@@ -723,9 +765,9 @@ Error RegisterSymbols(llvm::ELF64LEObjectFile *elfFile,
 }
 
 // Should be private in its own file with DiscoverAndRegisterSymbols
-Result<DiscoveredSymbols>
-DiscoverSymbols(llvm::ELF64LEObjectFile *elfFile,
-                llvm::bolt::BinaryContext *binaryContext) {
+Result<DiscoveredSymbols> DiscoverSymbols(
+    llvm::ELF64LEObjectFile *elfFile, llvm::bolt::BinaryContext *binaryContext,
+    std::unordered_map<std::string, uint64_t> &sectionVirtualMapping) {
 
   // Sort, merge symbols and register them.
   // For each function symbol in the text section, create a BinaryFunction
@@ -740,7 +782,12 @@ DiscoverSymbols(llvm::ELF64LEObjectFile *elfFile,
                                            const SymbolRef::Type &type) {
     const auto flags = cantFail(Sym.getFlags());
 
-    if (flags & SymbolRef::SF_Undefined) {
+    // Skip the following:
+    // - Undefined symbols are not be registered as code, it will be parsed
+    //   later.
+    // - Other symbols, like section anchor symbols. Not sure when/if we need to
+    //   capture this.
+    if (flags & SymbolRef::SF_Undefined || flags == SymbolRef::ST_Other) {
       return false;
     }
     if (flags & SymbolRef::SF_Absolute) {
@@ -752,18 +799,21 @@ DiscoverSymbols(llvm::ELF64LEObjectFile *elfFile,
         .isAllocatable();
   };
 
-  for (const SymbolRef &Symbol : elfFile->symbols()) {
-    const auto type = cantFail(Symbol.getType());
+  for (const SymbolRef &symbol : elfFile->symbols()) {
+    const auto type = cantFail(symbol.getType());
 
     // Catch ST_File symbols exactly as they appear in the table
     if (type == SymbolRef::ST_File) {
-      discoveredSymbols.fileSymbols.push_back(Symbol);
+      discoveredSymbols.fileSymbols.push_back(symbol);
       continue;
     }
 
-    if (isSymbolInMemory(Symbol, type)) {
-      discoveredSymbols.normalSortedSymbols.push_back(
-          {cantFail(Symbol.getAddress()), Symbol});
+    if (isSymbolInMemory(symbol, type)) {
+
+      auto virtualAddress =
+          getVirtualAddress(symbol, elfFile, sectionVirtualMapping);
+
+      discoveredSymbols.normalSortedSymbols.push_back({virtualAddress, symbol});
     }
   }
 
@@ -789,9 +839,11 @@ DiscoverSymbols(llvm::ELF64LEObjectFile *elfFile,
 }
 
 // public in its own file
-Error DiscoverAndRegisterSymbols(llvm::ELF64LEObjectFile *elfFile,
-                                 llvm::bolt::BinaryContext *binaryContext) {
-  auto maybeSortedSymbols = DiscoverSymbols(elfFile, binaryContext);
+Error DiscoverAndRegisterSymbols(
+    llvm::ELF64LEObjectFile *elfFile, llvm::bolt::BinaryContext *binaryContext,
+    std::unordered_map<std::string, uint64_t> &sectionVirtualMapping) {
+  auto maybeSortedSymbols =
+      DiscoverSymbols(elfFile, binaryContext, sectionVirtualMapping);
   RET_ON_FAILURE(maybeSortedSymbols, "Failed to discover symbols");
 
   RET_ON_FAILURE(RegisterSymbols(elfFile, binaryContext, *maybeSortedSymbols),
@@ -799,63 +851,81 @@ Error DiscoverAndRegisterSymbols(llvm::ELF64LEObjectFile *elfFile,
   return ERU_SUCCESS;
 }
 
-Error DiscoverAndRegisterSections(llvm::ELF64LEObjectFile *elfFile,
-                                  llvm::bolt::BinaryContext *binaryContext) {
+Result<std::unordered_map<std::string, uint64_t>>
+DiscoverAndRegisterSections(llvm::ELF64LEObjectFile *elfFile,
+                            llvm::bolt::BinaryContext *binaryContext) {
 
   // Assume symbol table is stripped until its section is found.
   binaryContext->IsStripped = true;
 
-  for (const SectionRef &Section : elfFile->sections()) {
-    auto SectionNameOrErr = Section.getName();
+  // Mapping of section name to its virtual mapping. This is needed to give
+  // sections a unique address, as sections all have offset 0 in an object file.
+  std::unordered_map<std::string, uint64_t> sectionVirtualMapping;
+
+  uint64_t nextAvailableAddress = 0x10000;
+
+  for (const SectionRef &section : elfFile->sections()) {
+    auto SectionNameOrErr = section.getName();
     if (auto err = SectionNameOrErr.takeError()) {
       return ERU_FAILURE("Failed to get section name.");
     }
-    auto SectionName = SectionNameOrErr.get();
+    const auto sectionName = SectionNameOrErr.get();
 
     // Save the address, size, offset and content of the original text
     // section.
-    if (SectionName == binaryContext->getMainCodeSectionName()) {
-      binaryContext->OldTextSectionAddress = Section.getAddress();
-      binaryContext->OldTextSectionSize = Section.getSize();
+    if (sectionName == binaryContext->getMainCodeSectionName()) {
+      binaryContext->OldTextSectionAddress = section.getAddress();
+      binaryContext->OldTextSectionSize = section.getSize();
 
-      auto SectionContentsOrErr = Section.getContents();
+      auto SectionContentsOrErr = section.getContents();
       if (auto err = SectionContentsOrErr.takeError()) {
         return ERU_FAILURE("Failed to get section content.");
       }
       auto SectionContents = SectionContentsOrErr.get();
       binaryContext->OldTextSectionOffset =
           SectionContents.data() - elfFile->getData().data();
-    } else if (SectionName == ".rela.text") {
+    } else if (sectionName == ".rela.text") {
       binaryContext->HasRelocations = true;
-    } else if (SectionName == ".symtab") {
+    } else if (sectionName == ".symtab") {
       binaryContext->IsStripped = false;
+    } else if (sectionName.empty()) {
+      continue;
     }
-    // Could check for .eh_frame, though not needed for object files. BOLT
-    // seems to do this when symbol table is not present.
+
+    assert(!sectionVirtualMapping.contains(sectionName.str()) &&
+           "Duplicate section.");
+
+    auto alignment = section.getAlignment().value();
+    if (alignment > 0) {
+      nextAvailableAddress = llvm::alignTo(nextAvailableAddress, alignment);
+    }
 
     // Register the section in the binary context for quick lookup later
-    binaryContext->registerSection(Section);
-  }
+    binaryContext->registerSection(section, nextAvailableAddress);
 
-  // can call BC->printSections(BC->outs()). Though this can probably be on
-  // debug object act?
+    sectionVirtualMapping.emplace(sectionName.str(), nextAvailableAddress);
+    nextAvailableAddress += section.getSize();
+  }
 
   RET_ON_FALSE(binaryContext->HasRelocations,
                "Object file does not have text relocations in '.rela.text'.");
   RET_ON_TRUE(binaryContext->IsStripped,
               "Object file does not have a symbol table in '.symtab'.");
 
-  return ERU_SUCCESS;
+  return sectionVirtualMapping;
 }
 
 Error DiscoverAndRegisterObject(llvm::ELF64LEObjectFile *elfFile,
                                 llvm::bolt::BinaryContext *binaryContext) {
 
-  RET_ON_FAILURE(DiscoverAndRegisterSections(elfFile, binaryContext),
-                 "Failed to discover and register sections");
-  RET_ON_FAILURE(DiscoverAndRegisterSymbols(elfFile, binaryContext),
-                 "Failed to discover and register symbols");
-  RET_ON_FAILURE(ProcessSymbols(elfFile, binaryContext),
+  auto maybeMapping = DiscoverAndRegisterSections(elfFile, binaryContext);
+  RET_ON_FAILURE(maybeMapping, "Failed to discover and register sections");
+
+  auto sectionVirtualMapping = *maybeMapping;
+  RET_ON_FAILURE(
+      DiscoverAndRegisterSymbols(elfFile, binaryContext, sectionVirtualMapping),
+      "Failed to discover and register symbols");
+  RET_ON_FAILURE(ProcessSymbols(elfFile, binaryContext, sectionVirtualMapping),
                  "Failed to process symbols");
 
   return ERU_SUCCESS;
@@ -908,36 +978,54 @@ Error EmitObjectFile(llvm::bolt::BinaryContext *binaryContext,
   // Create the LLVM MCStreamer
   std::unique_ptr<llvm::MCStreamer> streamer =
       binaryContext->createStreamer(outFile.os());
-  
+
+  // TODO temporary emitter.
+
+  // Emit binary functions
+  streamer->switchSection(binaryContext->getTextSection());
   for (auto &[_, function] : binaryContext->getBinaryFunctions()) {
-    
-      // TODO add flag for this and then write to file instead.
+
+    // TODO add flag for this and then write to file instead.
     llvm::outs() << "Dumping function: " << function.getPrintName() << "\n";
     function.print(llvm::outs(), "Before Emit");
 
-    // 1. Tell the streamer to write into the .text section
-    streamer->switchSection(binaryContext->getTextSection());
-
-    // 2. Emit the main function symbol (e.g. 'main') so the linker can find it
     streamer->emitSymbolAttribute(function.getSymbol(), llvm::MCSA_Global);
     streamer->emitLabel(function.getSymbol());
 
-    // 3. Iterate through the CFG and emit the instructions
     for (llvm::bolt::BinaryBasicBlock *bb : function.getLayout().blocks()) {
 
-      // Emit the block's internal label (.LBB00)
       streamer->emitLabel(bb->getLabel());
-
       for (llvm::MCInst &inst : *bb) {
-
-        // Strip BOLT's internal tracking data before handing it to standard
-        // LLVM
         binaryContext->MIB->stripAnnotations(inst);
-
-        // Emit the raw instruction bytes!
         streamer->emitInstruction(inst, *binaryContext->STI);
       }
     }
+  }
+
+  // Emit data
+  for (auto &[address, data] : binaryContext->getBinaryData()) {
+    llvm::bolt::BinarySection &section = data->getSection();
+
+    // We only want to emit data here (e.g. .rodata, .data).
+    // Code and unallocated sections (like .symtab) are handled elsewhere.
+    if (section.isText() || !section.isAllocatable() || section.isVirtual()) {
+      continue;
+    }
+
+    llvm::MCSection *mcSection = binaryContext->Ctx->getELFSection(
+        section.getName(), section.getELFType(), section.getELFFlags());
+    streamer->switchSection(mcSection);
+
+    streamer->emitValueToAlignment(llvm::Align(data->getAlignment()));
+
+    streamer->emitSymbolAttribute(data->getSymbol(), llvm::MCSA_Local);
+    streamer->emitLabel(data->getSymbol());
+
+    uint64_t offsetInSection = data->getAddress() - section.getAddress();
+    llvm::StringRef dataBytes =
+        section.getContents().substr(offsetInSection, data->getSize());
+
+    streamer->emitBytes(dataBytes);
   }
 
   streamer->finish();
@@ -986,7 +1074,7 @@ Error BinaryRewriter::ActOn(const Support::IO::Files &files) {
           llvm::WithColor::defaultWarningHandler),
       llvm::bolt::JournalingStreams{llvm::outs(), llvm::errs()});
   if (auto err = maybeBC.takeError()) {
-    return ERU_FAILURE("Error creating binary context.");
+    return {"Error creating binary context."};
   }
   auto binaryContext = std::move(maybeBC.get());
 
