@@ -59,7 +59,7 @@ ninja install
 
 or if building minimally with Debug enabled
 ```
-cmake -G Ninja ../llvm \
+cmake -G Ninja ../llvm-project/llvm \
   -DCMAKE_INSTALL_PREFIX=<llvm-install-dir> \
   -DLLVM_TARGETS_TO_BUILD="X86" \
   -DCMAKE_BUILD_TYPE=Debug \

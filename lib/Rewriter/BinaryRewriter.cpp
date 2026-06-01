@@ -432,13 +432,7 @@ Error HandleRelocation(
     referencedSymbol =
         GetNonFunctionRelocationSymbol(relocationInfo, binaryContext);
   }
-
-  // TODO might be needed?
-  // int64_t safeAddend = relocationInfo.addend;
-  // if (relocationInfo.isUndefined) {
-  //   safeAddend = 0;
-  // }
-
+  
   // Attach the relocation to the source function.
   relocationSourceFunction->addRelocation(relocationOffset, referencedSymbol,
                                           relocationType, relocationInfo.addend,
