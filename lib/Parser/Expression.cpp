@@ -201,7 +201,7 @@ Result<AST::Expression::Expression *> Parser::ParseExpression() {
     }
   } while (loopCounter++ < loopLimit);
 
-  RET_ON_FAILURE_CODE(analyzer.expression().ActOn(expression),
+  RET_ON_FAILURE_CODE(analyzer.expression().ActOnExpression(expression),
                       "ParseExpression: failed to act on expression.", lexer);
 
   return expression;

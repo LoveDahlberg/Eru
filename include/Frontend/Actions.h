@@ -33,7 +33,7 @@ public:
   virtual Error ActOn(AST::Context::ASTContext) = 0;
 };
 
-class BinaryAction {
+class RewriteAction {
 public:
   virtual Error ActOn(const Support::IO::Files &files) = 0;
 };

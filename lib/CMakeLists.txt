@@ -55,8 +55,15 @@ target_link_libraries(Parser PRIVATE Lexer Analyzer)
 
 # Create a library target for Rewriter
 add_library(LibRewriter STATIC
-    Rewriter/Rewriter.cpp
-    Rewriter/BinaryRewriter.cpp
+    Rewriter/Discover/Discover.cpp
+    Rewriter/Discover/Relocations.cpp
+    Rewriter/Discover/Sections.cpp
+    Rewriter/Discover/Symbols.cpp
+    Rewriter/Discover/VirtualAddress.cpp
+    Rewriter/Disassemble.cpp
+    Rewriter/Emit.cpp
+    Rewriter/ExamplePass.cpp
+    Rewriter/ObjectRewriter.cpp
 )
 target_include_directories(LibRewriter PUBLIC ${CMAKE_SOURCE_DIR}/include ${BOLT_INCLUDE_DIRS})
 target_link_libraries(LibRewriter PRIVATE Support)
@@ -67,6 +74,7 @@ add_library(Frontend STATIC
     Frontend/Compiler.cpp
     Frontend/Linker.cpp
     Frontend/EmitObjectFile.cpp
+    Frontend/Rewriter.cpp
 )
 
 target_include_directories(Frontend PUBLIC ${CMAKE_SOURCE_DIR}/include)

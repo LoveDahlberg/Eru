@@ -2,7 +2,7 @@
 #include <filesystem>
 
 #include <Frontend/Actions.h>
-#include <Frontend/BinaryRewriter.h>
+#include <Frontend/Rewriter.h>
 #include <Support/Commandline.h>
 #include <Support/Log.h>
 
@@ -42,10 +42,10 @@ int main(int argc, char *argv[]) {
   auto files = *maybefiles;
 
   // Create an Rewrite action
-  auto *action = new Frontend::Action::BinaryRewriter();
+  auto *action = new Frontend::Action::ObjectRewriter();
 
   // Call Rewrite on that action
-  Support::ExitAndPrintOnError(Frontend::Rewrite(action, files));
+  Support::ExitAndPrintOnError(Frontend::RewriteObject(action, files));
 
   return 0;
 }

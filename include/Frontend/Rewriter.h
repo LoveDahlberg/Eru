@@ -7,7 +7,7 @@
 
 namespace Frontend::Action {
 
-class BinaryRewriter : public BinaryAction {
+class ObjectRewriter : public RewriteAction {
 public:
   virtual Error ActOn(const Support::IO::Files& files) override;
 };
@@ -16,6 +16,6 @@ public:
 
 namespace Frontend {
 
-Error Rewrite(Action::BinaryAction *action, const Support::IO::Files &files);
+Error RewriteObject(Action::RewriteAction *action, const Support::IO::Files &files);
 
 } // namespace Frontend

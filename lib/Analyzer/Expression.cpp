@@ -122,7 +122,7 @@ Result<Type> ExpressionAnalyzer::EvaluateIndirectionType(
 // place of long convert it etc) and type convertions (zero or nullable values
 // becomes boolean false and everything else becomes boolean true etc) as
 // needed.
-Error ExpressionAnalyzer::ActOn(AST::Expression::Expression *expression) {
+Error ExpressionAnalyzer::ActOnExpression(AST::Expression::Expression *expression) {
 
   // We don't know the type before parsing. For now, all types in the expression
   // much match. Assume that this type is the first seen.

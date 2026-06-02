@@ -26,7 +26,7 @@ class ExpressionAnalyzer {
 public:
   ExpressionAnalyzer(PrivateAnalyzer &analyser) : analyser(analyser) {}
 
-  Error ActOn(AST::Expression::Expression *expression);
+  Error ActOnExpression(AST::Expression::Expression *expression);
 };
 
 } // namespace Analyzer
