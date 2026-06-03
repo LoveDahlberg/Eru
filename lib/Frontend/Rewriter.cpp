@@ -13,7 +13,7 @@ namespace Frontend {
 
 namespace {
 
-Result<llvm::bolt::BinaryContext *>
+Result<std::unique_ptr<llvm::bolt::BinaryContext>>
 Initialize(const std::string &objectFilePath, llvm::ObjectFile *objectFile) {
 
   // Initialize LLVM targets — required before anything BOLT does
@@ -39,6 +39,7 @@ Initialize(const std::string &objectFilePath, llvm::ObjectFile *objectFile) {
           nullptr, "", llvm::WithColor::defaultErrorHandler,
           llvm::WithColor::defaultWarningHandler),
       llvm::bolt::JournalingStreams{llvm::outs(), llvm::errs()});
+  
   if (auto err = maybeBC.takeError()) {
     return {"Error creating binary context."};
   }
@@ -53,7 +54,7 @@ Initialize(const std::string &objectFilePath, llvm::ObjectFile *objectFile) {
   // Sanity check that we are processing x86.
   assert(binaryContext->isX86());
 
-  return binaryContext.get();
+  return binaryContext;
 }
 } // namespace
 
@@ -71,8 +72,8 @@ Error RewriteObject(Action::RewriteAction *action,
   auto &owningBinary = *objOrErr;
 
   auto maybeContext = Initialize(objectFilePath, owningBinary.getBinary());
-  RET_ON_FAILURE(maybeContext, "Failed to initialize rewrite object.");
-  auto binaryContext = *maybeContext;
+  RET_ON_TRUE(maybeContext.hasFailed, "Failed to initialize rewrite object.");
+  auto binaryContext = maybeContext->get();
 
   RET_ON_FAILURE(
       Rewriter::DiscoverAndRegisterObject(
