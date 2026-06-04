@@ -14,7 +14,48 @@ namespace Rewriter {
 
 void emitDataSections();
 
-void EmitFunctionBody() {}
+void EmitFunctionBody(llvm::bolt::BinaryContext *binaryContext,
+                      llvm::bolt::BinaryFunction *function,
+                      llvm::bolt::FunctionFragment &functionFragment,
+                      llvm::MCStreamer *streamer) {
+
+  for (auto *const basicBLock : functionFragment) {
+
+    // Emit start label and possible secondary entry point symbols.
+    streamer->emitLabel(basicBLock->getLabel());
+    if (auto *EntrySymbol =
+            function->getSecondaryEntryPointSymbol(*basicBLock)) {
+      streamer->emitLabel(EntrySymbol);
+    }
+
+    for (auto &instruciton : *basicBLock) {
+
+      // If there is such a label, then it means that it needs to be emitted
+      // before the instruction to mark its location
+      if (auto *instrLabel = binaryContext->MIB->getInstLabel(instruciton)) {
+        streamer->emitLabel(instrLabel);
+      }
+
+      // Make sure to emit NOPs of correct size. This is a workaround for
+      // invalid handling of NOPs in llvm.
+      const auto size = binaryContext->MIB->getSize(instruciton);
+      if (binaryContext->MIB->isNoop(instruciton) && size.has_value()) {
+        llvm::SmallString<15> code;
+        llvm::raw_svector_ostream VecOS(code);
+        binaryContext->MAB->writeNopData(VecOS, *size,
+                                         binaryContext->STI.get());
+        streamer->emitBytes(code);
+        continue;
+      }
+
+      // Remove BOLT specific annotations if there are any, and then emit.
+      binaryContext->MIB->stripAnnotations(instruciton);
+      streamer->emitInstruction(instruciton, *binaryContext->STI);
+    }
+  }
+
+  // emitConstantIslands
+}
 
 bool skipFunction(llvm::bolt::BinaryFunction *function) {
   return function->isPseudo() || function->isIgnored() ||
@@ -30,53 +71,35 @@ void emitFunctions(llvm::bolt::BinaryContext *binaryContext,
       continue;
     }
 
-    // All parts of the function to emit. Split fragments might not exist here
-    // though.
-    auto functionFragments = [&] {
-      auto &layout = function->getLayout();
+    auto &functionFragement = function->getLayout().getMainFragment();
+    const auto fragmentNumber = functionFragement.getFragmentNum();
 
-      std::vector<llvm::bolt::FunctionFragment *> mainFragment = {
-          &layout.getMainFragment()};
-      if (function->isSplit()) {
-        for (auto &fragment : layout.getSplitFragments()) {
-          mainFragment.push_back(&fragment);
-        }
-      }
-      return mainFragment;
-    }();
+    auto section = binaryContext->getCodeSection(
+        function->getCodeSectionName(fragmentNumber));
+    section->setHasInstructions(true);
 
-    for (auto functionFragment : functionFragments) {
-      const auto fragmentNumber = functionFragment->getFragmentNum();
+    streamer->switchSection(section);
+    streamer->emitCodeAlignment(function->getAlign(), binaryContext->STI.get());
 
-      auto section = binaryContext->getCodeSection(
-          function->getCodeSectionName(fragmentNumber));
-      section->setHasInstructions(true);
-
-      streamer->switchSection(section);
-      streamer->emitCodeAlignment(function->getAlign(),
-                                  binaryContext->STI.get());
-
-      // Emit entry function labels
-      for (auto *functionEntryAlias : function->getSymbols()) {
-        streamer->emitSymbolAttribute(functionEntryAlias,
-                                      llvm::MCSA_ELF_TypeFunction);
-        streamer->emitLabel(functionEntryAlias);
-      }
-
-      // Emit body
-      EmitFunctionBody();
-
-      auto *endSymbol = function->getFunctionEndLabel(fragmentNumber);
-      streamer->emitLabel(endSymbol);
-
-      // Set the size of the function so that it is visible in the symbol table.
-      auto *const startSymbol = function->getSymbol(fragmentNumber);
-      auto &context = streamer->getContext();
-      const auto *sizeExpr = llvm::MCBinaryExpr::createSub(
-          llvm::MCSymbolRefExpr::create(endSymbol, context),
-          llvm::MCSymbolRefExpr::create(startSymbol, context), context);
-      streamer->emitELFSize(startSymbol, sizeExpr);
+    // Emit entry function labels
+    for (auto *functionEntryAlias : function->getSymbols()) {
+      streamer->emitSymbolAttribute(functionEntryAlias,
+                                    llvm::MCSA_ELF_TypeFunction);
+      streamer->emitLabel(functionEntryAlias);
     }
+
+    EmitFunctionBody(binaryContext, function, functionFragement, streamer);
+
+    auto *endSymbol = function->getFunctionEndLabel(fragmentNumber);
+    streamer->emitLabel(endSymbol);
+
+    // Set the size of the function so that it is visible in the symbol table.
+    auto *const startSymbol = function->getSymbol(fragmentNumber);
+    auto &context = streamer->getContext();
+    const auto *sizeExpr = llvm::MCBinaryExpr::createSub(
+        llvm::MCSymbolRefExpr::create(endSymbol, context),
+        llvm::MCSymbolRefExpr::create(startSymbol, context), context);
+    streamer->emitELFSize(startSymbol, sizeExpr);
   }
 }
 
@@ -104,7 +127,7 @@ Error EmitObjectFile(llvm::bolt::BinaryContext *binaryContext,
 
   emitDataSections();
 
-  /// OLD Emitter
+  /// OLD Emitter TODO REMOVE
 
   // Emit binary functions
   streamer->switchSection(binaryContext->getTextSection());
