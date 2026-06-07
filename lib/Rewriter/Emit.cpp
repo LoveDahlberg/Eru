@@ -14,7 +14,74 @@
 
 namespace Rewriter {
 
-void emitDataSections();
+void emitDataSections(llvm::bolt::BinaryContext *binaryContext,
+                      llvm::MCStreamer *streamer) {
+  for (auto &section : binaryContext->sections()) {
+
+    if (!section.isAllocatable() || !section.isData() || section.isText()) {
+      continue;
+    }
+
+    // Section content is either the original, if unchanged, or the modified
+    // version otherwise.
+    auto sectionContents = section.isFinalized() ? section.getOutputContents()
+                                                 : section.getContents();
+    auto *targetELFSection = binaryContext->Ctx->getELFSection(
+        section.getName(), section.getELFType(), section.getELFFlags());
+
+    streamer->switchSection(targetELFSection);
+    streamer->emitValueToAlignment(section.getAlign());
+
+    // If no relocations, just emit the raw bytes.
+    if (!section.hasRelocations()) {
+      streamer->emitBytes(sectionContents);
+      continue;
+    }
+
+    uint64_t currentSectionOffset = 0;
+    auto currentRelocation = section.relocations().begin();
+    const auto relocactionEnd = section.relocations().end();
+
+    // Loop through all relocations until we have reached the end.
+    // Note that we cannot loop through and write them all as is, because
+    // upcoming relocations might need to be written to the same offset as the
+    // current one. This happens when we have multiple relocations applied to
+    // the same instruction.
+    while (currentRelocation != relocactionEnd) {
+      const uint64_t offset = currentRelocation->Offset;
+
+      // If there are bytes before the first relocation, emit them.
+      if (currentSectionOffset < offset) {
+        streamer->emitBytes(sectionContents.substr(
+            currentSectionOffset, offset - currentSectionOffset));
+        currentSectionOffset = offset;
+      }
+
+      // From the current relocation, find the next relocation that doesn't
+      // share the same offset. This will capture all relocations that share the
+      // same offset as the current one. We need to make sure these are emitted
+      // as one, as the streamer will increment the offset on each emit.
+      auto relocationGroupEnd = std::find_if(
+          currentRelocation, relocactionEnd, [&offset](const auto &relocation) {
+            return relocation.Offset != offset;
+          });
+
+      // Emit the grouped relocations between the current point right up until
+      // we reach the reloction that has a new offset.
+      size_t emittedSize = llvm::bolt::Relocation::emit(
+          currentRelocation, relocationGroupEnd, streamer);
+      currentSectionOffset += emittedSize;
+
+      // Make sure to skip over all emitted group relocations for next loop.
+      currentRelocation = relocationGroupEnd;
+    }
+
+    // If there are bytes left over after the last relcoation, emit them.
+    if (currentSectionOffset < sectionContents.size()) {
+      streamer->emitBytes(sectionContents.substr(currentSectionOffset));
+    }
+  }
+}
 
 /// Represents a continous range of data inside of a function. This ends either
 /// at another chunk of data, which might contain different kind of data and/or
@@ -40,9 +107,9 @@ struct IslandChunk {
 /// still considered a new chunk by LLVM if they are separated by a 'start data'
 /// marker.
 std::vector<IslandChunk>
-BuildIslandChunks(llvm::bolt::BinaryFunction *function) {
+BuildIslandChunks(llvm::bolt::BinaryFunction &function) {
 
-  auto &islands = function->getIslandInfo();
+  auto &islands = function.getIslandInfo();
 
   auto getNextBoundaryOrMax = [&](const auto &set,
                                   const uint64_t startOffset) -> uint64_t {
@@ -50,7 +117,7 @@ BuildIslandChunks(llvm::bolt::BinaryFunction *function) {
     auto range = std::ranges::upper_bound(set, startOffset);
 
     // If offset is too large, set as absolute function end.
-    return range != set.end() ? *range : function->getMaxSize();
+    return range != set.end() ? *range : function.getMaxSize();
   };
 
   auto getMapSubrange = [](const auto &map, const uint64_t startOffset,
@@ -116,10 +183,10 @@ BuildIslandChunks(llvm::bolt::BinaryFunction *function) {
 /// for now. Ideally we control the layout of the function explicitly in passes,
 /// but for now we can keep this as is.
 void emitConstantIsland(llvm::bolt::BinaryContext *binaryContext,
-                        llvm::bolt::BinaryFunction *function,
+                        llvm::bolt::BinaryFunction &function,
                         llvm::MCStreamer *streamer) {
 
-  auto &islands = function->getIslandInfo();
+  auto &islands = function.getIslandInfo();
   if (islands.DataOffsets.empty()) {
     return;
   }
@@ -131,9 +198,9 @@ void emitConstantIsland(llvm::bolt::BinaryContext *binaryContext,
   // Get the raw contents of the function. We are going to use this to emit
   // specific sequences of data.
   const auto FunctionContents =
-      function->getOriginSection()->getContents().substr(
-          function->getAddress() - function->getOriginSection()->getAddress(),
-          function->getMaxSize());
+      function.getOriginSection()->getContents().substr(
+          function.getAddress() - function.getOriginSection()->getAddress(),
+          function.getMaxSize());
 
   // TODO, make into a separate function.
   // Emits the relevant data and relocations within a offset range.
@@ -167,13 +234,13 @@ void emitConstantIsland(llvm::bolt::BinaryContext *binaryContext,
   };
 
   streamer->emitCodeAlignment(
-      llvm::Align(function->getConstantIslandAlignment()),
+      llvm::Align(function.getConstantIslandAlignment()),
       &*binaryContext->STI);
 
   // We are now going to be emitting the original constant islands, that are
   // possibly spread out, into one big constant island at the end of the
   // function. This label denotes the start of this island.
-  streamer->emitLabel(function->getFunctionConstantIslandLabel());
+  streamer->emitLabel(function.getFunctionConstantIslandLabel());
 
   // Sequentially emit each island chunk one after the other.
   for (const IslandChunk &chunk : islandChunks) {
@@ -223,7 +290,7 @@ void emitConstantIsland(llvm::bolt::BinaryContext *binaryContext,
 }
 
 void EmitFunctionBody(llvm::bolt::BinaryContext *binaryContext,
-                      llvm::bolt::BinaryFunction *function,
+                      llvm::bolt::BinaryFunction &function,
                       llvm::bolt::FunctionFragment &functionFragment,
                       llvm::MCStreamer *streamer) {
 
@@ -232,7 +299,7 @@ void EmitFunctionBody(llvm::bolt::BinaryContext *binaryContext,
     // Emit start label and possible secondary entry point symbols.
     streamer->emitLabel(basicBLock->getLabel());
     if (auto *EntrySymbol =
-            function->getSecondaryEntryPointSymbol(*basicBLock)) {
+            function.getSecondaryEntryPointSymbol(*basicBLock)) {
       streamer->emitLabel(EntrySymbol);
     }
 
@@ -264,37 +331,37 @@ void EmitFunctionBody(llvm::bolt::BinaryContext *binaryContext,
 
   // If the function contains function islands, gather them all up and emit them
   // at the end of the function as one contiguous constant island.
-  if (function->hasIslandsInfo()) {
+  if (function.hasIslandsInfo()) {
     emitConstantIsland(binaryContext, function, streamer);
   }
 }
 
-bool skipFunction(llvm::bolt::BinaryFunction *function) {
-  return function->isPseudo() || function->isIgnored() ||
-         !function->isSimple() || function->size() == 0 ||
-         function->getState() == llvm::bolt::BinaryFunction::State::Empty;
+bool skipFunction(llvm::bolt::BinaryFunction &function) {
+  return function.isPseudo() || function.isIgnored() ||
+         !function.isSimple() || function.size() == 0 ||
+         function.getState() == llvm::bolt::BinaryFunction::State::Empty;
 }
 
 void emitFunctions(llvm::bolt::BinaryContext *binaryContext,
                    llvm::MCStreamer *streamer) {
-  for (auto *function : binaryContext->getOutputBinaryFunctions()) {
+  for (auto &[_, function] : binaryContext->getBinaryFunctions()) {
 
     if (skipFunction(function)) {
       continue;
     }
 
-    auto &functionFragement = function->getLayout().getMainFragment();
+    auto &functionFragement = function.getLayout().getMainFragment();
     const auto fragmentNumber = functionFragement.getFragmentNum();
 
     auto section = binaryContext->getCodeSection(
-        function->getCodeSectionName(fragmentNumber));
+        function.getCodeSectionName(fragmentNumber));
     section->setHasInstructions(true);
 
     streamer->switchSection(section);
-    streamer->emitCodeAlignment(function->getAlign(), binaryContext->STI.get());
+    streamer->emitCodeAlignment(function.getAlign(), binaryContext->STI.get());
 
     // Emit entry function labels
-    for (auto *functionEntryAlias : function->getSymbols()) {
+    for (auto *functionEntryAlias : function.getSymbols()) {
       streamer->emitSymbolAttribute(functionEntryAlias,
                                     llvm::MCSA_ELF_TypeFunction);
       streamer->emitLabel(functionEntryAlias);
@@ -302,11 +369,11 @@ void emitFunctions(llvm::bolt::BinaryContext *binaryContext,
 
     EmitFunctionBody(binaryContext, function, functionFragement, streamer);
 
-    auto *endSymbol = function->getFunctionEndLabel(fragmentNumber);
+    auto *endSymbol = function.getFunctionEndLabel(fragmentNumber);
     streamer->emitLabel(endSymbol);
 
     // Set the size of the function so that it is visible in the symbol table.
-    auto *const startSymbol = function->getSymbol(fragmentNumber);
+    auto *const startSymbol = function.getSymbol(fragmentNumber);
     auto &context = streamer->getContext();
     const auto *sizeExpr = llvm::MCBinaryExpr::createSub(
         llvm::MCSymbolRefExpr::create(endSymbol, context),
@@ -330,68 +397,15 @@ Error EmitObjectFile(llvm::bolt::BinaryContext *binaryContext,
   RET_ON_TRUE(errorCode, "Cannot open output file: '" + outputPath +
                              "' with error '" + errorCode.message() + "'");
 
-  // Create the LLVM MCStreamer
+  // Create and initialize the streamer.
   std::unique_ptr<llvm::MCStreamer> streamer =
       binaryContext->createStreamer(outFile.os());
-
   streamer->initSections(false, *binaryContext->STI);
   streamer->setUseAssemblerInfoForParsing(false);
 
-  binaryContext->getTextSection()->setAlignment(
-      llvm::Align(binaryContext->PageAlign));
-
+  // Emit text and data sections.
   emitFunctions(binaryContext, streamer.get());
-
-  emitDataSections();
-
-  /// OLD Emitter TODO REMOVE
-
-  // Emit binary functions
-  streamer->switchSection(binaryContext->getTextSection());
-  for (auto &[_, function] : binaryContext->getBinaryFunctions()) {
-
-    // TODO add flag for this and then write to file instead.
-    llvm::outs() << "Dumping function: " << function.getPrintName() << "\n";
-    function.print(llvm::outs(), "Before Emit");
-
-    streamer->emitSymbolAttribute(function.getSymbol(), llvm::MCSA_Global);
-    streamer->emitLabel(function.getSymbol());
-
-    for (llvm::bolt::BinaryBasicBlock *bb : function.getLayout().blocks()) {
-
-      streamer->emitLabel(bb->getLabel());
-      for (llvm::MCInst &inst : *bb) {
-        binaryContext->MIB->stripAnnotations(inst);
-        streamer->emitInstruction(inst, *binaryContext->STI);
-      }
-    }
-  }
-
-  // Emit data
-  for (auto &[address, data] : binaryContext->getBinaryData()) {
-    llvm::bolt::BinarySection &section = data->getSection();
-
-    // We only want to emit data here (e.g. .rodata, .data).
-    // Code and unallocated sections (like .symtab) are handled elsewhere.
-    if (section.isText() || !section.isAllocatable() || section.isVirtual()) {
-      continue;
-    }
-
-    llvm::MCSection *mcSection = binaryContext->Ctx->getELFSection(
-        section.getName(), section.getELFType(), section.getELFFlags());
-    streamer->switchSection(mcSection);
-
-    streamer->emitValueToAlignment(llvm::Align(data->getAlignment()));
-
-    streamer->emitSymbolAttribute(data->getSymbol(), llvm::MCSA_Local);
-    streamer->emitLabel(data->getSymbol());
-
-    uint64_t offsetInSection = data->getAddress() - section.getAddress();
-    llvm::StringRef dataBytes =
-        section.getContents().substr(offsetInSection, data->getSize());
-
-    streamer->emitBytes(dataBytes);
-  }
+  emitDataSections(binaryContext, streamer.get());
 
   streamer->finish();
 
@@ -399,6 +413,7 @@ Error EmitObjectFile(llvm::bolt::BinaryContext *binaryContext,
               "LLVM MCStreamer encountered an error during emission.");
 
   outFile.keep();
+  streamer->setUseAssemblerInfoForParsing(true);
 
   return ERU_SUCCESS;
 }

@@ -10,8 +10,8 @@
 // RUN: %rewriter %t/main.o -o %t/main-mod.o
 
 // Check the object file raw dump with relocations, before and after processing.
-// RUN: objdump -r -d %t/main-mod.o | FileCheck %s --check-prefix=DUMP
-// RUN: objdump -r -d %t/main.o | FileCheck %s --check-prefix=DUMP
+// RUN objdump -r -d %t/main-mod.o | FileCheck %s --check-prefix=DUMP
+// RUN objdump -r -d %t/main.o | FileCheck %s --check-prefix=DUMP
 //
 // DUMP: 0000000000000000 <main>:
 // DUMP:    0:	55                   	push   %rbp
@@ -37,8 +37,8 @@
 // TODO: Doesnt fully match exactly.
 //
 // Check relocations and symtab. 
-// RUN: readelf -a %t/main-mod.o | FileCheck %s --check-prefix=META
-// RUN: readelf -a %t/main.o | FileCheck %s --check-prefix=META
+// RUN readelf -a %t/main-mod.o | FileCheck %s --check-prefix=META
+// RUN readelf -a %t/main.o | FileCheck %s --check-prefix=META
 //
 // META:   Offset          Info           Type             Sym. Value    Sym. Name + Addend
 // META: 000000000029     {{.*}}      R_X86_64_PC32     0000000000000000 .L.str - 4

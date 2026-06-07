@@ -8,6 +8,9 @@ add_compile_options(-Wunused-result)
 # LLVM is complied with this, so we must also use it.
 add_compile_options(-fno-rtti)
 
+# Flag to make debugging less buggy.
+add_compile_options(-fstandalone-debug)
+
 # Use libstdc++ as project only supports Linux.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++ -gdwarf-4")
 
