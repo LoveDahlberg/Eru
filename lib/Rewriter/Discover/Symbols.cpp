@@ -1,5 +1,6 @@
 
 
+#include "bolt/Core/BinarySection.h"
 #include <Rewriter/Discover/Symbols.h>
 #include <Rewriter/Discover/VirtualAddress.h>
 
@@ -77,6 +78,20 @@ void RegisterSymbolName(const uint64_t address, const llvm::SymbolRef &symbol,
   binaryContext->registerNameAtAddress(
       name, address, llvm::ELFSymbolRef(symbol).getSize(),
       symbol.getAlignment(), cantFail(symbol.getFlags()));
+}
+
+llvm::bolt::BinaryFunction *
+RegisterFunction(const uint64_t address, const llvm::SymbolRef &symbol,
+                 const std::string &name, const uint64_t finalSize,
+                 llvm::bolt::BinaryContext *binaryContext,
+                 llvm::bolt::BinarySection *binarySection,
+                 const uint64_t symbolSize) {
+
+  // Make sure to register the symbol before creating the binary function, as
+  // this lets us set the symbol flags.
+  RegisterSymbolName(address, symbol, name, finalSize, binaryContext);
+  return binaryContext->createBinaryFunction(name, *binarySection, address,
+                                             symbolSize);
 }
 
 // TODO clean this up in to several smaller meaningful functions.
@@ -220,8 +235,9 @@ Error RegisterSymbols(llvm::ELF64LEObjectFile *elfFile,
         continue;
       }
 
-      newBinaryFunction = binaryContext->createBinaryFunction(
-          name, *binarySection, address, symbolSize);
+      newBinaryFunction =
+          RegisterFunction(address, symbol, name, symbolSize, binaryContext,
+                           binarySection, symbolSize);
     }
 
     RegisterSymbolName(address, symbol, name, symbolSize, binaryContext);

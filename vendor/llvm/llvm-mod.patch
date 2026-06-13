@@ -18,6 +18,18 @@ index 31c90d2c502b..11cddba6abe1 100644
  
    /// Register or update the information for the section with the given
    /// /p Name.  If the section already exists, the information in the
+diff --git a/bolt/include/bolt/Core/BinaryData.h b/bolt/include/bolt/Core/BinaryData.h
+index 4ab628030ff0..c4526c6ce508 100644
+--- a/bolt/include/bolt/Core/BinaryData.h
++++ b/bolt/include/bolt/Core/BinaryData.h
+@@ -121,6 +121,7 @@ public:
+   uint64_t getOffset() const;
+   uint64_t getSize() const { return Size; }
+   uint16_t getAlignment() const { return Alignment; }
++  unsigned getFlags() const { return Flags; }
+ 
+   BinarySection &getSection() { return *Section; }
+   const BinarySection &getSection() const { return *Section; }
 diff --git a/bolt/include/bolt/Core/BinaryFunction.h b/bolt/include/bolt/Core/BinaryFunction.h
 index 12aef415aa05..c83c27b870e5 100644
 --- a/bolt/include/bolt/Core/BinaryFunction.h
@@ -251,3 +263,46 @@ index 7c24c2ce136f..65c17ce75179 100644
      case ELF::R_X86_64_GOTPCREL:
      case ELF::R_X86_64_TPOFF32:
      case ELF::R_X86_64_GOTTPOFF:
+diff --git a/bolt/lib/Target/X86/X86MCSymbolizer.cpp b/bolt/lib/Target/X86/X86MCSymbolizer.cpp
+index 0e0ad9270550..1cab1fba2dc9 100644
+--- a/bolt/lib/Target/X86/X86MCSymbolizer.cpp
++++ b/bolt/lib/Target/X86/X86MCSymbolizer.cpp
+@@ -149,8 +149,37 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
+   if (Relocation->isPCRelative())
+     SymbolValue += InstAddress + ImmOffset;
+ 
++  // Figure out if the target of the relocation should have a new symbol created
++  // for it. This is needed when parsing object files, which has an empty
++  // relocation value and can target undefined symbols.
++  const bool isValidTarget = [&] {
++    // If there is no symbol target or if the relocation has a offset already,
++    // then we know the SymbolValue target is valid.
++    if (Relocation->Symbol == nullptr || Relocation->Value != 0) {
++      return true;
++    }
++
++    const auto *symbolData =
++        BC.getBinaryDataByName(Relocation->Symbol->getName());
++
++    // If there is no data associated with this symbol or the symbol is
++    // undefined, then it means we are working with an object file (or something
++    // has gone horribly wrong) and no fixup is needed.
++    if (symbolData == nullptr || symbolData->getSymbol()->isUndefined()) {
++      return false;
++    }
++
++    // If the symbol section is not in text or if it is an absolute symbol
++    // without a section, then no text section fixup is needed.
++    if (symbolData->isAbsolute() || !symbolData->getSection().isText()) {
++      return false;
++    }
++
++    return true;
++  }();
++
+   // Process reference to the symbol.
+-  if (CreateNewSymbols)
++  if (CreateNewSymbols && isValidTarget)
+     BC.handleAddressRef(SymbolValue, Function, Relocation->isPCRelative());
+ 
+   uint64_t Addend = Relocation->Addend;

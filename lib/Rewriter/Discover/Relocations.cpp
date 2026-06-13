@@ -92,34 +92,34 @@ Result<RelocationInfo> GetRelocationInfo(
   // For example:
   //
   // clang-format off
-// 
-//   Assembly from `llvm-objdump -r -l`
-//
-//       26: 48 8d 3d 00 00 00 00         	leaq	(%rip), %rdi            # 0x2d <main+0x2d>
-//       0000000000000029:  R_X86_64_PC32	.L.str-0x4
-//       2d: b0 00                        	movb	$0x0, %al
-//
-//   Symbol table from `readelf -s`
-//     
-//       Num:    Value          Size Type    Bind   Vis      Ndx Name
-//         3: 0000000000000000     9 OBJECT  LOCAL  DEFAULT    4 .L.str
-//
-//   Section headers with `llvm-objdump --section-headers`
-//
-//       Sections:
-//       Idx Name            Size     VMA              Type
-//         4 .rodata.str1.1  00000009 0000000000000000 DATA
-//
-// The symbol table show that .L.str is in section index 4, which is .rodata.str1.1
-//
-// - Offset: 0x29, see address first on relocation line
-// - Info: Type R_X86_64_PC32 and index 3 in the symbol table.
-// - Addend: -0x4. The compiler's adjustment because the RIP register will be at 0x2d when this executes.
-// - Extracted value: value at offset 0x29 -> `00 00 00 00`, just passed the `48 8d 3d` leaq.  
-// - Target symbol: The actual `L.str` symbol.
-// - Symbol address: 0x00 as it is the first byte in Section index 4.
-// - Target address: 0x00 calculated as: SymbolAddress (0) + Addend (-4) + PCRelArtifactSize (4) = 0
-//
+  // 
+  //   Assembly from `llvm-objdump -r -l`
+  //
+  //       26: 48 8d 3d 00 00 00 00         	leaq	(%rip), %rdi            # 0x2d <main+0x2d>
+  //       0000000000000029:  R_X86_64_PC32	.L.str-0x4
+  //       2d: b0 00                        	movb	$0x0, %al
+  //
+  //   Symbol table from `readelf -s`
+  //     
+  //       Num:    Value          Size Type    Bind   Vis      Ndx Name
+  //         3: 0000000000000000     9 OBJECT  LOCAL  DEFAULT    4 .L.str
+  //
+  //   Section headers with `llvm-objdump --section-headers`
+  //
+  //       Sections:
+  //       Idx Name            Size     VMA              Type
+  //         4 .rodata.str1.1  00000009 0000000000000000 DATA
+  //
+  // The symbol table show that .L.str is in section index 4, which is .rodata.str1.1
+  //
+  // - Offset: 0x29, see address first on relocation line
+  // - Info: Type R_X86_64_PC32 and index 3 in the symbol table.
+  // - Addend: -0x4. The compiler's adjustment because the RIP register will be at 0x2d when this executes.
+  // - Extracted value: value at offset 0x29 -> `00 00 00 00`, just passed the `48 8d 3d` leaq.  
+  // - Target symbol: The actual `L.str` symbol.
+  // - Symbol address: 0x00 as it is the first byte in Section index 4.
+  // - Target address: 0x00 calculated as: SymbolAddress (0) + Addend (-4) + PCRelArtifactSize (4) = 0
+  //
   // clang-format on
 
   const size_t sizeOfRelocation =

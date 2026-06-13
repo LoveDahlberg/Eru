@@ -46,8 +46,8 @@
 //
 // META:    Num:    Value          Size      Type    Bind   Vis      Ndx Name
 // META:      0: 0000000000000000     0      NOTYPE  LOCAL  DEFAULT  UND 
-// META: {{.*}}: 0000000000000000     {{.*}} {{.*}}  LOCAL  DEFAULT    4 .L.str
-// META: {{.*}}: 0000000000000000     {{.*}} {{.*}}  GLOBAL DEFAULT    2 main
+// META: {{.*}}: 0000000000000000     9      OBJECT  LOCAL  DEFAULT    4 .L.str
+// META: {{.*}}: 0000000000000000     60     FUNC    GLOBAL DEFAULT    2 main
 // META: {{.*}}: 0000000000000000     0      NOTYPE  GLOBAL DEFAULT  UND printf
 
 // Link and run both the original and the rewritten object file.

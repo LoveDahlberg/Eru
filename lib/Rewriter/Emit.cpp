@@ -1,6 +1,8 @@
 
 
 // bolt
+#include "bolt/Core/BinaryData.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCSection.h"
 #include <bolt/Core/BinaryFunction.h>
 
@@ -13,6 +15,63 @@
 #include <ranges>
 
 namespace Rewriter {
+
+llvm::MCSymbolAttr getEmitterFlag(const uint32_t symbolRefFlag) {
+
+  // Map only equivalent flags.
+  switch (symbolRefFlag) {
+  case llvm::object::SymbolRef::SF_Global:
+    return llvm::MCSA_Global;
+
+  case llvm::object::SymbolRef::SF_Weak:
+    return llvm::MCSA_Weak;
+
+  case llvm::object::SymbolRef::SF_Indirect:
+    return llvm::MCSA_IndirectSymbol;
+
+  case llvm::object::SymbolRef::SF_Exported:
+    return llvm::MCSA_Exported;
+
+  case llvm::object::SymbolRef::SF_Hidden:
+    return llvm::MCSA_Hidden;
+
+  default:
+    return llvm::MCSA_Invalid;
+  }
+}
+
+void forwardSymbolAttributes(llvm::MCSymbol *symbol,
+                             llvm::bolt::BinaryData *originalSymbolData,
+                             llvm::MCStreamer *streamer) {
+
+  if (originalSymbolData == nullptr) {
+    return;
+  }
+
+  // Flags are defined in llvm/include/llvm/Object/SymbolicFile.h
+  const uint32_t flags = originalSymbolData->getFlags();
+
+  constexpr auto max_flag_value = 11;
+  for (int i = 0; i <= max_flag_value; ++i) {
+    const uint32_t currentFlag = 1U << i;
+
+    if (!(flags & currentFlag)) {
+      continue;
+    }
+
+    auto emitterFlag = getEmitterFlag(currentFlag);
+    if (emitterFlag == llvm::MCSA_Invalid) {
+      continue;
+    }
+
+    streamer->emitSymbolAttribute(symbol, emitterFlag);
+  }
+}
+
+struct DataAtOffset {
+  std::vector<llvm::bolt::BinaryData *> DataSymbols;
+  std::vector<llvm::bolt::Relocation> Relocations;
+};
 
 void emitDataSections(llvm::bolt::BinaryContext *binaryContext,
                       llvm::MCStreamer *streamer) {
@@ -32,60 +91,70 @@ void emitDataSections(llvm::bolt::BinaryContext *binaryContext,
     streamer->switchSection(targetELFSection);
     streamer->emitValueToAlignment(section.getAlign());
 
-    // If no relocations, just emit the raw bytes.
-    if (!section.hasRelocations()) {
+    // All of the data to emit at each offset (section relative). Each offset
+    // point can have multiple labels and relocations.
+    std::map<uint64_t, DataAtOffset> dataToEmit;
+
+    for (const auto &[address, binaryData] :
+         binaryContext->getBinaryDataForSection(section)) {
+      dataToEmit[address - section.getAddress()].DataSymbols.emplace_back(
+          binaryData);
+    }
+
+    for (const auto &relocation : section.relocations()) {
+      dataToEmit[relocation.Offset].Relocations.emplace_back(relocation);
+    }
+
+    // If there are no relocations or symbols found, just emit the raw bytes.
+    if (dataToEmit.empty()) {
       streamer->emitBytes(sectionContents);
       continue;
     }
 
     uint64_t currentSectionOffset = 0;
-    auto currentRelocation = section.relocations().begin();
-    const auto relocactionEnd = section.relocations().end();
-
-    // Loop through all relocations until we have reached the end.
-    // Note that we cannot loop through and write them all as is, because
-    // upcoming relocations might need to be written to the same offset as the
-    // current one. This happens when we have multiple relocations applied to
-    // the same instruction.
-    while (currentRelocation != relocactionEnd) {
-      const uint64_t offset = currentRelocation->Offset;
-
-      // If there are bytes before the first relocation, emit them.
+    for (const auto &[offset, data] : dataToEmit) {
+      // If there are bytes before the first meaningful data, emit their raw
+      // bytes.
       if (currentSectionOffset < offset) {
         streamer->emitBytes(sectionContents.substr(
             currentSectionOffset, offset - currentSectionOffset));
         currentSectionOffset = offset;
       }
 
-      // From the current relocation, find the next relocation that doesn't
-      // share the same offset. This will capture all relocations that share the
-      // same offset as the current one. We need to make sure these are emitted
-      // as one, as the streamer will increment the offset on each emit.
-      auto relocationGroupEnd = std::find_if(
-          currentRelocation, relocactionEnd, [&offset](const auto &relocation) {
-            return relocation.Offset != offset;
-          });
+      // First emit all symbols as labels with relevant attributes and size
+      // information for the symbol table. This does not increment the streamer.
+      for (auto *dataSymbol : data.DataSymbols) {
+        auto symbol = dataSymbol->getSymbol();
 
-      // Emit the grouped relocations between the current point right up until
-      // we reach the reloction that has a new offset.
-      size_t emittedSize = llvm::bolt::Relocation::emit(
-          currentRelocation, relocationGroupEnd, streamer);
-      currentSectionOffset += emittedSize;
+        forwardSymbolAttributes(symbol, dataSymbol, streamer);
+        streamer->emitSymbolAttribute(symbol, llvm::MCSA_ELF_TypeObject);
 
-      // Make sure to skip over all emitted group relocations for next loop.
-      currentRelocation = relocationGroupEnd;
+        if (dataSymbol->getSize() > 0) {
+          streamer->emitELFSize(
+              symbol, llvm::MCConstantExpr::create(dataSymbol->getSize(),
+                                                   streamer->getContext()));
+        }
+
+        streamer->emitLabel(symbol);
+      }
+
+      // Then emit all relocations found at this address.
+      if (!data.Relocations.empty()) {
+        currentSectionOffset += llvm::bolt::Relocation::emit(
+            data.Relocations.begin(), data.Relocations.end(), streamer);
+      }
     }
 
-    // If there are bytes left over after the last relcoation, emit them.
+    // If there are bytes left over afterwards, emit them.
     if (currentSectionOffset < sectionContents.size()) {
       streamer->emitBytes(sectionContents.substr(currentSectionOffset));
     }
   }
 }
 
-/// Represents a continous range of data inside of a function. This ends either
-/// at another chunk of data, which might contain different kind of data and/or
-/// at different alignment, or when executable code starts again.
+/// Represents a continous range of data inside of a function. This ends
+/// either at another chunk of data, which might contain different kind of
+/// data and/or at different alignment, or when executable code starts again.
 struct IslandChunk {
   /// The start offset where data begins.
   uint64_t startOffset;
@@ -100,12 +169,12 @@ struct IslandChunk {
   std::vector<llvm::bolt::Relocation> relocations;
 };
 
-/// Go through all constant islands in the current function and collect them as
-/// island chunks. An island chunk represents a sequential sequence of data that
-/// all hold the same kind of data with the same alignment. One chunk may
-/// immediately be followed by another one in the original function, but this is
-/// still considered a new chunk by LLVM if they are separated by a 'start data'
-/// marker.
+/// Go through all constant islands in the current function and collect them
+/// as island chunks. An island chunk represents a sequential sequence of data
+/// that all hold the same kind of data with the same alignment. One chunk may
+/// immediately be followed by another one in the original function, but this
+/// is still considered a new chunk by LLVM if they are separated by a 'start
+/// data' marker.
 std::vector<IslandChunk>
 BuildIslandChunks(llvm::bolt::BinaryFunction &function) {
 
@@ -126,9 +195,9 @@ BuildIslandChunks(llvm::bolt::BinaryFunction &function) {
                                  map.lower_bound(endOffset));
   };
 
-  // Loop through all DataOffsets, which denotes the start of a contiguous block
-  // of data in code. This block of data can contain several labels that the
-  // code can jump to.
+  // Loop through all DataOffsets, which denotes the start of a contiguous
+  // block of data in code. This block of data can contain several labels that
+  // the code can jump to.
   std::vector<IslandChunk> chunks;
   for (const auto startOffset : islands.DataOffsets) {
     IslandChunk chunk;
@@ -139,7 +208,8 @@ BuildIslandChunks(llvm::bolt::BinaryFunction &function) {
     // - The start marker of the nearest other data chunk (which is right next
     //   to our chunk). This is data of different type and/or alignment.
     // - The nearest code start marker. We take which ever is closest.
-    //   - This is what is in CodeOffsets, offsets where executable code starts.
+    //   - This is what is in CodeOffsets, offsets where executable code
+    //   starts.
     const auto startOfNextDataBlock =
         getNextBoundaryOrMax(islands.DataOffsets, startOffset);
     const auto endOfCurrentDataBlock =
@@ -172,16 +242,16 @@ BuildIslandChunks(llvm::bolt::BinaryFunction &function) {
   return chunks;
 }
 
-/// Constant islands represents parts of executable code that is actually data.
-/// One function may contain several islands of data through out
-/// the functions. These islands of data can all be placed separately, or
-/// grouped back to back.
+/// Constant islands represents parts of executable code that is actually
+/// data. One function may contain several islands of data through out the
+/// functions. These islands of data can all be placed separately, or grouped
+/// back to back.
 ///
 /// Here, we gather them all up and emit them in one big island at the end of
 /// the current function. This is taken from bolt which does this for I-cache
-/// optimization. It doesn't really matter for us here, we just want to emit it
-/// for now. Ideally we control the layout of the function explicitly in passes,
-/// but for now we can keep this as is.
+/// optimization. It doesn't really matter for us here, we just want to emit
+/// it for now. Ideally we control the layout of the function explicitly in
+/// passes, but for now we can keep this as is.
 void emitConstantIsland(llvm::bolt::BinaryContext *binaryContext,
                         llvm::bolt::BinaryFunction &function,
                         llvm::MCStreamer *streamer) {
@@ -211,8 +281,8 @@ void emitConstantIsland(llvm::bolt::BinaryContext *binaryContext,
     for (const auto &relocation : relocations) {
       // If there is space in between where the current offset and where the
       // relocation starts. This simply means that we have raw data before the
-      // actual relocation. Emit this data so that we are at the point where the
-      // relocation starts.
+      // actual relocation. Emit this data so that we are at the point where
+      // the relocation starts.
       if (currentOffset < relocation.Offset) {
         streamer->emitBytes(
             FunctionContents.slice(currentOffset, relocation.Offset));
@@ -234,8 +304,7 @@ void emitConstantIsland(llvm::bolt::BinaryContext *binaryContext,
   };
 
   streamer->emitCodeAlignment(
-      llvm::Align(function.getConstantIslandAlignment()),
-      &*binaryContext->STI);
+      llvm::Align(function.getConstantIslandAlignment()), &*binaryContext->STI);
 
   // We are now going to be emitting the original constant islands, that are
   // possibly spread out, into one big constant island at the end of the
@@ -249,20 +318,21 @@ void emitConstantIsland(llvm::bolt::BinaryContext *binaryContext,
     auto relocationsStart = chunk.relocations.begin();
     const auto relocationsEnd = chunk.relocations.end();
 
-    // Emit the data and relocations between the currentOffset and the next jump
-    // label. Note that each sequence of data needs to start with a label. The
-    // first sequnece uses the constant island label as its start symbl. We then
-    // emit the label for the next sequence at the end of each loop.
+    // Emit the data and relocations between the currentOffset and the next
+    // jump label. Note that each sequence of data needs to start with a
+    // label. The first sequnece uses the constant island label as its start
+    // symbl. We then emit the label for the next sequence at the end of each
+    // loop.
     for (const auto &[endOffset, symbol] : chunk.jumpLabels) {
 
       // TODO this should ideally be constructed in place in the
-      // BuildIslandChunks. That way, we can place the constant island label as
-      // the label in the first sequence instead of adding it at the end like
-      // this. We would also be able to just loop everything nicely here.
+      // BuildIslandChunks. That way, we can place the constant island label
+      // as the label in the first sequence instead of adding it at the end
+      // like this. We would also be able to just loop everything nicely here.
       //
       // Find the relocations to emit from the range. We are
-      // essentially sliding a window across the range to account for the offset
-      // we are trying to emit.
+      // essentially sliding a window across the range to account for the
+      // offset we are trying to emit.
       const auto relocationSubRangeEnd =
           std::ranges::lower_bound(relocationsStart, relocationsEnd, endOffset,
                                    {}, &llvm::bolt::Relocation::Offset);
@@ -329,16 +399,16 @@ void EmitFunctionBody(llvm::bolt::BinaryContext *binaryContext,
     }
   }
 
-  // If the function contains function islands, gather them all up and emit them
-  // at the end of the function as one contiguous constant island.
+  // If the function contains function islands, gather them all up and emit
+  // them at the end of the function as one contiguous constant island.
   if (function.hasIslandsInfo()) {
     emitConstantIsland(binaryContext, function, streamer);
   }
 }
 
 bool skipFunction(llvm::bolt::BinaryFunction &function) {
-  return function.isPseudo() || function.isIgnored() ||
-         !function.isSimple() || function.size() == 0 ||
+  return function.isPseudo() || function.isIgnored() || !function.isSimple() ||
+         function.size() == 0 ||
          function.getState() == llvm::bolt::BinaryFunction::State::Empty;
 }
 
@@ -362,6 +432,12 @@ void emitFunctions(llvm::bolt::BinaryContext *binaryContext,
 
     // Emit entry function labels
     for (auto *functionEntryAlias : function.getSymbols()) {
+
+      forwardSymbolAttributes(
+          functionEntryAlias,
+          binaryContext->getBinaryDataByName(functionEntryAlias->getName()),
+          streamer);
+
       streamer->emitSymbolAttribute(functionEntryAlias,
                                     llvm::MCSA_ELF_TypeFunction);
       streamer->emitLabel(functionEntryAlias);
@@ -382,11 +458,10 @@ void emitFunctions(llvm::bolt::BinaryContext *binaryContext,
   }
 }
 
-// TODO, split the emit code into sub folders when done. For example:
-// Emit/Functions/EmitFunctions
-//                EmitConstantIslands
-//     /Data     /...
-
+/// TODO, split the emit code into sub folders when done. For example:
+/// Emit/Functions/EmitFunctions
+///                EmitConstantIslands
+///     /Data     /...
 Error EmitObjectFile(llvm::bolt::BinaryContext *binaryContext,
                      const std::string &outputPath) {
 
