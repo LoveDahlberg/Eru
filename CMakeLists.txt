@@ -8,6 +8,9 @@ add_compile_options(-Wunused-result)
 # LLVM is complied with this, so we must also use it.
 add_compile_options(-fno-rtti)
 
+# Flag to make debugging less buggy.
+add_compile_options(-fstandalone-debug)
+
 # Use libstdc++ as project only supports Linux.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++ -gdwarf-4")
 
@@ -63,6 +66,9 @@ add_definitions(${LLVM_DEFINITIONS})
 
 # Find all llvm libs
 set(llvm_libs ${LLVM_AVAILABLE_LIBS})
+
+# Remove as it causes two of the same opts to be linked in. 
+list(REMOVE_ITEM llvm_libs LLVMOptDriver)
 
 ############################
 # Includes and Libraries

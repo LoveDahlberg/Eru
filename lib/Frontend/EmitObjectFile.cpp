@@ -19,7 +19,7 @@ namespace Frontend::Action {
 namespace {
 
 Error emitObject(llvm::Module &module, const std::filesystem::path &outputFile,
-                 const  llvm::Triple &targetTriple) {
+                 const llvm::Triple &targetTriple) {
 
   // From kolidascope. TODO rewrite this with the new pass manager.
 
@@ -59,7 +59,7 @@ Error emitObject(llvm::Module &module, const std::filesystem::path &outputFile,
 
   if (EC) {
     return ERU_FAILURE("EmitObjectFile: Failed to define output file '" +
-                   EC.message() + "'");
+                       EC.message() + "'");
   }
 
   llvm::legacy::PassManager pass;
@@ -99,6 +99,11 @@ void writeIRToFile(llvm::Module &module, std::string &errorMsg) {
 
 } // namespace
 
+// TODO, this filename is confusing with the rewriters emit object file. Could
+// be ok.
+
+// TODO this should not be in the frontend, it should be the entry point to the
+// IR pass folder.
 Error EmitObjectFile::ActOn(AST::Context::ASTContext context) {
 
   auto ctx = new llvm::LLVMContext();

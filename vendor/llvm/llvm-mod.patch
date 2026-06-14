@@ -1,0 +1,308 @@
+diff --git a/bolt/include/bolt/Core/BinaryContext.h b/bolt/include/bolt/Core/BinaryContext.h
+index 31c90d2c502b..11cddba6abe1 100644
+--- a/bolt/include/bolt/Core/BinaryContext.h
++++ b/bolt/include/bolt/Core/BinaryContext.h
+@@ -1161,11 +1161,13 @@ public:
+ 
+   /// Register information about the given \p Section so we can look up
+   /// sections by address.
+-  BinarySection &registerSection(SectionRef Section);
++  BinarySection &
++  registerSection(SectionRef Section,
++                  std::optional<uint64_t> NewSectionAddress = std::nullopt);
+ 
+   /// Register a copy of /p OriginalSection under a different name.
+   BinarySection &registerSection(const Twine &SectionName,
+-                                 const BinarySection &OriginalSection);
++    const BinarySection &OriginalSection);
+ 
+   /// Register or update the information for the section with the given
+   /// /p Name.  If the section already exists, the information in the
+diff --git a/bolt/include/bolt/Core/BinaryData.h b/bolt/include/bolt/Core/BinaryData.h
+index 4ab628030ff0..c4526c6ce508 100644
+--- a/bolt/include/bolt/Core/BinaryData.h
++++ b/bolt/include/bolt/Core/BinaryData.h
+@@ -121,6 +121,7 @@ public:
+   uint64_t getOffset() const;
+   uint64_t getSize() const { return Size; }
+   uint16_t getAlignment() const { return Alignment; }
++  unsigned getFlags() const { return Flags; }
+ 
+   BinarySection &getSection() { return *Section; }
+   const BinarySection &getSection() const { return *Section; }
+diff --git a/bolt/include/bolt/Core/BinaryFunction.h b/bolt/include/bolt/Core/BinaryFunction.h
+index 12aef415aa05..c83c27b870e5 100644
+--- a/bolt/include/bolt/Core/BinaryFunction.h
++++ b/bolt/include/bolt/Core/BinaryFunction.h
+@@ -626,6 +626,7 @@ private:
+   /// Count the number of functions created.
+   static uint64_t Count;
+ 
++public:
+   /// Register alternative function name.
+   void addAlternativeName(std::string NewName) {
+     Aliases.push_back(std::move(NewName));
+@@ -638,6 +639,7 @@ private:
+   ///       a global symbol that corresponds to an entry at this address.
+   MCSymbol *getOrCreateLocalLabel(uint64_t Address);
+ 
++private:
+   /// Register an data entry at a given \p Offset into the function.
+   void markDataAtOffset(uint64_t Offset) {
+     if (!Islands)
+diff --git a/bolt/include/bolt/Core/BinarySection.h b/bolt/include/bolt/Core/BinarySection.h
+index 154a8d12de5c..d4382172fab0 100644
+--- a/bolt/include/bolt/Core/BinarySection.h
++++ b/bolt/include/bolt/Core/BinarySection.h
+@@ -154,9 +154,12 @@ public:
+         PendingRelocations(Section.PendingRelocations), OutputName(Name.str()),
+         SectionNumber(++Count) {}
+ 
+-  BinarySection(BinaryContext &BC, SectionRef Section)
++  BinarySection(BinaryContext &BC, SectionRef Section,
++                std::optional<uint64_t> NewSectionAddress = std::nullopt)
+       : BC(BC), Name(getName(Section)), Section(Section),
+-        Contents(getContentsOrQuit(Section)), Address(Section.getAddress()),
++        Contents(getContentsOrQuit(Section)),
++        Address(NewSectionAddress.has_value() ? *NewSectionAddress
++                                              : Section.getAddress()),
+         Size(Section.getSize()), Alignment(Section.getAlignment().value()),
+         OutputName(Name), SectionNumber(++Count) {
+     if (isELF()) {
+diff --git a/bolt/lib/Core/BinaryContext.cpp b/bolt/lib/Core/BinaryContext.cpp
+index f0541921c70a..c7589fec628f 100644
+--- a/bolt/lib/Core/BinaryContext.cpp
++++ b/bolt/lib/Core/BinaryContext.cpp
+@@ -53,8 +53,8 @@ static cl::opt<bool>
+                 cl::Hidden, cl::cat(BoltCategory));
+ 
+ static cl::opt<bool>
+-PrintDebugInfo("print-debug-info",
+-  cl::desc("print debug info when printing functions"),
++    PrintDebugInfo("print-debug-info",
++                   cl::desc("print debug info when printing functions"),
+   cl::Hidden,
+   cl::ZeroOrMore,
+   cl::cat(BoltCategory));
+@@ -66,7 +66,7 @@ cl::opt<bool> PrintRelocations(
+ 
+ static cl::opt<bool>
+ PrintMemData("print-mem-data",
+-  cl::desc("print memory data annotations when printing functions"),
++    cl::desc("print memory data annotations when printing functions"),
+   cl::Hidden,
+   cl::ZeroOrMore,
+   cl::cat(BoltCategory));
+@@ -2297,8 +2297,9 @@ BinarySection &BinaryContext::registerSection(BinarySection *Section) {
+   return *Section;
+ }
+ 
+-BinarySection &BinaryContext::registerSection(SectionRef Section) {
+-  return registerSection(new BinarySection(*this, Section));
++BinarySection &BinaryContext::registerSection(SectionRef Section,
++                               std::optional<uint64_t> NewSectionAddress) {
++  return registerSection(new BinarySection(*this, Section, NewSectionAddress));
+ }
+ 
+ BinarySection &
+diff --git a/bolt/lib/Core/BinaryFunction.cpp b/bolt/lib/Core/BinaryFunction.cpp
+index dc83b9e8ed76..bab1be0f2834 100644
+--- a/bolt/lib/Core/BinaryFunction.cpp
++++ b/bolt/lib/Core/BinaryFunction.cpp
+@@ -87,20 +87,20 @@ static cl::opt<bool> DotToolTipCode(
+ cl::opt<JumpTableSupportLevel>
+ JumpTables("jump-tables",
+   cl::desc("jump tables support (default=basic)"),
+-  cl::init(JTS_BASIC),
+-  cl::values(
+-      clEnumValN(JTS_NONE, "none",
+-                 "do not optimize functions with jump tables"),
++    cl::init(JTS_BASIC),
++    cl::values(
++        clEnumValN(JTS_NONE, "none",
++                   "do not optimize functions with jump tables"),
+       clEnumValN(JTS_BASIC, "basic",
+                  "optimize functions with jump tables"),
+       clEnumValN(JTS_MOVE, "move",
+                  "move jump tables to a separate section"),
+-      clEnumValN(JTS_SPLIT, "split",
+-                 "split jump tables section into hot and cold based on "
+-                 "function execution frequency"),
+-      clEnumValN(JTS_AGGRESSIVE, "aggressive",
+-                 "aggressively split jump tables section based on usage "
+-                 "of the tables")),
++        clEnumValN(JTS_SPLIT, "split",
++                   "split jump tables section into hot and cold based on "
++                   "function execution frequency"),
++        clEnumValN(JTS_AGGRESSIVE, "aggressive",
++                   "aggressively split jump tables section based on usage "
++                   "of the tables")),
+   cl::ZeroOrMore,
+   cl::cat(BoltOptCategory));
+ 
+@@ -125,8 +125,8 @@ static cl::opt<bool> PrintOutputAddressRange(
+ 
+ cl::opt<bool>
+ PrintDynoStats("dyno-stats",
+-  cl::desc("print execution info based on profile"),
+-  cl::cat(BoltCategory));
++                             cl::desc("print execution info based on profile"),
++                             cl::cat(BoltCategory));
+ 
+ static cl::opt<bool>
+ PrintDynoStatsOnly("print-dyno-stats-only",
+@@ -1401,38 +1401,47 @@ Error BinaryFunction::disassemble() {
+         const bool IsCondBranch = MIB->isConditionalBranch(Instruction);
+         MCSymbol *TargetSymbol = nullptr;
+ 
+-        if (IsUnsupported)
+-          if (auto *TargetFunc =
+-                  BC.getBinaryFunctionContainingAddress(TargetAddress))
+-            TargetFunc->setIgnored();
++        // Object file specific change. Calls can happen to external undefined
++        // symbols tagged with a relocation.
++        if (const Relocation *Rel =
++                getRelocationInRange(Offset, Offset + Size)) {
++          TargetSymbol = Rel->Symbol;
++        }
++
++        if (TargetSymbol == nullptr) {
++          if (IsUnsupported)
++            if (auto *TargetFunc =
++                    BC.getBinaryFunctionContainingAddress(TargetAddress))
++              TargetFunc->setIgnored();
+ 
+-        if (IsCall && TargetAddress == getAddress()) {
+-          // A recursive call. Calls to internal blocks are handled by
+-          // ValidateInternalCalls pass.
+-          TargetSymbol = getSymbol();
+-        } else {
+-          // Create either local label or external symbol.
+-          if (containsAddress(TargetAddress)) {
+-            TargetSymbol = getOrCreateLocalLabel(TargetAddress);
++          if (IsCall && TargetAddress == getAddress()) {
++            // A recursive call. Calls to internal blocks are handled by
++            // ValidateInternalCalls pass.
++            TargetSymbol = getSymbol();
+           } else {
+-            if (TargetAddress == getAddress() + getSize() &&
+-                TargetAddress < getAddress() + getMaxSize() &&
++            // Create either local label or external symbol.
++            if (containsAddress(TargetAddress)) {
++              TargetSymbol = getOrCreateLocalLabel(TargetAddress);
++            } else {
++              if (TargetAddress == getAddress() + getSize() &&
++                  TargetAddress < getAddress() + getMaxSize() &&
+                 !(BC.isAArch64() &&
+                   BC.handleAArch64Veneer(TargetAddress, /*MatchOnly*/ true))) {
+-              // Result of __builtin_unreachable().
+-              errs() << "BOLT-WARNING: jump past end detected at 0x"
+-                     << Twine::utohexstr(AbsoluteInstrAddr) << " in function "
+-                     << *this << " : replacing with nop.\n";
+-              BC.MIB->createNoop(Instruction);
+-              if (IsCondBranch) {
+-                // Register branch offset for profile validation.
+-                IgnoredBranches.emplace_back(Offset, Offset + Size);
++                // Result of __builtin_unreachable().
++                errs() << "BOLT-WARNING: jump past end detected at 0x"
++                       << Twine::utohexstr(AbsoluteInstrAddr) << " in function "
++                       << *this << " : replacing with nop.\n";
++                BC.MIB->createNoop(Instruction);
++                if (IsCondBranch) {
++                  // Register branch offset for profile validation.
++                  IgnoredBranches.emplace_back(Offset, Offset + Size);
++                }
++                goto add_instruction;
+               }
+-              goto add_instruction;
++              // May update Instruction and IsCall
++              TargetSymbol = handleExternalReference(Instruction, Size, Offset,
++                                                     TargetAddress, IsCall);
+             }
+-            // May update Instruction and IsCall
+-            TargetSymbol = handleExternalReference(Instruction, Size, Offset,
+-                                                   TargetAddress, IsCall);
+           }
+         }
+ 
+@@ -1506,7 +1515,7 @@ Error BinaryFunction::disassemble() {
+       }
+     }
+ 
+-add_instruction:
++  add_instruction:
+     if (!getDWARFUnits().empty()) {
+       SmallVector<DebugLineTableRowRef, 1> Rows;
+       for (const auto &[_, Unit] : getDWARFUnits()) {
+@@ -3933,11 +3942,11 @@ BinaryFunction::BasicBlockListType BinaryFunction::dfs() const {
+   // NB: we rely on the original order of entries to match.
+   SmallVector<BinaryBasicBlock *> EntryPoints;
+   llvm::copy_if(BasicBlocks, std::back_inserter(EntryPoints),
+-          [&](const BinaryBasicBlock *const BB) { return isEntryPoint(*BB); });
++      [&](const BinaryBasicBlock *const BB) { return isEntryPoint(*BB); });
+   // Sort entry points by their offset to make sure we got them in the right
+   // order.
+   llvm::stable_sort(EntryPoints, [](const BinaryBasicBlock *const A,
+-                              const BinaryBasicBlock *const B) {
++                                    const BinaryBasicBlock *const B) {
+     return A->getOffset() < B->getOffset();
+   });
+   for (BinaryBasicBlock *const BB : reverse(EntryPoints))
+diff --git a/bolt/lib/Target/X86/X86MCPlusBuilder.cpp b/bolt/lib/Target/X86/X86MCPlusBuilder.cpp
+index 7c24c2ce136f..65c17ce75179 100644
+--- a/bolt/lib/Target/X86/X86MCPlusBuilder.cpp
++++ b/bolt/lib/Target/X86/X86MCPlusBuilder.cpp
+@@ -409,8 +409,9 @@ public:
+     case ELF::R_X86_64_GOTPC64:
+     case ELF::R_X86_64_GOTPCRELX:
+     case ELF::R_X86_64_REX_GOTPCRELX:
+-      return true;
++     // Relocation that normally is consumed by the linker. Denotes external call.
+     case ELF::R_X86_64_PLT32:
++      return true;
+     case ELF::R_X86_64_GOTPCREL:
+     case ELF::R_X86_64_TPOFF32:
+     case ELF::R_X86_64_GOTTPOFF:
+diff --git a/bolt/lib/Target/X86/X86MCSymbolizer.cpp b/bolt/lib/Target/X86/X86MCSymbolizer.cpp
+index 0e0ad9270550..1cab1fba2dc9 100644
+--- a/bolt/lib/Target/X86/X86MCSymbolizer.cpp
++++ b/bolt/lib/Target/X86/X86MCSymbolizer.cpp
+@@ -149,8 +149,37 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
+   if (Relocation->isPCRelative())
+     SymbolValue += InstAddress + ImmOffset;
+ 
++  // Figure out if the target of the relocation should have a new symbol created
++  // for it. This is needed when parsing object files, which has an empty
++  // relocation value and can target undefined symbols.
++  const bool isValidTarget = [&] {
++    // If there is no symbol target or if the relocation has a offset already,
++    // then we know the SymbolValue target is valid.
++    if (Relocation->Symbol == nullptr || Relocation->Value != 0) {
++      return true;
++    }
++
++    const auto *symbolData =
++        BC.getBinaryDataByName(Relocation->Symbol->getName());
++
++    // If there is no data associated with this symbol or the symbol is
++    // undefined, then it means we are working with an object file (or something
++    // has gone horribly wrong) and no fixup is needed.
++    if (symbolData == nullptr || symbolData->getSymbol()->isUndefined()) {
++      return false;
++    }
++
++    // If the symbol section is not in text or if it is an absolute symbol
++    // without a section, then no text section fixup is needed.
++    if (symbolData->isAbsolute() || !symbolData->getSection().isText()) {
++      return false;
++    }
++
++    return true;
++  }();
++
+   // Process reference to the symbol.
+-  if (CreateNewSymbols)
++  if (CreateNewSymbols && isValidTarget)
+     BC.handleAddressRef(SymbolValue, Function, Relocation->isPCRelative());
+ 
+   uint64_t Addend = Relocation->Addend;

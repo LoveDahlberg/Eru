@@ -58,9 +58,9 @@ public:
   /// Constructor to use when the operation was successful and the value should
   /// be propagated.
   /// \param value The value to use in next operation.
-  Result(underLyingType value) requires(
+  Result(underLyingType incomingValue) requires(
       !std::is_same_v<underLyingType, Formatter>)
-      : value(value), hasFailed(false) {}
+      : value(std::move(incomingValue)), hasFailed(false) {}
 
   /// Constructor to use when the operation was successful and no value needs to
   /// be propagated.
@@ -111,18 +111,18 @@ public:
   }
 
   /// Get the underlying value. Only enable this for non-void values.
-  underLyingType operator*() requires(!std::is_same_v<underLyingType, Void>) {
+  underLyingType &operator*() requires(!std::is_same_v<underLyingType, Void>) {
     if (hasFailed) {
       assert("Cannot get resulting value when an error has occoured.");
-      return {};
     }
-    return *value;
+    return value.value();
   }
 
   /// Get the underlying value. Only enable this for non-void values.
   underLyingType *operator->() requires(!std::is_same_v<underLyingType, Void>) {
     if (hasFailed) {
-      assert("Cannot access members of value when an error has occoured.");
+      assert(false &&
+             "Cannot access members of value when an error has occoured.");
       return nullptr;
     }
     return &(*value);
@@ -140,7 +140,7 @@ using Error = Result<>;
 
 #define ERU_SUCCESS Result<>()
 
-#define ERU_FAILURE(description)                                                   \
+#define ERU_FAILURE(description)                                               \
   Formatter { description }
 #define FAILURE_CODE(description, lexer)                                       \
   { Formatter{description}, lexer.getParsedInput() }
